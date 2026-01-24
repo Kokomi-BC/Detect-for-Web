@@ -95,6 +95,10 @@ app.get('/theme-loader.js', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/theme-loader.js'));
 });
 
+app.get('/user-editor.js', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/user-editor.js'));
+});
+
 app.use('/css', express.static(path.join(__dirname, '../public/css'), {
     maxAge: '1h'
 }));

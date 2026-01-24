@@ -4,22 +4,50 @@ const path = require('path');
 const fsPromises = require('fs').promises;
 const fs = require('fs');
 const crypto = require('crypto');
+const multer = require('multer');
+const sharp = require('sharp');
 const { pool } = require('../config/db');
 const { authenticate, authenticateAdmin } = require('../middleware/auth');
 
 const IMG_CACHE_DIR = path.join(__dirname, '../../data/img_cache');
+const USERS_DATA_DIR = path.join(__dirname, '../../data/users');
 if (!fs.existsSync(IMG_CACHE_DIR)) {
     fs.mkdirSync(IMG_CACHE_DIR, { recursive: true });
 }
+
+// Multer storage configuration for avatars
+const avatarStorage = multer.memoryStorage();
+const uploadAvatar = multer({
+    storage: avatarStorage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // Allowed 10MB for original upload, will compress later
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /image\/(jpeg|png|gif|webp|jpg)/;
+        if (allowedTypes.test(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only images are allowed (jpg, png, gif, webp)'));
+        }
+    }
+});
 
 module.exports = function(services, state) {
     const { extractionManager, fileParser, llmService } = services;
     const { sseClients } = state;
 
-    const getUserHistoryPath = (userId) => path.join(__dirname, '../../data/users', String(userId), 'history.json');
+    const getUserHistoryPath = (userId) => path.join(USERS_DATA_DIR, String(userId), 'history.json');
+    const getUserAvatarDir = (userId) => path.join(USERS_DATA_DIR, String(userId));
     const ensureUserDir = async (userId) => {
-        const userDir = path.dirname(getUserHistoryPath(userId));
+        const userDir = getUserAvatarDir(userId);
         await fsPromises.mkdir(userDir, { recursive: true });
+    };
+
+    // Helper to find avatar file in user directory
+    const findAvatarFile = async (userId) => {
+        const dir = getUserAvatarDir(userId);
+        if (!fs.existsSync(dir)) return null;
+        const files = await fsPromises.readdir(dir);
+        const avatarFile = files.find(f => f.startsWith('avatar.'));
+        return avatarFile ? path.join(dir, avatarFile) : null;
     };
 
     const deleteCachedImages = async (imageUrls) => {
@@ -567,6 +595,121 @@ module.exports = function(services, state) {
             
             res.json({ success: true });
         } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    // Avatar Management
+    router.get('/public/avatar/:userId', authenticate, async (req, res) => {
+        try {
+            const userId = req.params.userId;
+            const avatarPath = await findAvatarFile(userId);
+            if (avatarPath && fs.existsSync(avatarPath)) {
+                const stats = await fsPromises.stat(avatarPath);
+                res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24h
+                res.setHeader('Last-Modified', stats.mtime.toUTCString());
+                
+                // Optional: Check if-modified-since
+                const ifModifiedSince = req.headers['if-modified-since'];
+                if (ifModifiedSince && new Date(ifModifiedSince) >= stats.mtime) {
+                    return res.status(304).end();
+                }
+
+                res.sendFile(avatarPath);
+            } else {
+                // Return default avatar SVG if not found
+                res.setHeader('Content-Type', 'image/svg+xml');
+                res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache default for 1h
+                res.send(`<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#e2e8f0"/><path d="M12 12C14.2091 12 16 10.2091 16 8C16 5.79086 14.2091 4 12 4C9.79086 4 8 5.79086 8 8C8 10.2091 9.79086 12 12 12Z" fill="#94a3b8"/><path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" fill="#94a3b8"/></svg>`);
+            }
+        } catch (e) {
+            res.status(500).send('Avatar Error');
+        }
+    });
+
+    const handleAvatarUpload = async (userId, file) => {
+        await ensureUserDir(userId);
+        const oldAvatar = await findAvatarFile(userId);
+        if (oldAvatar) await fsPromises.unlink(oldAvatar);
+        
+        let buffer = file.buffer;
+        const MB = 1024 * 1024;
+
+        // If larger than 1MB, compress it
+        if (buffer.length > MB) {
+            console.log(`[Avatar] Compressing avatar for user ${userId} (Size: ${(buffer.length/MB).toFixed(2)}MB)`);
+            buffer = await sharp(buffer)
+                .resize(500, 500, { fit: 'cover' }) // Reasonable size for avatar
+                .jpeg({ quality: 80 }) // JPEG is good for compression
+                .toBuffer();
+            
+            // Re-check: if still > 1MB (unlikely for 500x500 80% jpg), compress more
+            if (buffer.length > MB) {
+                buffer = await sharp(buffer).jpeg({ quality: 60 }).toBuffer();
+            }
+        }
+
+        const newPath = path.join(getUserAvatarDir(userId), `avatar.jpg`); // Standardize to jpg for consistency if compressed
+        await fsPromises.writeFile(newPath, buffer);
+        return true;
+    };
+
+    router.post('/user/avatar', authenticate, uploadAvatar.single('avatar'), async (req, res) => {
+        try {
+            if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
+            await handleAvatarUpload(req.userId, req.file);
+            res.json({ success: true });
+        } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    });
+
+    router.delete('/user/avatar', authenticate, async (req, res) => {
+        try {
+            const avatarPath = await findAvatarFile(req.userId);
+            if (avatarPath) await fsPromises.unlink(avatarPath);
+            res.json({ success: true });
+        } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    });
+
+    router.post('/user/update', authenticate, async (req, res) => {
+        const { username, password, role } = req.body; // Explicitly pull role for validation
+        try {
+            const userId = req.userId;
+            
+            // Security: Prevent regular users from setting their own role to admin
+            if (role && role !== 'user') {
+                return res.status(403).json({ success: false, error: '无权修改角色' });
+            }
+
+            // Validate username uniqueness (excluding current user)
+            if (username) {
+                const [existing] = await pool.query('SELECT id FROM users WHERE username = ? AND id != ?', [username, userId]);
+                if (existing.length > 0) return res.status(400).json({ success: false, error: '用户名已存在' });
+            }
+
+            let q = 'UPDATE users SET id=id'; // No-op start
+            let params = [];
+            if (username) { q += ', username = ?'; params.push(username); }
+            if (password) { q += ', password = ?'; params.push(password); }
+            q += ' WHERE id = ?';
+            params.push(userId);
+            
+            await pool.query(q, params);
+            res.json({ success: true });
+        } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/user/avatar/:userId', authenticate, authenticateAdmin, uploadAvatar.single('avatar'), async (req, res) => {
+        try {
+            if (!req.file) return res.status(400).json({ success: false, error: 'No file uploaded' });
+            await handleAvatarUpload(req.params.userId, req.file);
+            res.json({ success: true });
+        } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    });
+
+    router.delete('/admin/user/avatar/:userId', authenticate, authenticateAdmin, async (req, res) => {
+        try {
+            const avatarPath = await findAvatarFile(req.params.userId);
+            if (avatarPath) await fsPromises.unlink(avatarPath);
+            res.json({ success: true });
+        } catch (e) { res.status(500).json({ success: false, error: e.message }); }
     });
 
     return router;

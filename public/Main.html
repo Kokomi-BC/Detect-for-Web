@@ -51,13 +51,20 @@
         <div class="title-bar-actions">
             <!-- User Profile Menu -->
             <div class="toolbar-btn more-menu" id="userBtn" title="个人中心" tabindex="0">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <img id="topBarAvatar" src="" style="width:20px; height:20px; border-radius:50%; object-fit:cover; display:none;">
+                <svg id="topBarUserIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
                 </svg>
                 <div class="dropdown-menu" id="userDropdown">
                     <div class="dropdown-header" id="usernameDisplay" style="padding: 10px 15px; font-weight: 600; font-size: 14px; border-bottom: 1px solid var(--border-color); margin-bottom: 5px;">
                         Loading...
+                    </div>
+                    <div class="dropdown-item" id="changeAvatarBtn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                           <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                        <span>修改用户信息</span>
                     </div>
                     <div class="dropdown-item" id="logoutBtn">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -98,6 +105,7 @@
         </div>
     </div>
     <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+    <input type="file" id="avatarInput" accept="image/*" style="display: none;">
     <div class="container">
         <div class="left-sidebar" id="leftSidebar">
             <!-- 工具栏 -->
@@ -706,6 +714,7 @@
         </div>
     </div>
 
+    <script src="/user-editor.js"></script>
     <script>
         // API Bridge for Web compatibility (Migration)
         window.api = {
@@ -801,9 +810,42 @@
                             const user = data.user;
                             const display = document.getElementById('usernameDisplay');
                             if (display) display.textContent = user.username + (user.role === 'admin' ? ' (管理员)' : '');
+                            
+                            // 更新头像
+                            const avatarImg = document.getElementById('topBarAvatar');
+                            const userIcon = document.getElementById('topBarUserIcon');
+                            if (avatarImg && userIcon) {
+                                avatarImg.src = `/api/public/avatar/${user.id}`;
+                                avatarImg.style.display = 'block';
+                                avatarImg.onload = () => {
+                                    avatarImg.style.display = 'block';
+                                    userIcon.style.display = 'none';
+                                };
+                                avatarImg.onerror = () => {
+                                    avatarImg.style.display = 'none';
+                                    userIcon.style.display = 'block';
+                                };
+                            }
                         }
                     } catch (err) { console.error('Failed to fetch user info', err); }
                 })();
+
+                // 用户信息管理逻辑
+                const changeAvatarBtn = document.getElementById('changeAvatarBtn');
+                if (changeAvatarBtn) {
+                    changeAvatarBtn.addEventListener('click', async () => {
+                        const meRes = await fetch('/auth/me');
+                        const meData = await meRes.json();
+                        if (meData.success) {
+                            window.userEditor.open({
+                                userId: meData.user.id,
+                                username: meData.user.username,
+                                isAdminContext: false,
+                                onSuccess: () => location.reload()
+                            });
+                        }
+                    });
+                }
 
                 // 全屏显示功能
                 const __fullScreenBtnEl = document.getElementById('fullScreenBtn');
@@ -4296,29 +4338,14 @@
                     continue;
                 }
 
-                try {
-                    // 获取原始 URL (如果是代理 URL，提取其中的原始 URL)
-                    let targetUrl = originalSrc;
-                    if (originalSrc.includes('/api/proxy-image?url=')) {
-                        try {
-                            const urlObj = new URL(originalSrc, window.location.origin);
-                            targetUrl = urlObj.searchParams.get('url') || originalSrc;
-                        } catch (e) {
-                            // Fallback if URL parsing fails
-                            const match = originalSrc.match(/url=([^&]+)/);
-                            if (match) targetUrl = decodeURIComponent(match[1]);
-                        }
-                    }
-
-                    const base64 = await api.invoke('convert-image-to-base64', targetUrl);
-                    if (base64) {
-                        img.src = base64;
-                        img.setAttribute('data-converted', 'true');
-                        // 移除错误标记（如果之前破碎过）
-                        img.style.opacity = '1';
-                    }
-                } catch (err) {
-                    console.error('Failed to convert image to base64 for display:', err);
+                // 优化：直接使用代理 URL 代替 Base64 转换。
+                // 这样可以利用浏览器和服务器的双方缓存，同时显著提高加载速度。
+                let displaySrc = originalSrc;
+                if (displaySrc && !displaySrc.startsWith('blob:')) {
+                    displaySrc = getProxyUrl(displaySrc);
+                    img.src = displaySrc;
+                    img.setAttribute('data-converted', 'true');
+                    img.style.opacity = '1';
                 }
             }
         }
@@ -5346,12 +5373,16 @@
 
             if (!isUrl && item.images && item.images.length > 0) {
                 // Normalize images to match uploadedImages structure
-                // Skip getProxyUrl for history restoration as per bandwidth optimization request
+                // 优化：恢复历史记录时使用代理 URL 以确保图片能正常加载并利用缓存
                 uploadedImages = item.images.map(img => {
                     let url = (typeof img === 'string') ? img : img.url;
+                    // 如果不是 Base64 或本地地址，则应用代理
+                    if (url && url.startsWith('http') && !url.includes(window.location.origin)) {
+                        url = getProxyUrl(url);
+                    }
                     return {
                         id: (typeof img === 'object' && img.id) ? img.id : (Date.now() + Math.random()),
-                        url: url, // Directly use the URL (could be Base64 or external HTTP link)
+                        url: url,
                         name: (typeof img === 'object' && img.name) ? img.name : 'Restored Image'
                     };
                 });

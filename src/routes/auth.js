@@ -151,7 +151,7 @@ router.post('/register', async (req, res) => {
 
 router.get('/me', authenticate, async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT username, role, last_login_at, last_login_ip FROM users WHERE id = ?', [req.userId]);
+        const [rows] = await pool.query('SELECT id, username, role, last_login_at, last_login_ip FROM users WHERE id = ?', [req.userId]);
         if (rows.length > 0) {
             res.json({ success: true, user: rows[0] });
         } else {

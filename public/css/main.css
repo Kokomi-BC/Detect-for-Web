@@ -168,8 +168,19 @@
             width: 32px;
             height: 28px;
             border-radius: 4px;
+            display: flex; /* Ensure centering works */
+            align-items: center;
             justify-content: center;
             padding-left: 0;
+        }
+
+        #topBarAvatar {
+            border: 1.5px solid var(--border-color);
+            transition: border-color 0.2s;
+        }
+
+        .toolbar-btn:hover #topBarAvatar {
+            border-color: var(--accent-color);
         }
 
         /* 全屏模式样式 */
@@ -2171,17 +2182,23 @@
         .custom-modal.active { display: flex; }
         
         .custom-modal-content {
-            background: var(--bg-glass);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: var(--bg-primary);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border-radius: var(--radius-lg);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
             padding: 32px;
-            min-width: 360px;
+            min-width: 380px;
             max-width: 90vw;
             text-align: center;
             animation: zoomIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
             border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        [data-theme="dark"] .custom-modal-content {
+            background: rgba(30, 41, 59, 0.85);
+            border-color: rgba(255, 255, 255, 0.1);
         }
         
         .custom-modal-title {
@@ -2195,7 +2212,8 @@
             font-size: 16px;
             color: var(--text-secondary);
             margin-bottom: 32px;
-            line-height: 1.5;
+            line-height: 1.6;
+            opacity: 0.9;
         }
         
         .custom-modal-actions {
@@ -2205,18 +2223,22 @@
         }
         
         .custom-modal-btn {
-            padding: 10px 32px;
+            padding: 12px 36px;
             border-radius: var(--radius-md);
-            border: 1px solid rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
+            transition: all 0.2s ease;
             
-            /* Deeper glass effect for unselected */
-            background: rgba(0, 0, 0, 0.08);
+            background: var(--bg-secondary);
             color: var(--text-primary);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+        }
+
+        [data-theme="dark"] .custom-modal-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
             
             transition: var(--transition-fast);
         }
