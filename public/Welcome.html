@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>欢迎页面 - 假新闻检测系统</title>
+    <link rel="icon" href="/ico/Detect.ico">
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/welcome.css">
+    <script src="/theme-loader.js"></script>
+</head>
+<body>
+    <!-- 自定义标题栏 -->
+    <div id="title-bar">
+        <div class="app-icon"></div>
+        <div class="app-title">Fake News Detection</div>
+        <div class="title-bar-actions">
+            <!-- Theme Toggle -->
+            <button class="toolbar-btn" id="theme-toggle" title="切换主题">
+                <!-- SVG will be injected -->
+            </button>
+        </div>
+    </div>
+
+    <div class="welcome-wrapper" id="wrapper">
+        <!-- 欢迎文字 -->
+        <h1 class="welcome-text">欢迎</h1>
+        
+        <!-- 蓝色圆形箭头 -->
+        <div class="arrow-circle" id="enterBtn">
+            <div class="arrow-icon">
+                <!-- 短粗箭头 SVG -->
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 12H19" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 5L19 12L12 19" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const icons = {
+            sun: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`,
+            moon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`
+        };
+
+        function updateThemeIcon() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            themeToggleBtn.innerHTML = isDark ? icons.sun : icons.moon;
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon();
+        });
+
+        // API Bridge for Web compatibility (Migration)
+        window.api = {
+            invoke: async (channel, ...args) => {
+                try {
+                    const response = await fetch('/api/invoke', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ channel, args })
+                    });
+
+                    if (response.status === 401) {
+                        window.location.href = '/Login';
+                        return;
+                    }
+
+                    const result = await response.json();
+                    if (result.success) return result.data;
+                    throw new Error(result.error || 'API call failed');
+                } catch (err) {
+                    console.error('API Invoke Error:', err);
+                    throw err;
+                }
+            }
+        };
+
+        // 主题管理
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const isDark = savedTheme ? (savedTheme === 'dark') : systemDark;
+
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            updateThemeIcon();
+
+            if (window.matchMedia) {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                    if (!localStorage.getItem('theme')) {
+                        document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+                        updateThemeIcon();
+                    }
+                });
+            }
+        }
+
+        // 页面加载时初始化
+        initTheme();
+
+        // 屏蔽右键菜单
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        document.getElementById('enterBtn').addEventListener('click', (e) => {
+            const ripple = document.createElement('div');
+            ripple.classList.add('ripple');
+            
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = rect.left + rect.width / 2;
+            const y = rect.top + rect.height / 2;
+            
+            const size = Math.max(window.innerWidth, window.innerHeight) * 2.5;
+            
+            ripple.style.width = `${size}px`;
+            ripple.style.height = `${size}px`;
+            ripple.style.left = `${x - size/2}px`;
+            ripple.style.top = `${y - size/2}px`;
+            
+            document.body.appendChild(ripple);
+
+            document.getElementById('wrapper').classList.add('fade-out');
+            
+            setTimeout(() => {
+                window.location.href = '/Main';
+            }, 600);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+:root {
+    /* Core Branding Colors */
+    --primary-color: #4361ee;
+    --primary-hover: #3a56d4;
+    --accent-color: var(--primary-color);
+    --accent-hover: var(--primary-hover);
+    --accent-light: var(--accent-light);
+    
+    --success-color: #2ec4b6;
+    --warning-color: #ff9f1c;
+    --danger-color: #e71d36;
+    --error-color: #ef476f;
+
+    /* Global Transitions & Radius */
+    --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+
+    /* Light Theme (Default) */
+    --bg-main: #f3f4f6;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --bg-tertiary: #f1f3f5;
+    --bg-card: rgba(255, 255, 255, 0.7);
+    --bg-glass: rgba(255, 255, 255, 0.45);
+    --bg-menu: rgba(255, 255, 255, 0.95);
+    
+    --text-main: #111827;
+    --text-primary: #1a1d20;
+    --text-secondary: #6c757d;
+    --text-muted: #6b7280;
+    --text-sub: #374151;
+    
+    --border-color: #e9ecef;
+    --glass-border: rgba(255, 255, 255, 0.8);
+    --input-bg: rgba(255, 255, 255, 0.5);
+    --input-border: #9ca3af;
+    
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+    --shadow-md: 0 8px 24px rgba(0,0,0,0.08);
+    --shadow-lg: 0 16px 48px rgba(0,0,0,0.12);
+    --shadow-accent: 0 4px 12px var(--accent-hover);
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    
+    /* Functional Aliases */
+    --bg-color: var(--bg-main);
+    --card-bg: var(--bg-card);
+    --shadow: var(--shadow-md);
+    --bg-overlay: linear-gradient(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.05));
+
+    /* Misc */
+    --font-scale: 1.0;
+}
+
+[data-theme="dark"] {
+    /* Dark Theme branding overrides */
+    --primary-color: #4cc9f0;
+    --primary-hover: #48bfe3;
+    --accent-color: var(--primary-color);
+    --accent-hover: var(--primary-hover);
+    --accent-light: rgba(76, 201, 240, 0.15);
+
+    /* Dark Theme Surface Colors */
+    --bg-main: #0f172a;
+    --bg-primary: #111315;
+    --bg-secondary: #1a1d20;
+    --bg-tertiary: #212529;
+    --bg-card: rgba(30, 41, 59, 0.7); /* Slightly more opaque for glass stability */
+    --bg-glass: rgba(15, 23, 42, 0.55);
+    --bg-menu: rgba(25, 28, 32, 0.95);
+    
+    --text-main: #f8fafc;
+    --text-primary: #e9ecef;
+    --text-secondary: #adb5bd;
+    --text-muted: #94a3b8;
+    --text-sub: #e5e7eb;
+    
+    --border-color: #2d3238;
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --input-bg: rgba(15, 23, 42, 0.4);
+    --input-border: rgba(255, 255, 255, 0.2);
+    
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
+    --shadow-md: 0 8px 24px rgba(0,0,0,0.3);
+    --shadow-lg: 0 16px 48px rgba(0,0,0,0.4);
+    --shadow-accent: 0 4px 12px rgba(76, 201, 240, 0.25);
+    --shadow-color: rgba(0, 0, 0, 0.5);
+
+    /* Dark mode specific overlay */
+    --bg-overlay: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6));
+}

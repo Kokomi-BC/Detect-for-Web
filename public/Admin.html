@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>后台管理 - 假新闻检测系统</title>
+    <link rel="icon" href="/ico/Detect.ico">
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <script src="/theme-loader.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="top-bar">
+            <!-- SVG Title -->
+            <div style="display:flex; align-items:center; gap: 12px;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <path d="M12 8v4"></path>
+                    <path d="M12 16h.01"></path>
+                </svg>
+                <h1 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-main)">后台管理</h1>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" onclick="toggleTheme()" title="切换深色模式" id="theme-toggle">
+                    <svg id="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                    <svg id="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </button>
+                <div style="width: 1px; height: 24px; background: var(--border-color); margin: 0 4px;"></div>
+                <button class="filled-btn" onclick="goToWelcome()" style="background: var(--primary-color)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    进入系统
+                </button>
+                <button class="icon-btn danger" onclick="logout()" title="退出登录">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="header-info" id="admin-info">
+            正在加载管理员信息...
+        </div>
+
+        <!-- 标签页切换 -->
+        <div class="tabs">
+            <div id="tab-users" class="tab active" onclick="switchTab('users')">用户管理</div>
+            <div id="tab-history" class="tab" onclick="switchTab('history')">历史记录</div>
+            <div id="tab-anomalies" class="tab" onclick="switchTab('anomalies')">挂马拦截日志</div>
+            <div id="tab-ip-logs" class="tab" onclick="switchTab('ip-logs')">IP 访问日志</div>
+            <div id="tab-blacklist" class="tab" onclick="switchTab('blacklist')">IP 黑名单</div>
+            <div id="tab-system" class="tab" onclick="switchTab('system')">资源管理</div>
+            <div id="tab-config" class="tab" onclick="switchTab('config')">API 配置</div>
+            <div id="tab-appearance" class="tab" onclick="switchTab('appearance')">外观设置</div>
+        </div>
+
+        <div id="users-section">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2>用户列表</h2>
+                <button class="filled-btn" onclick="openAddModal()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    新增用户
+                </button>
+            </div>
+            <div class="table-container">
+                <table id="users-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>用户名</th>
+                            <th>角色</th>
+                            <th>状态</th>
+                            <th>上次登录IP</th>
+                            <th>上次登录时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 历史记录区块 -->
+        <div id="history-section" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2>所有用户历史记录</h2>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <div style="position:relative;">
+                        <input type="text" id="history-search" placeholder="搜索标题或内容..." style="padding:10px 12px 10px 35px; border:1px solid var(--input-border); border-radius:8px; width:250px; background:var(--card-bg); color:var(--text-main); font-size:14px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="position:absolute; left:12px; top:50%; transform:translateY(-50%);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </div>
+                    <button class="filled-btn" onclick="fetchHistory()">
+                        搜索
+                    </button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="history-table">
+                    <thead>
+                        <tr>
+                            <th>用户</th>
+                            <th>标题 </th>
+                            <th>链接 / 原始输入</th>
+                            <th>评分 (AI)</th>
+                            <th>时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 资源管理区块 -->
+        <div id="system-section" style="display:none;">
+            <h2>资源管理</h2>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px; margin-top:20px;">
+                <!-- 图片缓存 -->
+                <div style="background:var(--bg-color); padding:25px; border-radius:12px; border:1px solid var(--border-color);">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        <h3 style="margin:0;">图片缓存</h3>
+                    </div>
+                    <p style="color:var(--text-muted); font-size:14px; margin-bottom:20px;">系统代理的图片文件缓存，用于加速历史记录查看和绕过反爬限制。</p>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                        <div>
+                            <div style="font-size:24px; font-weight:bold; color:var(--text-main);" id="cache-size">Loading...</div>
+                            <div style="font-size:14px; color:var(--text-muted);" id="cache-count">Loading...</div>
+                        </div>
+                        <button class="filled-btn" style="background:var(--danger-color)" onclick="clearCache()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            清除缓存
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 系统空间 -->
+                <div style="background:var(--bg-color); padding:25px; border-radius:12px; border:1px solid var(--border-color);">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--success-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        <h3 style="margin:0;">系统存储空间</h3>
+                    </div>
+                    <p style="color:var(--text-muted); font-size:14px; margin-bottom:20px;">服务器磁盘根目录的可用空间概况。</p>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                        <div>
+                            <div style="font-size:14px; color:var(--text-muted); margin-bottom:4px;">
+                                可用空间：<strong id="disk-free" style="color:var(--text-main); font-size:20px;">Loading...</strong>
+                            </div>
+                            <div style="font-size:13px; color:var(--text-muted);" id="disk-total">Loading...</div>
+                        </div>
+                        <div id="disk-percent" style="font-size: 11px; color: var(--success-color); font-weight: bold; background: rgba(16, 185, 129, 0.1); padding: 4px 10px; border-radius: 99px; border: 1px solid rgba(16, 185, 129, 0.2);"> - % 已用 </div>
+                    </div>
+                    <!-- 简单的进度条 -->
+                    <div style="width:100%; height:8px; background:rgba(0,0,0,0.1); border-radius:4px; margin-top:15px; overflow:hidden;">
+                        <div id="disk-bar" style="width:0%; height:100%; background:var(--primary-color); transition: width 0.5s;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- IP 访问日志区块 -->
+        <div id="ip-logs-section" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2>IP 访问日志</h2>
+                <button class="filled-btn secondary" onclick="clearIPLogs()">清空记录</button>
+            </div>
+            
+            <div style="margin-top:20px;">
+                <h3>今日访客排行 (Top IP)</h3>
+                <div class="table-container">
+                    <table id="ip-today-table">
+                        <thead>
+                            <tr>
+                                <th>IP 地址</th>
+                                <th>今日访问次数</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="margin-top:30px;">
+                <h3>历史访问记录 (去重 IP+UA)</h3>
+                <div class="table-container">
+                    <table id="ip-history-table">
+                        <thead>
+                            <tr>
+                                <th>IP 地址</th>
+                                <th>浏览器标识 (User-Agent)</th>
+                                <th>最后访问时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- IP 黑名单区块 -->
+        <div id="blacklist-section" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2>IP 黑名单管理</h2>
+                <button class="filled-btn" onclick="openAddBlacklistModal()">+ 新增封禁 IP</button>
+            </div>
+            <div class="table-container">
+                <table id="blacklist-table">
+                    <thead>
+                        <tr>
+                            <th>IP 地址</th>
+                            <th>封禁原因</th>
+                            <th>封禁时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 异常日志区块 -->
+        <div id="anomalies-section" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2>抓取异常记录 (可能已被拦截)</h2>
+                <button class="filled-btn secondary" onclick="clearAnomalies()">清空记录</button>
+            </div>
+            <div class="table-container">
+                <table id="anomalies-table">
+                    <thead>
+                        <tr>
+                            <th>检测时间</th>
+                            <th>触发关键词</th>
+                            <th>页面标题</th>
+                            <th>原始链接</th>
+                            <th>管理操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- API 配置区块 -->
+        <div id="config-section" style="display:none;">
+            <h2>API 接口配置</h2>
+            <div style="background:var(--bg-card); padding:25px; border-radius:12px; border:1px solid var(--border-color); margin-top:20px;">
+                <h3 style="margin-top:0; border-left: 4px solid var(--primary-color); padding-left: 10px;">模型 API (Doubao/OpenAI 兼容)</h3>
+                <div style="display:grid; grid-template-columns: 1fr; gap:20px; margin-top:20px;">
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="password" id="config-llm-key" placeholder="输入 API Key" style="width:100%;">
+                    </div>
+                    <div class="form-group">
+                        <label>Base URL</label>
+                        <input type="text" id="config-llm-url" placeholder="https://ark.cn-beijing.volces.com/api/v3" style="width:100%;">
+                    </div>
+                    <div class="form-group">
+                        <label>模型名称 (Model Endpoint)</label>
+                        <input type="text" id="config-llm-model" placeholder="ep-xxxxxxxxxxxx" style="width:100%;">
+                    </div>
+                </div>
+
+                <h3 style="margin-top:35px; border-left: 4px solid var(--success-color); padding-left: 10px;">联网搜索 API (Bocha AI)</h3>
+                <div style="display:grid; grid-template-columns: 1fr; gap:20px; margin-top:20px;">
+                    <div class="form-group">
+                        <label>Bocha API Key</label>
+                        <input type="password" id="config-search-key" placeholder="输入 Bocha API Key" style="width:100%;">
+                    </div>
+                    <div class="form-group">
+                        <label>搜索 API Base URL</label>
+                        <input type="text" id="config-search-url" placeholder="https://api.bochaai.com/v1/web-search" style="width:100%;">
+                    </div>
+                </div>
+
+                <div style="margin-top:40px; display:flex; gap:15px; justify-content: flex-end;">
+                    <span id="save-status" style="display:none; color:var(--success-color); align-self: center; font-size: 14px; font-weight: bold;">已保存生效 ✓</span>
+                    <button class="filled-btn" onclick="saveConfig()" id="save-config-btn">保存配置</button>
+                </div>
+            </div>
+            
+            <p style="margin-top:20px; font-size:12px; color:var(--text-muted); line-height: 1.6;">
+                提示: API 配置保存在服务器 <code>data/config.json</code> 中。保存后将立即应用于新发起的检测任务。
+                <br>注意: 联网搜索目前仅支持 Bocha AI 接口。
+            </p>
+        </div>
+        <!-- 外观设置区块 -->
+        <div id="appearance-section" style="display:none;">
+            <h2>外观设置</h2>
+            <div style="background:var(--bg-card); padding:30px; border-radius:12px; border:1px solid var(--border-color); margin-top:20px;">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:30px;">
+                    <!-- 浅色模式设置 -->
+                    <div style="background: rgba(0,0,0,0.02); padding: 20px; border-radius: 12px; border: 1px dashed var(--border-color);">
+                        <h3 style="margin-top:0; border-left: 4px solid #4361ee; padding-left: 10px; margin-bottom: 20px;">浅色模式 (Light Mode)</h3>
+                        <div class="form-group">
+                            <label>主题主色 (Primary)</label>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <input type="color" id="light-primary" style="width:50px; height:40px; padding:2px; border:none; cursor:pointer; background:none;">
+                                <input type="text" id="light-primary-text" placeholder="#4361ee" style="flex:1;">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>页面背景 (Background)</label>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <input type="color" id="light-bg" style="width:50px; height:40px; padding:2px; border:none; cursor:pointer; background:none;">
+                                <input type="text" id="light-bg-text" placeholder="#f3f4f6" style="flex:1;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 深色模式设置 -->
+                    <div style="background: rgba(0,0,0,0.05); padding: 20px; border-radius: 12px; border: 1px dashed var(--border-color);">
+                        <h3 style="margin-top:0; border-left: 4px solid #4cc9f0; padding-left: 10px; margin-bottom: 20px;">深色模式 (Dark Mode)</h3>
+                        <div class="form-group">
+                            <label>主题主色 (Primary)</label>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <input type="color" id="dark-primary" style="width:50px; height:40px; padding:2px; border:none; cursor:pointer; background:none;">
+                                <input type="text" id="dark-primary-text" placeholder="#4cc9f0" style="flex:1;">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>页面背景 (Background)</label>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <input type="color" id="dark-bg" style="width:50px; height:40px; padding:2px; border:none; cursor:pointer; background:none;">
+                                <input type="text" id="dark-bg-text" placeholder="#0f172a" style="flex:1;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:30px;">
+                    <h3 style="margin-top:0; border-left: 4px solid var(--success-color); padding-left: 10px; margin-bottom: 20px;">快速预设 (Presets)</h3>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap:12px;" id="theme-presets">
+                        <div onclick="applyFullPreset('#4361ee', '#f3f4f6', '#4cc9f0', '#0f172a')" style="background:linear-gradient(135deg, #4361ee 50%, #0f172a 50%); width:100%; aspect-ratio:1; border-radius:12px; cursor:pointer; border:2px solid var(--border-color);" title="Indigo & Night"></div>
+                        <div onclick="applyFullPreset('#006a6a', '#f0fdfa', '#4db6ac', '#002020')" style="background:linear-gradient(135deg, #006a6a 50%, #002020 50%); width:100%; aspect-ratio:1; border-radius:12px; cursor:pointer; border:2px solid var(--border-color);" title="Teal & Ocean"></div>
+                        <div onclick="applyFullPreset('#9c425b', '#fff1f2', '#f06292', '#2a0a11')" style="background:linear-gradient(135deg, #9c425b 50%, #2a0a11 50%); width:100%; aspect-ratio:1; border-radius:12px; cursor:pointer; border:2px solid var(--border-color);" title="Rose & Wine"></div>
+                        <div onclick="applyFullPreset('#6750a4', '#f5f3ff', '#b39ddb', '#1c1b1f')" style="background:linear-gradient(135deg, #6750a4 50%, #1c1b1f 50%); width:100%; aspect-ratio:1; border-radius:12px; cursor:pointer; border:2px solid var(--border-color);" title="Violet & Abyss"></div>
+                        <div onclick="applyFullPreset('#386a20', '#f7fee7', '#8bc34a', '#0a1a05')" style="background:linear-gradient(135deg, #386a20 50%, #0a1a05 50%); width:100%; aspect-ratio:1; border-radius:12px; cursor:pointer; border:2px solid var(--border-color);" title="Green & Forest"></div>
+                    </div>
+                </div>
+
+                <div style="margin-top:40px; display:flex; gap:15px; justify-content: flex-end;">
+                    <button class="filled-btn secondary" onclick="resetTheme()">恢复默认</button>
+                    <button class="filled-btn" onclick="saveTheme()">应用并保存</button>
+                </div>
+            </div>
+            <p style="margin-top:20px; font-size:12px; color:var(--text-muted); line-height: 1.6;">
+                提示: 外观配色将保存在 <code>data/config.json</code> 中。应用后会立即同步至全站。
+            </p>
+        </div>    </div>
+
+    <!-- Blacklist Add Modal -->
+    <div id="blacklist-modal" class="modal">
+        <div class="modal-content">
+            <h3>手动封禁 IP</h3>
+            <div class="form-group">
+                <label>IP 地址</label>
+                <input type="text" id="blacklist-ip" placeholder="e.g. 192.168.1.1">
+            </div>
+            <div class="form-group">
+                <label>封禁原因 (可选)</label>
+                <input type="text" id="blacklist-reason" placeholder="e.g. 恶意扫描">
+            </div>
+            <div class="modal-actions">
+                <button class="filled-btn secondary" onclick="closeModal()">取消</button>
+                <button class="filled-btn danger" onclick="addBlacklist()">确认封禁</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <h3>修改用户</h3>
+            <input type="hidden" id="edit-id">
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" id="edit-username" minlength="3" maxlength="20">
+            </div>
+            <div class="form-group">
+                <label>角色</label>
+                <select id="edit-role">
+                    <option value="user">普通用户</option>
+                    <option value="admin">管理员</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>密码 (留空不修改)</label>
+                <input type="password" id="edit-password" placeholder="输入新密码" minlength="6" maxlength="32">
+            </div>
+            <div class="modal-actions">
+                <button class="filled-btn secondary" onclick="closeModal()">取消</button>
+                <button class="filled-btn" onclick="saveUser()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Modal -->
+    <div id="add-modal" class="modal">
+        <div class="modal-content">
+            <h3>新增用户</h3>
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" id="add-username" placeholder="请输入用户名" minlength="3" maxlength="20">
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="add-password" placeholder="请输入密码" minlength="6" maxlength="32">
+            </div>
+            <div class="form-group">
+                <label>角色</label>
+                <select id="add-role">
+                    <option value="user">普通用户</option>
+                    <option value="admin">管理员</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>状态</label>
+                <select id="add-status">
+                    <option value="active">正常</option>
+                    <option value="pending">待审核</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="filled-btn secondary" onclick="closeModal()">取消</button>
+                <button class="filled-btn" onclick="createUser()">创建用户</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Theme Logic ---
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            const sunIcon = document.getElementById('sun-icon');
+            const moonIcon = document.getElementById('moon-icon');
+            if (theme === 'dark') {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            } else {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+            // Re-apply dynamic custom colors for the new mode
+            if (typeof applyDynamicTheme === 'function') {
+                applyDynamicTheme();
+            }
+        }
+
+        function toggleTheme() {
+            const current = localStorage.getItem('theme') || 'light';
+            const next = current === 'light' ? 'dark' : 'light';
+            applyTheme(next);
+        }
+
+        // Init Theme
+        applyTheme(localStorage.getItem('theme') || 'light');
+
+        // Centralized fetch with 401 handling
+        async function safeFetch(url, options = {}) {
+            try {
+                const res = await fetch(url, options);
+                if (res.status === 401) {
+                    window.location.href = '/Login';
+                    return null;
+                }
+                return await res.json();
+            } catch (e) {
+                console.error(`Fetch error (${url}):`, e);
+                return { success: false, error: e.message };
+            }
+        }
+
+        async function fetchAdminInfo() {
+            const data = await safeFetch('/auth/me');
+            if (data && data.success) {
+                const u = data.user;
+                document.getElementById('admin-info').innerHTML = `
+                    <div class="user-stats">
+                        <span>管理员: <strong>${u.username}</strong></span>
+                        <span>角色: <strong>${u.role}</strong></span>
+                        <span>登录IP: <strong>${u.last_login_ip || 'N/A'}</strong></span>
+                        <span>记录时间: <strong>${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'N/A'}</strong></span>
+                    </div>
+                `;
+            }
+        }
+
+        async function fetchUsers() {
+            const json = await safeFetch('/api/admin/users');
+            if (json && json.success) {
+                renderTable(json.data);
+            }
+        }
+
+        function renderTable(users) {
+            const tbody = document.querySelector('#users-table tbody');
+            tbody.innerHTML = '';
+            users.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${u.id}</td>
+                    <td style="font-weight:600; color:var(--text-main)">${u.username}</td>
+                    <td><code style="background:var(--bg-color); padding:2px 6px; border-radius:4px;">${u.role}</code></td>
+                    <td><span class="status-${u.status}">${u.status === 'active' ? '正常' : '待审核'}</span></td>
+                    <td style="font-size:12px; font-family:monospace;">${u.last_login_ip || '-'}</td>
+                    <td style="font-size:11px; color:var(--text-muted)">${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '-'}</td>
+                    <td>
+                        <div style="display:flex; gap:6px;">
+                            ${u.status === 'pending' ? `<button class="icon-btn primary" onclick="approveUser(${u.id})" title="批准用户"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></button>` : ''}
+                            <button class="icon-btn" onclick="openEdit(${u.id}, '${u.username}', '${u.role}')" title="编辑"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                            <button class="icon-btn danger" onclick="deleteUser(${u.id})" title="删除"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function approveUser(id) {
+            if (!confirm('确认批准该用户?')) return;
+            await post('/api/admin/user/approve', { userId: id });
+            fetchUsers();
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('确认删除该用户? 这是一个不可逆操作。')) return;
+            await post('/api/admin/user/delete', { userId: id });
+            fetchUsers();
+        }
+
+        function openEdit(id, username, role) {
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-username').value = username;
+            document.getElementById('edit-role').value = role || 'user';
+            document.getElementById('edit-password').value = '';
+            document.getElementById('edit-modal').style.display = 'flex';
+        }
+
+        function openAddModal() {
+            document.getElementById('add-username').value = '';
+            document.getElementById('add-password').value = '';
+            document.getElementById('add-role').value = 'user';
+            document.getElementById('add-status').value = 'active';
+            document.getElementById('add-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+            document.getElementById('add-modal').style.display = 'none';
+            document.getElementById('blacklist-modal').style.display = 'none';
+        }
+
+        async function sha256(str) {
+            const msgBuffer = new TextEncoder().encode(str);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function saveUser() {
+            const id = document.getElementById('edit-id').value;
+            const username = document.getElementById('edit-username').value;
+            const role = document.getElementById('edit-role').value;
+            const password = document.getElementById('edit-password').value;
+
+            if (username.length < 3 || username.length > 20) return alert('用户名长度需在3-20之间');
+            if (password && (password.length < 6 || password.length > 32)) return alert('密码长度需在6-32位之间');
+
+            const payload = { userId: id, username, role };
+            if (password) {
+                payload.password = await sha256(password);
+            }
+
+            const res = await post('/api/admin/user/update', payload);
+            if (res && res.success) {
+                closeModal();
+                fetchUsers();
+            }
+        }
+
+        async function createUser() {
+            const username = document.getElementById('add-username').value;
+            const password = document.getElementById('add-password').value;
+            const role = document.getElementById('add-role').value;
+            const status = document.getElementById('add-status').value;
+
+            if (!username || !password) return alert('请完整填写信息');
+            if (username.length < 3 || username.length > 20) return alert('用户名长度需在3-20位之间');
+            if (password.length < 6 || password.length > 32) return alert('密码长度需在6-32位之间');
+
+            const hashedPassword = await sha256(password);
+            const res = await post('/api/admin/user/add', { 
+                username, 
+                password: hashedPassword, 
+                role, 
+                status 
+            });
+
+            if (res && res.success) {
+                alert('用户创建成功');
+                closeModal();
+                fetchUsers();
+            }
+        }
+
+        async function post(url, data) {
+            const json = await safeFetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (json && !json.success) alert(json.error);
+            return json;
+        }
+
+        function goToWelcome() {
+            window.location.href = '/Welcome';
+        }
+
+        async function logout() {
+            await fetch('/auth/logout', { method: 'POST' });
+            window.location.href = '/Login';
+        }
+
+        // --- 异常处理界面逻辑 ---
+        async function fetchAnomalies() {
+            const json = await safeFetch('/api/admin/anomalies');
+            if (json && json.success) {
+                renderAnomalies(json.data);
+                
+                const tab = document.getElementById('tab-anomalies');
+                if (json.data && json.data.length > 0) {
+                    tab.innerHTML = `抓取异常日志 (${json.data.length})`;
+                } else {
+                    tab.innerHTML = `抓取异常日志`;
+                }
+            }
+        }
+
+        function renderAnomalies(anomalies) {
+            const tbody = document.querySelector('#anomalies-table tbody');
+            tbody.innerHTML = '';
+            [...anomalies].reverse().forEach(a => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-size:11px; color:var(--text-muted)">${a.time}</td>
+                    <td><span style="color:var(--danger-color); font-weight:600; font-size:13px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right:4px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>${a.reason}</span></td>
+                    <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px;" title="${a.title}">${a.title}</td>
+                    <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        <a href="${a.url}" target="_blank" style="color:var(--primary-color); font-size:11px; text-decoration:none;">${a.url}</a>
+                    </td>
+                    <td>
+                        <div style="display:flex; gap:6px;">
+                            <button class="icon-btn" onclick="viewSnapshot('${a.id}')" title="查看快照"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                            <button class="icon-btn" onclick="openProxy('${a.url}')" title="在线代理"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg></button>
+                            <button class="icon-btn danger" onclick="deleteAnomaly('${a.id}')" title="删除"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            if (anomalies.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);">暂无拦截记录</td></tr>';
+            }
+        }
+
+        async function clearAnomalies() {
+            if (!confirm('确定清空所有异常记录及现场快照?')) return;
+            await post('/api/admin/anomalies/clear', {});
+            fetchAnomalies();
+        }
+
+        async function deleteAnomaly(id) {
+            if (!confirm('确定删除该条记录及现场文件?')) return;
+            await post('/api/admin/anomalies/delete', { id });
+            fetchAnomalies();
+        }
+
+        function viewSnapshot(id) {
+            window.open(`/api/admin/anomalies/view?id=${id}`, '_blank');
+        }
+
+        function openProxy(url) {
+            window.open(`/api/admin/proxy?url=${encodeURIComponent(url)}`, '_blank');
+        }
+
+        // --- IP 访问日志逻辑 ---
+        async function fetchIPLogs() {
+            const json = await safeFetch('/api/admin/ip-logs');
+            if (json && json.success) {
+                renderIPLogs(json.history, json.today);
+            }
+        }
+
+        function renderIPLogs(history, today) {
+            // Render Today Stats
+            const todayBody = document.querySelector('#ip-today-table tbody');
+            todayBody.innerHTML = '';
+            today.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-family:monospace; font-weight:600;">${item.ip}</td>
+                    <td><strong style="color:var(--primary-color); font-size:16px;">${item.hit_count}</strong></td>
+                `;
+                todayBody.appendChild(tr);
+            });
+            if (today.length === 0) {
+                todayBody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:20px; color:var(--text-muted);">今日暂无访问</td></tr>';
+            }
+
+            // Render History
+            const historyBody = document.querySelector('#ip-history-table tbody');
+            historyBody.innerHTML = '';
+            history.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-family:monospace; font-weight:600;">${item.ip}</td>
+                    <td style="font-size:11px; color:var(--text-muted); max-width:400px; word-break:break-all; font-family:monospace;">${item.ua}</td>
+                    <td style="font-size:11px; color:var(--text-muted)">${new Date(item.last_access).toLocaleString()}</td>
+                    <td>
+                        <button class="icon-btn danger" onclick="quickBan('${item.ip}')" title="封禁 IP">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                        </button>
+                    </td>
+                `;
+                historyBody.appendChild(tr);
+            });
+            if (history.length === 0) {
+                historyBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">暂无记录</td></tr>';
+            }
+        }
+
+        async function clearIPLogs() {
+            if (!confirm('确定清空所有 IP 访问历史和今日统计记录吗?')) return;
+            await post('/api/admin/ip-logs/clear', {});
+            fetchIPLogs();
+        }
+
+        // --- Blacklist Logic ---
+        async function fetchBlacklist() {
+            const json = await safeFetch('/api/admin/blacklist');
+            if (json && json.success) {
+                renderBlacklist(json.data);
+            }
+        }
+
+        function renderBlacklist(data) {
+            const tbody = document.querySelector('#blacklist-table tbody');
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-family:monospace; font-weight:600;">${item.ip}</td>
+                    <td style="font-size:13px;">${item.reason}</td>
+                    <td style="font-size:11px; color:var(--text-muted)">${new Date(item.created_at).toLocaleString()}</td>
+                    <td>
+                        <button class="icon-btn" onclick="removeBlacklist('${item.id}')" title="解封" style="color:var(--success-color); border-color:rgba(16,185,129,0.2); background:rgba(16,185,129,0.1);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">黑名单为空</td></tr>';
+            }
+        }
+
+        function openAddBlacklistModal() {
+            document.getElementById('blacklist-ip').value = '';
+            document.getElementById('blacklist-reason').value = '';
+            document.getElementById('blacklist-modal').style.display = 'flex';
+        }
+
+        async function addBlacklist() {
+            const ip = document.getElementById('blacklist-ip').value;
+            const reason = document.getElementById('blacklist-reason').value;
+            if (!ip) return alert('请输入 IP');
+            
+            await post('/api/admin/blacklist/add', { ip, reason });
+            closeModal();
+            fetchBlacklist();
+        }
+
+        async function removeBlacklist(id) {
+            if (!confirm('确定移除该 IP 的封禁状态?')) return;
+            await post('/api/admin/blacklist/remove', { id });
+            fetchBlacklist();
+        }
+
+        async function quickBan(ip) {
+            if (!confirm(`确定封禁 IP: ${ip} 吗?`)) return;
+            await post('/api/admin/blacklist/add', { ip, reason: '管理员从日志封禁' });
+            alert('IP 已封禁');
+        }
+
+        // --- History Logic ---
+        async function fetchHistory() {
+            const q = document.getElementById('history-search').value;
+            const url = q ? `/api/admin/histories?q=${encodeURIComponent(q)}` : '/api/admin/histories';
+            const json = await safeFetch(url);
+            if (json && json.success) {
+                renderHistory(json.data);
+            }
+        }
+
+        function renderHistory(data) {
+            const tbody = document.querySelector('#history-table tbody');
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                const link = item.url ? 
+                    `<a href="${item.url}" target="_blank" style="color:var(--primary-color); text-decoration:none; font-size:11px;">${item.url}</a>` : 
+                    `<span style="color:var(--text-muted); font-size:12px;">${item.originalInput || '-'}</span>`;
+                tr.innerHTML = `
+                    <td>
+                        <div style="display:flex; flex-direction:column;">
+                            <span style="font-weight:600; font-size:13px; color:var(--text-main)">${item.username}</span>
+                            <span style="font-size:11px; color:var(--text-muted)">ID: ${item.userId}</span>
+                        </div>
+                    </td>
+                    <td style="max-width:250px; overflow:hidden; text-overflow:ellipsis; font-size:13px; font-weight:500;">${item.title}</td>
+                    <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${link}</td>
+                    <td><div style="font-weight:700; color:var(--primary-color)">${item.score}</div></td>
+                    <td style="font-size:11px; color:var(--text-muted)">${new Date(item.timestamp).toLocaleString()}</td>
+                    <td>
+                        <button class="icon-btn danger" onclick="deleteHistoryItem(${item.userId}, ${item.timestamp})" title="删除">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">无相关历史记录</td></tr>';
+            }
+        }
+
+        async function deleteHistoryItem(userId, timestamp) {
+            if (!confirm('确定删除该条历史记录 (及其图片缓存)?')) return;
+            await post('/api/admin/history/delete', { userId, timestamp });
+            fetchHistory();
+            if (document.getElementById('system-section').style.display !== 'none') fetchCacheStats();
+        }
+
+        // --- System/Cache Logic ---
+        async function fetchCacheStats() {
+            const json = await safeFetch('/api/admin/cache/stats');
+            if (json && json.success) {
+                document.getElementById('cache-size').innerText = formatBytes(json.size);
+                document.getElementById('cache-count').innerText = `${json.count} 个文件`;
+
+                if (json.disk) {
+                    const free = json.disk.free;
+                    const total = json.disk.total;
+                    const used = total - free;
+                    const usedPercent = ((used / total) * 100).toFixed(1);
+                    
+                    document.getElementById('disk-free').innerText = formatBytes(free);
+                    document.getElementById('disk-total').innerText = `总容量: ${formatBytes(total)}`;
+                    document.getElementById('disk-percent').innerText = `${usedPercent}% 已用`;
+                    document.getElementById('disk-bar').style.width = `${usedPercent}%`;
+                    
+                    // 颜色预警
+                    const bar = document.getElementById('disk-bar');
+                    if (usedPercent > 90) bar.style.background = 'var(--danger-color)';
+                    else if (usedPercent > 70) bar.style.background = 'var(--warning-color)';
+                    else bar.style.background = 'var(--primary-color)';
+                }
+            }
+        }
+
+        async function clearCache() {
+            if (!confirm('确定清空所有图片缓存? 这将导致历史记录中的图片需要重新代理加载。')) return;
+            await post('/api/admin/cache/clear', {});
+            fetchCacheStats();
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (!+bytes) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        }
+
+        function switchTab(tab) {
+            const tabs = ['users', 'anomalies', 'ip-logs', 'blacklist', 'history', 'system', 'config', 'appearance'];
+            tabs.forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                const sec = document.getElementById(`${t}-section`);
+                if (t === tab) {
+                    el.classList.add('active');
+                    sec.style.display = 'block';
+                } else {
+                    el.classList.remove('active');
+                    sec.style.display = 'none';
+                }
+            });
+
+            if (tab === 'users') fetchUsers();
+            if (tab === 'anomalies') fetchAnomalies();
+            if (tab === 'ip-logs') fetchIPLogs();
+            if (tab === 'blacklist') fetchBlacklist();
+            if (tab === 'history') fetchHistory();
+            if (tab === 'system') fetchCacheStats();
+            if (tab === 'config') fetchConfig();
+            if (tab === 'appearance') fetchAppearanceSettings();
+        }
+
+        async function fetchAppearanceSettings() {
+            const data = await safeFetch('/api/admin/config');
+            if (data && data.success) {
+                const theme = data.data.theme || {};
+                
+                // Light mode
+                const lp = theme.lightPrimary || theme.primary || '#4361ee';
+                const lb = theme.lightBackground || theme.background || '#f3f4f6';
+                document.getElementById('light-primary').value = lp;
+                document.getElementById('light-primary-text').value = lp;
+                document.getElementById('light-bg').value = lb;
+                document.getElementById('light-bg-text').value = lb;
+
+                // Dark mode
+                const dp = theme.darkPrimary || '#4cc9f0';
+                const db = theme.darkBackground || '#0f172a';
+                document.getElementById('dark-primary').value = dp;
+                document.getElementById('dark-primary-text').value = dp;
+                document.getElementById('dark-bg').value = db;
+                document.getElementById('dark-bg-text').value = db;
+            }
+        }
+
+        function applyFullPreset(lp, lb, dp, db) {
+            document.getElementById('light-primary').value = lp;
+            document.getElementById('light-primary-text').value = lp;
+            document.getElementById('light-bg').value = lb;
+            document.getElementById('light-bg-text').value = lb;
+            document.getElementById('dark-primary').value = dp;
+            document.getElementById('dark-primary-text').value = dp;
+            document.getElementById('dark-bg').value = db;
+            document.getElementById('dark-bg-text').value = db;
+        }
+
+        async function saveTheme() {
+            const lp = document.getElementById('light-primary-text').value;
+            const lb = document.getElementById('light-bg-text').value;
+            const dp = document.getElementById('dark-primary-text').value;
+            const db = document.getElementById('dark-bg-text').value;
+
+            const configData = await safeFetch('/api/admin/config');
+            if (configData && configData.success) {
+                const config = configData.data;
+                config.theme = { 
+                    lightPrimary: lp, 
+                    lightBackground: lb,
+                    darkPrimary: dp,
+                    darkBackground: db,
+                    primary: lp,
+                    background: lb
+                };
+                
+                const res = await post('/api/admin/config', config);
+                if (res && res.success) {
+                    alert('全站主题配置已保存，正在应用...');
+                    location.reload();
+                }
+            }
+        }
+
+        async function resetTheme() {
+            if (!confirm('确定恢复默认配色吗？')) return;
+            applyFullPreset('#4361ee', '#f3f4f6', '#4cc9f0', '#0f172a');
+            await saveTheme();
+        }
+
+        // --- 同步颜色选择器和文本框 ---
+        const syncColor = (colorId, textId) => {
+            const colorEl = document.getElementById(colorId);
+            const textEl = document.getElementById(textId);
+            colorEl.addEventListener('input', (e) => { textEl.value = e.target.value; });
+            textEl.addEventListener('input', (e) => {
+                if (/^#[0-9A-F]{6}$/i.test(e.target.value)) colorEl.value = e.target.value;
+            });
+        };
+        syncColor('light-primary', 'light-primary-text');
+        syncColor('light-bg', 'light-bg-text');
+        syncColor('dark-primary', 'dark-primary-text');
+        syncColor('dark-bg', 'dark-bg-text');
+
+        async function fetchConfig() {
+            const data = await safeFetch('/api/admin/config');
+            if (data && data.success) {
+                const c = data.data;
+                document.getElementById('config-llm-key').value = c.llm?.apiKey || '';
+                document.getElementById('config-llm-url').value = c.llm?.baseURL || '';
+                document.getElementById('config-llm-model').value = c.llm?.model || '';
+                document.getElementById('config-search-key').value = c.search?.apiKey || '';
+                document.getElementById('config-search-url').value = c.search?.baseURL || '';
+            }
+        }
+
+        async function saveConfig() {
+            const btn = document.getElementById('save-config-btn');
+            const status = document.getElementById('save-status');
+            
+            btn.disabled = true;
+            btn.innerText = '正在保存...';
+            
+            const config = {
+                llm: {
+                    apiKey: document.getElementById('config-llm-key').value.trim(),
+                    baseURL: document.getElementById('config-llm-url').value.trim(),
+                    model: document.getElementById('config-llm-model').value.trim()
+                },
+                search: {
+                    apiKey: document.getElementById('config-search-key').value.trim(),
+                    baseURL: document.getElementById('config-search-url').value.trim()
+                }
+            };
+
+            const data = await post('/api/admin/config', config);
+            btn.disabled = false;
+            btn.innerText = '保存配置';
+
+            if (data && data.success) {
+                status.style.display = 'inline';
+                setTimeout(() => { status.style.display = 'none'; }, 3000);
+            } else {
+                alert('保存失败: ' + (data.error || '未知错误'));
+            }
+        }
+
+        // Init
+        fetchAdminInfo();
+        fetchUsers();
+        fetchAnomalies();
+    </script>
+</body>
+</html>

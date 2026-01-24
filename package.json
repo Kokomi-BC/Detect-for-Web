@@ -1,0 +1,56 @@
+{
+  "name": "fake-news-detector",
+  "version": "2.5.0",
+  "description": "假新闻检测系统",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "build:renderer": "webpack --mode production",
+    "build:dev": "webpack --mode development",
+    "dev": "node src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "fake-news",
+    "Detector"
+  ],
+  "author": "Kokomi-BC",
+  "license": "ISC",
+  "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kokomi-BC/Detect.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Kokomi-BC/Detect/issues"
+  },
+  "homepage": "https://github.com/Kokomi-BC/Detect#readme",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "devDependencies": {
+    "html-webpack-plugin": "^5.6.5",
+    "webpack": "^5.104.1",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "cheerio": "^1.1.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "crawlee": "^3.15.3",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.2.1",
+    "image-size": "^2.0.2",
+    "jsdom": "^27.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mammoth": "^1.11.0",
+    "mysql2": "^3.6.1",
+    "openai": "^6.15.0",
+    "pdf-parse": "^1.1.1",
+    "playwright": "^1.57.0",
+    "word-extractor": "^1.0.4",
+    "xlsx": "^0.18.5"
+  }
+}
