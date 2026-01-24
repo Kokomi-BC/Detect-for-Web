@@ -350,8 +350,17 @@ module.exports = function(services, state) {
     // Admin Logs and Blacklist
     router.get('/admin/ip-logs', authenticate, authenticateAdmin, async (req, res) => {
         try {
-            const [history] = await pool.query('SELECT * FROM access_history ORDER BY last_access DESC LIMIT 1000');
-            const [today] = await pool.query('SELECT ip, hit_count FROM access_today WHERE access_date = CURDATE() ORDER BY hit_count DESC');
+            const [history] = await pool.query(`
+                SELECT h.*, (SELECT 1 FROM ip_blacklist b WHERE b.ip = h.ip LIMIT 1) as is_banned 
+                FROM access_history h 
+                ORDER BY last_access DESC LIMIT 1000
+            `);
+            const [today] = await pool.query(`
+                SELECT t.ip, t.hit_count, (SELECT 1 FROM ip_blacklist b WHERE b.ip = t.ip LIMIT 1) as is_banned
+                FROM access_today t 
+                WHERE t.access_date = CURDATE() 
+                ORDER BY hit_count DESC
+            `);
             res.json({ success: true, history, today });
         } catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });
