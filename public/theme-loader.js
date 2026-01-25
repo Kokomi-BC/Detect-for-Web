@@ -10,13 +10,19 @@
                 const isDark = mode === 'dark';
                 
                 // Pick values based on current mode, fallback to legacy fields or defaults
-                let primary, background;
+                let primary, secondary, background, card, bgSec;
                 if (isDark) {
                     primary = theme.darkPrimary || theme.primary || '#4cc9f0';
+                    secondary = theme.darkSecondary || '#4895ef';
                     background = theme.darkBackground || '#0f172a';
+                    card = theme.darkCard || '#1e293b';
+                    bgSec = theme.darkBgSec || '#1a1d20';
                 } else {
                     primary = theme.lightPrimary || theme.primary || '#4361ee';
+                    secondary = theme.lightSecondary || '#3f37c9';
                     background = theme.lightBackground || theme.background || '#f3f4f6';
+                    card = theme.lightCard || '#ffffff';
+                    bgSec = theme.lightBgSec || '#f8f9fa';
                 }
 
                 if (primary) {
@@ -34,10 +40,46 @@
                         document.documentElement.style.setProperty('--divider-color', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${isDark ? 0.2 : 0.15})`);
                     }
                 }
+
+                if (secondary) {
+                    document.documentElement.style.setProperty('--secondary-color', secondary);
+                    
+                    const rgb = hexToRgb(secondary);
+                    if (rgb) {
+                        document.documentElement.style.setProperty('--secondary-light', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`);
+                        document.documentElement.style.setProperty('--secondary-hover', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.25)`);
+                    }
+                }
                 
                 if (background) {
                     document.documentElement.style.setProperty('--bg-main', background);
                     document.documentElement.style.setProperty('--bg-color', background);
+                    
+                    const rgb = hexToRgb(background);
+                    if (rgb) {
+                        document.documentElement.style.setProperty('--bg-glass', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${isDark ? 0.6 : 0.45})`);
+                        document.documentElement.style.setProperty('--bg-overlay', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${isDark ? 0.85 : 0.75})`);
+                    }
+                }
+
+                if (bgSec) {
+                    document.documentElement.style.setProperty('--bg-secondary', bgSec);
+                }
+
+                if (card) {
+                    // If card color is a simple hex, we might want to apply the glass transparency
+                    // But for Admin dashboard, solid colors often look better for stability.
+                    // We'll calculate a glass version anyway in case it's used.
+                    const rgb = hexToRgb(card);
+                    if (rgb) {
+                        const alpha = isDark ? 0.7 : 0.7; // Standard card alpha
+                        document.documentElement.style.setProperty('--bg-card', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`);
+                        document.documentElement.style.setProperty('--bg-card-solid', card);
+                        document.documentElement.style.setProperty('--bg-primary', card); // Sidebar and main surface
+                    } else {
+                        document.documentElement.style.setProperty('--bg-card', card);
+                        document.documentElement.style.setProperty('--bg-primary', card);
+                    }
                 }
             }
         } catch (e) {

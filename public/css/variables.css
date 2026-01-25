@@ -2,13 +2,19 @@
     /* Core Branding Colors */
     --primary-color: #4361ee;
     --primary-hover: #3a56d4;
+    --secondary-color: #3f37c9;
+    --secondary-hover: rgba(63, 55, 201, 0.25);
+    --secondary-light: rgba(63, 55, 201, 0.15);
     --accent-color: var(--primary-color);
     --accent-hover: rgba(67, 97, 238, 0.25);
     --accent-light: rgba(67, 97, 238, 0.15);
     
     --success-color: #2ec4b6;
+    --success-light: rgba(46, 196, 182, 0.15);
     --warning-color: #ff9f1c;
+    --warning-light: rgba(255, 159, 28, 0.15);
     --danger-color: #e71d36;
+    --danger-light: rgba(231, 29, 54, 0.15);
     --error-color: #ef476f;
 
     /* Global Transitions & Radius */
@@ -62,6 +68,7 @@
     /* Dark Theme branding overrides */
     --primary-color: #4cc9f0;
     --primary-hover: #48bfe3;
+    --secondary-color: #4895ef;
     --accent-color: var(--primary-color);
     --accent-hover: var(--primary-hover);
     --accent-light: rgba(76, 201, 240, 0.15);

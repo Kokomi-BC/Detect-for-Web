@@ -232,7 +232,7 @@ body {
 }
 
 .dropdown-item.danger:hover {
-    background: rgba(239, 68, 68, 0.05);
+    background: var(--danger-light);
 }
 
 .content-wrapper {
@@ -348,9 +348,9 @@ button.icon-btn.secondary:hover {
 }
 
 button.icon-btn.danger {
-    background: rgba(239, 68, 68, 0.1);
+    background: var(--danger-light);
     color: var(--danger-color);
-    border-color: rgba(239, 68, 68, 0.2);
+    border-color: var(--danger-light);
 }
 button.icon-btn.danger:hover { background: var(--danger-color); color: white; }
 

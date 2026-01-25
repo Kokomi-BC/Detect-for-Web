@@ -560,7 +560,7 @@
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            border: 3px solid rgba(111, 130, 255, 0.2);
+            border: 3px solid var(--accent-light);
             border-top-color: var(--accent-color);
             animation: spinner-rotate 0.9s linear infinite;
             box-sizing: border-box;
@@ -825,17 +825,17 @@
         .drag-overlay.active { display: flex; animation: fadeIn 0.2s; }
         .drag-overlay.error {
             border-color: var(--danger-color);
-            background: rgba(231, 29, 54, 0.15);
+            background: var(--danger-light);
             color: var(--danger-color);
         }
         .drag-overlay.success {
             border-color: var(--success-color);
-            background: rgba(46, 196, 182, 0.15);
+            background: var(--success-light);
             color: var(--success-color);
         }
         .drag-overlay.full {
             border-color: var(--warning-color);
-            background: rgba(255, 159, 28, 0.15);
+            background: var(--warning-light);
             color: var(--warning-color);
         }
 
@@ -2069,13 +2069,13 @@
 
         /* Analysis Status Styles */
         .analysis-item.positive { border-left-color: var(--success-color); }
-        .analysis-item.positive .analysis-icon { color: var(--success-color); background: rgba(46, 196, 182, 0.1); }
+        .analysis-item.positive .analysis-icon { color: var(--success-color); background: var(--success-light); }
         
         .analysis-item.negative { border-left-color: var(--danger-color); }
-        .analysis-item.negative .analysis-icon { color: var(--danger-color); background: rgba(231, 29, 54, 0.1); }
+        .analysis-item.negative .analysis-icon { color: var(--danger-color); background: var(--danger-light); }
         
         .analysis-item.warning { border-left-color: var(--warning-color); }
-        .analysis-item.warning .analysis-icon { color: var(--warning-color); background: rgba(255, 159, 28, 0.1); }
+        .analysis-item.warning .analysis-icon { color: var(--warning-color); background: var(--warning-light); }
 
         .analysis-text {
             flex: 1;
@@ -2194,8 +2194,8 @@
         }
 
         [data-theme="dark"] .custom-modal-content {
-            background: rgba(30, 41, 59, 0.85);
-            border-color: rgba(255, 255, 255, 0.1);
+            background: var(--bg-card);
+            border-color: var(--border-color);
         }
         
         .custom-modal-title {
