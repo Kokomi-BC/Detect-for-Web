@@ -299,7 +299,7 @@
                 <div id="users-section">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h2>用户列表</h2>
-                <button class="filled-btn" onclick="openAddModal()">
+                <button class="filled-btn" onclick="openAddModal()" style="height: 40px; display: flex; align-items: center; justify-content: center;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     新增用户
                 </button>
@@ -328,13 +328,13 @@
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h2>所有用户历史记录</h2>
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <div style="position:relative;">
-                        <input type="text" id="history-search" placeholder="搜索标题或内容..." style="width: 250px; padding-left: 40px; height: 38px;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="position:absolute; left:14px; top:50%; transform:translateY(-50%);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <button class="filled-btn" onclick="fetchHistory()" style="height: 40px;">刷新记录</button>
+                    <div class="search-group">
+                        <input type="text" id="history-search" placeholder="搜索标题或内容..." style="width: 250px;">
+                        <button class="search-btn" onclick="fetchHistory()" title="搜索">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </button>
                     </div>
-                    <button class="icon-btn primary" onclick="fetchHistory()" style="width: 38px; height: 38px;" title="搜索">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    </button>
                 </div>
             </div>
             <div class="table-container">
@@ -430,9 +430,9 @@
             <div style="margin-top:30px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h3 style="margin:0;">历史访问记录 (去重 IP+UA)</h3>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <input type="text" id="ip-history-search" placeholder="搜索 IP 或 地理位置..." style="width: 220px; height: 38px;">
-                        <button class="icon-btn primary" onclick="fetchIPLogs(1, null)" style="width: 38px; height: 38px;" title="搜索">
+                    <div class="search-group">
+                        <input type="text" id="ip-history-search" placeholder="搜索 IP 或 地理位置..." style="width: 220px;">
+                        <button class="search-btn" onclick="fetchIPLogs(1, null)" title="搜索">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                         </button>
                     </div>
@@ -513,12 +513,12 @@
                         </div>
                         <div class="form-group">
                             <label>UA 拦截关键词 (英文逗号分隔)</label>
-                            <textarea id="crawler-ua-keywords" style="width:100%; height:80px; font-family:monospace; resize:none;" placeholder="python,scrapy,spider,bot..."></textarea>
+                            <textarea id="crawler-ua-keywords" style="height:100px; font-family:inherit; resize:vertical; padding: 12px;" placeholder="python,scrapy,spider,bot..."></textarea>
                             <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">匹配不区分大小写。当 UA 包含任意关键词时将被拦截。</p>
                         </div>
                     </div>
                     <div style="margin-top: 20px; text-align: right;">
-                        <button class="filled-btn" onclick="saveCrawlerSettings()">保存防御配置</button>
+                        <button class="filled-btn" onclick="saveCrawlerSettings()" style="height: 40px;">保存防御配置</button>
                     </div>
                 </div>
             </div>
@@ -526,11 +526,13 @@
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h2>全局拦截日志 (爬虫/黑名单)</h2>
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <input type="text" id="crawler-log-search" placeholder="搜索 IP/地区/UA..." style="width: 220px; height: 38px;">
-                    <button class="icon-btn primary" onclick="fetchCrawlerLogs(1)" style="width: 38px; height: 38px;" title="搜索">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    </button>
-                    <button class="filled-btn danger" onclick="clearCrawlerLogs()" style="height: 38px;">清空记录</button>
+                    <button class="filled-btn danger" onclick="clearCrawlerLogs()" style="height: 40px;">清空记录</button>
+                    <div class="search-group">
+                        <input type="text" id="crawler-log-search" placeholder="搜索 IP/地区/UA..." style="width: 220px;">
+                        <button class="search-btn" onclick="fetchCrawlerLogs(1)" title="搜索">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
             

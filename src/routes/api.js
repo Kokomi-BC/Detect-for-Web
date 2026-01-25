@@ -257,7 +257,7 @@ module.exports = function(services, state) {
     });
 
     // Image Proxy
-    router.get('/proxy-image', async (req, res) => {
+    router.get('/proxy-image', authenticate, async (req, res) => {
         let imageUrl = req.query.url;
         if (!imageUrl) return res.status(400).send('URL required');
 

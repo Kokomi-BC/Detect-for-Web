@@ -53,14 +53,19 @@ button {
 .modal-content h3 { margin-top: 0; margin-bottom: 20px; }
 .modal .form-group { margin-bottom: 15px; }
 .modal .form-group label, .admin-layout .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; color: var(--text-muted); }
-.modal .form-group input, .modal .form-group select, .admin-layout .form-group input, .admin-layout .form-group select { 
+.modal .form-group input, .modal .form-group select, .modal .form-group textarea,
+.admin-layout .form-group input, .admin-layout .form-group select, .admin-layout .form-group textarea,
+.admin-layout input[type="text"], .admin-layout input[type="password"], .admin-layout input[type="number"] { 
     width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; 
     box-sizing: border-box; font-size: 14px; background: var(--bg-card); color: var(--text-main);
     transition: all 0.2s;
+    font-family: inherit;
 }
 .modal .form-group input:focus, .admin-layout .form-group input:focus, 
-.modal .form-group select:focus, .admin-layout .form-group select:focus { 
-    outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15); 
+.modal .form-group select:focus, .admin-layout .form-group select:focus,
+.modal .form-group textarea:focus, .admin-layout .form-group textarea:focus,
+.admin-layout input:focus { 
+    outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px var(--accent-light); 
 }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
 

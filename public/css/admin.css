@@ -450,6 +450,56 @@ button.filled-btn.danger:hover {
     color: var(--text-muted);
 }
 
+/* --- Search Box Unification --- */
+.search-group {
+    display: flex;
+    align-items: center;
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 2px;
+    transition: var(--transition-fast);
+}
+
+.search-group:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.search-group input {
+    border: none !important;
+    background: transparent !important;
+    height: 34px !important;
+    padding: 0 12px !important;
+    box-shadow: none !important;
+    width: 200px;
+}
+
+.search-group .search-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-color);
+    color: white;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.search-group .search-btn:hover {
+    background: var(--primary-hover);
+}
+
+.search-group .search-icon-left {
+    position: absolute;
+    left: 12px;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
 /* Sections */
 [id$="-section"] {
     background: var(--bg-primary);
