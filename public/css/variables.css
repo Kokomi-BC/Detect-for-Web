@@ -46,6 +46,8 @@
     --shadow-accent: 0 4px 12px var(--accent-hover);
     --shadow-color: rgba(0, 0, 0, 0.1);
     
+    --divider-color: rgba(67, 97, 238, 0.15);
+    
     /* Functional Aliases */
     --bg-color: var(--bg-main);
     --card-bg: var(--bg-card);
@@ -89,6 +91,8 @@
     --shadow-lg: 0 16px 48px rgba(0,0,0,0.4);
     --shadow-accent: 0 4px 12px rgba(76, 201, 240, 0.25);
     --shadow-color: rgba(0, 0, 0, 0.5);
+
+    --divider-color: rgba(76, 201, 240, 0.2);
 
     /* Dark mode specific overlay */
     --bg-overlay: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6));
