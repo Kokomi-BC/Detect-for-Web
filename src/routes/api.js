@@ -4,6 +4,7 @@ const path = require('path');
 const fsPromises = require('fs').promises;
 const fs = require('fs');
 const crypto = require('crypto');
+const os = require('os');
 const multer = require('multer');
 const sharp = require('sharp');
 const { pool } = require('../config/db');
@@ -318,9 +319,13 @@ module.exports = function(services, state) {
 
     // Admin Users
     router.get('/admin/users', authenticate, authenticateAdmin, async (req, res) => {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
         try {
-            const [rows] = await pool.query('SELECT id, username, role, status, last_login_at, last_login_ip FROM users ORDER BY id DESC');
-            res.json({ success: true, data: rows });
+            const [[{total}]] = await pool.query('SELECT COUNT(*) as total FROM users');
+            const [rows] = await pool.query('SELECT id, username, role, status, last_login_at, last_login_ip FROM users ORDER BY id DESC LIMIT ? OFFSET ?', [limit, offset]);
+            res.json({ success: true, data: rows, total, page, limit });
         } catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });
 
@@ -377,19 +382,45 @@ module.exports = function(services, state) {
 
     // Admin Logs and Blacklist
     router.get('/admin/ip-logs', authenticate, authenticateAdmin, async (req, res) => {
+        const page = parseInt(req.query.page) || 1;
+        const tpage = parseInt(req.query.tpage) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const q = req.query.q || '';
+        
         try {
-            const [history] = await pool.query(`
-                SELECT h.*, (SELECT 1 FROM ip_blacklist b WHERE b.ip = h.ip LIMIT 1) as is_banned 
-                FROM access_history h 
-                ORDER BY last_access DESC LIMIT 1000
-            `);
+            let historyQuery = 'SELECT h.*, (SELECT 1 FROM ip_blacklist b WHERE b.ip = h.ip LIMIT 1) as is_banned FROM access_history h';
+            let countQuery = 'SELECT COUNT(*) as total FROM access_history';
+            let params = [];
+
+            if (q) {
+                const search = `%${q}%`;
+                historyQuery += ' WHERE h.ip LIKE ? OR h.region LIKE ?';
+                countQuery = 'SELECT COUNT(*) as total FROM access_history WHERE ip LIKE ? OR region LIKE ?';
+                params = [search, search];
+            }
+
+            historyQuery += ' ORDER BY last_access DESC LIMIT ? OFFSET ?';
+            const [[{total}]] = q ? await pool.query(countQuery, params) : await pool.query(countQuery);
+            const [history] = await pool.query(historyQuery, [...params, limit, (page - 1) * limit]);
+
+            const [[{ttotal}]] = await pool.query('SELECT COUNT(*) as ttotal FROM access_today WHERE access_date = CURDATE()');
             const [today] = await pool.query(`
-                SELECT t.ip, t.hit_count, (SELECT 1 FROM ip_blacklist b WHERE b.ip = t.ip LIMIT 1) as is_banned
+                SELECT t.ip, t.hit_count, t.region, t.last_access, (SELECT 1 FROM ip_blacklist b WHERE b.ip = t.ip LIMIT 1) as is_banned
                 FROM access_today t 
                 WHERE t.access_date = CURDATE() 
-                ORDER BY hit_count DESC
-            `);
-            res.json({ success: true, history, today });
+                ORDER BY hit_count DESC LIMIT ? OFFSET ?
+            `, [limit, (tpage - 1) * limit]);
+
+            res.json({ 
+                success: true, 
+                history, 
+                today, 
+                total, 
+                page, 
+                ttotal,
+                tpage,
+                limit 
+            });
         } catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });
 
@@ -402,9 +433,13 @@ module.exports = function(services, state) {
     });
 
     router.get('/admin/blacklist', authenticate, authenticateAdmin, async (req, res) => {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
         try {
-            const [rows] = await pool.query('SELECT * FROM ip_blacklist ORDER BY created_at DESC');
-            res.json({ success: true, data: rows });
+            const [[{total}]] = await pool.query('SELECT COUNT(*) as total FROM ip_blacklist');
+            const [rows] = await pool.query('SELECT * FROM ip_blacklist ORDER BY created_at DESC LIMIT ? OFFSET ?', [limit, offset]);
+            res.json({ success: true, data: rows, total, page, limit });
         } catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });
 
@@ -427,7 +462,17 @@ module.exports = function(services, state) {
 
     // Admin Anomalies
     router.get('/admin/anomalies', authenticate, authenticateAdmin, (req, res) => {
-        res.json({ success: true, data: extractionManager.getAnomalies() });
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const start = (page - 1) * limit;
+        const allAnomalies = extractionManager.getAnomalies();
+        res.json({ 
+            success: true, 
+            data: allAnomalies.slice(start, start + limit),
+            total: allAnomalies.length,
+            page,
+            limit
+        });
     });
 
     router.post('/admin/anomalies/clear', authenticate, authenticateAdmin, (req, res) => {
@@ -488,7 +533,17 @@ module.exports = function(services, state) {
             }
             // Sort by timestamp desc
             allHistory.sort((a,b) => b.timestamp - a.timestamp); 
-            res.json({ success: true, data: allHistory });
+
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const start = (page - 1) * limit;
+
+            res.json({ 
+                success: true, 
+                data: allHistory.slice(start, start + limit),
+                total: allHistory.length,
+                page, limit
+            });
         } catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });
     
@@ -710,6 +765,96 @@ module.exports = function(services, state) {
             if (avatarPath) await fsPromises.unlink(avatarPath);
             res.json({ success: true });
         } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    });
+    // Crawler Defense APIs
+    router.get('/admin/crawler/settings', authenticate, authenticateAdmin, async (req, res) => {
+        try {
+            const [rows] = await pool.query('SELECT * FROM crawler_settings');
+            const settings = {};
+            rows.forEach(r => settings[r.setting_key] = r.setting_value);
+            res.json({ success: true, data: settings });
+        } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/crawler/settings', authenticate, authenticateAdmin, async (req, res) => {
+        const { ua_min_length, ua_keywords } = req.body;
+        try {
+            await pool.query('REPLACE INTO crawler_settings (setting_key, setting_value) VALUES (?, ?)', ['ua_min_length', ua_min_length.toString()]);
+            await pool.query('REPLACE INTO crawler_settings (setting_key, setting_value) VALUES (?, ?)', ['ua_keywords', ua_keywords || '']);
+            res.json({ success: true });
+        } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.get('/admin/crawler/logs', authenticate, authenticateAdmin, async (req, res) => {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const q = req.query.q || '';
+        
+        try {
+            let sql = 'SELECT * FROM blocked_logs';
+            let countSql = 'SELECT COUNT(*) as total FROM blocked_logs';
+            let params = [];
+
+            if (q) {
+                sql += ' WHERE ip LIKE ? OR region LIKE ? OR ua LIKE ?';
+                countSql += ' WHERE ip LIKE ? OR region LIKE ? OR ua LIKE ?';
+                const search = `%${q}%`;
+                params = [search, search, search];
+            }
+
+            sql += ' ORDER BY last_blocked_at DESC LIMIT ? OFFSET ?';
+            const [[{total}]] = params.length ? await pool.query(countSql, params) : await pool.query(countSql);
+            const [logs] = await pool.query(sql, [...params, limit, (page - 1) * limit]);
+
+            res.json({ success: true, data: logs, total, page, limit });
+        } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/crawler/logs/clear', authenticate, authenticateAdmin, async (req, res) => {
+        try {
+            await pool.query('DELETE FROM blocked_logs');
+            res.json({ success: true });
+        } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    // Stats API
+    router.get('/admin/stats/today', authenticate, authenticateAdmin, async (req, res) => {
+        try {
+            const [[stats]] = await pool.query('SELECT * FROM system_stats WHERE stat_date = CURDATE()');
+            const defaultStats = {
+                access_count: 0,
+                unique_visitor_count: 0,
+                login_user_count: 0,
+                login_fail_count: 0,
+                anomaly_count: 0,
+                blocked_count: 0
+            };
+
+            // Real-time system stats (Not in DB)
+            const totalMem = os.totalmem();
+            const freeMem = os.freemem();
+            const usedMem = totalMem - freeMem;
+            const memUsage = (usedMem / totalMem * 100).toFixed(1);
+            
+            const cpus = os.cpus();
+            const load = os.loadavg();
+            const cpuUsage = Math.min(100, (load[0] / cpus.length * 100)).toFixed(1);
+
+            const systemData = {
+                cpuUsage,
+                memUsage,
+                totalMem,
+                freeMem,
+                usedMem,
+                uptime: os.uptime()
+            };
+
+            res.json({ 
+                success: true, 
+                data: stats || defaultStats,
+                system: systemData
+            });
+        } catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });
 
     return router;

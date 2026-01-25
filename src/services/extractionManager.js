@@ -13,7 +13,8 @@ config.set('maxMemoryMbytes', 768);
 config.set('availableMemoryRatio', 0.15); 
 
 class ExtractionManager {
-  constructor() {
+  constructor(pool = null) {
+    this.pool = pool;
     this.imageExtractor = new ImageExtractor();
     this.urlProcessor = new URLProcessor();
     this.isExtractionCancelled = false;
@@ -238,6 +239,21 @@ class ExtractionManager {
                       }
 
                       this.anomalies.push(anomalyRecord);
+
+                      // 同时更新数据库统计
+                      if (this.pool) {
+                          (async () => {
+                              try {
+                                  await this.pool.query(`
+                                      INSERT INTO system_stats (stat_date, anomaly_count)
+                                      VALUES (CURDATE(), 1)
+                                      ON DUPLICATE KEY UPDATE anomaly_count = anomaly_count + 1
+                                  `);
+                              } catch (e) {
+                                  console.error('[ExtractionManager] Failed to update system_stats:', e);
+                              }
+                          })();
+                      }
                       
                       // 最多保留50条
                       if (this.anomalies.length > 50) {

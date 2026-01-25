@@ -24,8 +24,9 @@ app.use(cookieParser());
 app.use(loggerMiddleware);
 
 // --- SERVICES ---
+const { pool } = require('./config/db');
 const services = {
-    extractionManager: new ExtractionManager(),
+    extractionManager: new ExtractionManager(pool),
     fileParser: new FileParser(),
     llmService: new LLMService()
 };
@@ -68,7 +69,6 @@ const checkCookieAuth = (req, res, next) => {
     }
 };
 
-const { pool } = require('./config/db');
 const checkAdminAuth = async (req, res, next) => {
     const token = req.cookies.token;
     if (!token) return res.redirect('/Login');

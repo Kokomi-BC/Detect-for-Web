@@ -3,8 +3,8 @@
     --primary-color: #4361ee;
     --primary-hover: #3a56d4;
     --accent-color: var(--primary-color);
-    --accent-hover: var(--primary-hover);
-    --accent-light: var(--accent-light);
+    --accent-hover: rgba(67, 97, 238, 0.25);
+    --accent-light: rgba(67, 97, 238, 0.15);
     
     --success-color: #2ec4b6;
     --warning-color: #ff9f1c;

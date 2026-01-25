@@ -48,16 +48,28 @@ The application runs as an Express server.
 - **NPM Install**: `cnpm install` for faster dependency installation.
 
 ### Administrative Features
-- **User Management**: Creating, editing, and deleting system users.
+- **User Management**: Creating, editing, and deleting system users; status-based (active/pending) approval flow.
+- **Workbench Metrics (3-Column Grid)**:
+    - **Business Stats**: Total registered users and today's successful login count.
+    - **Visitor Tracking**: Daily unique IP visitor count (session-based de-duplication).
+    - **Security & Stability**: 
+        - Web scraping anomaly tracking (automated content extraction errors).
+        - Security defense blocks (Crawler de-denial & Blacklist hits).
 - **Resource Monitoring**: 
     - Real-time disk space stats (Available vs. Total).
     - Image cache size tracking and one-click cleanup.
-- **Anomaly Tracking**: Detailed logs and HTML snapshots of blocked scraping attempts.
+- **Logging & Defense**:
+    - Detailed IP access logs with geographic region resolution.
+    - Crawler defense configuration (UA length/keywords) and real-time block logs.
 
 ### Security & Access
 - **HTTPS**: Required for all connections. Use `key.pem` and `cert.pem`.
-- **Auth Middleware**: All `/api/invoke` requests must include a JWT in the `Authorization` header.
-- **Routing**: Root access (`/`) redirects to `Login.html`. Unauthenticated access to pages is caught by frontend JS.
+- **Auth Middleware**: All `/api/invoke` and admin requests must include a JWT in the `Authorization` header or HTTP-only cookies.
+- **IP Protection**: Built-in IP blacklist and session-aware visitor de-duplication to prevent stats inflation.
+
+## Database & Documentation
+- **MySQL (detect_db)**: Central storage for users, stats, and logs.
+- **Schema Reference**: Refer to `db_schema.md` for full table structural details (`users`, `system_stats`, `access_history`, etc.).
 
 ## Coding Conventions
 

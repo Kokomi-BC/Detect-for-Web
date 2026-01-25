@@ -45,7 +45,7 @@
                     </div>
                     <div id="tab-anomalies" class="nav-item" onclick="switchTab('anomalies')">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                        <span>读取网页拦截日志</span>
+                        <span>采集异常日志</span>
                     </div>
                 </div>
 
@@ -58,6 +58,10 @@
                     <div id="tab-blacklist" class="nav-item" onclick="switchTab('blacklist')">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
                         <span>IP 黑名单</span>
+                    </div>
+                    <div id="tab-crawler-defense" class="nav-item" onclick="switchTab('crawler-defense')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+                        <span>防火墙</span>
                     </div>
                 </div>
 
@@ -81,10 +85,6 @@
                     </div>
                 </div>
             </nav>
-
-            <div class="sidebar-footer">
-                <div class="sidebar-version">v3.0.1 Stable</div>
-            </div>
         </aside>
 
         <!-- 主内容区 -->
@@ -146,45 +146,92 @@
                 <!-- 工作台区块 (Dashboard) -->
                 <div id="workbench-section">
                     <div class="stats-grid">
+                        <!-- 第一行 -->
                         <div class="stat-card">
                             <div class="stat-header">
                                 <span class="stat-title">总注册用户</span>
-                                <div class="stat-icon" style="background: rgba(67, 97, 238, 0.1); color: var(--primary-color)">
+                                <div class="stat-icon" style="background: rgba(99, 102, 241, 0.1); color: #6366f1">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                                 </div>
                             </div>
                             <div class="stat-value" id="stat-total-users">-</div>
                             <div class="stat-footer">
-                                <span class="stat-trend positive">↑ 12%</span>
-                                <span class="stat-desc">较上月</span>
+                                <span class="stat-trend positive">全量用户</span>
+                                <span class="stat-desc">系统数据</span>
                             </div>
                         </div>
+
                         <div class="stat-card">
                             <div class="stat-header">
-                                <span class="stat-title">异常日志数</span>
-                                <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger-color)">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
+                                <span class="stat-title">今日成功登录</span>
+                                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success-color)">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>
                                 </div>
                             </div>
-                            <div class="stat-value" id="stat-today-anomalies">-</div>
+                            <div class="stat-value" id="stat-login-users-count">0</div>
                             <div class="stat-footer">
-                                <span class="stat-trend negative">↓ 5%</span>
-                                <span class="stat-desc">较昨日</span>
+                                <span class="stat-trend positive">今日通过身份验证</span>
+                                <span class="stat-desc">次数</span>
                             </div>
                         </div>
+
                         <div class="stat-card">
                             <div class="stat-header">
-                                <span class="stat-title">今日访客数</span>
-                                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success-color)">
+                                <span class="stat-title">今日访问 IP 数</span>
+                                <div class="stat-icon" style="background: rgba(79, 70, 229, 0.1); color: #6366f1">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
                                 </div>
                             </div>
                             <div class="stat-value" id="stat-today-visitors">-</div>
                             <div class="stat-footer">
-                                <span class="stat-trend positive">↑ 10%</span>
-                                <span class="stat-desc">去重 IP</span>
+                                <span class="stat-trend positive">已去重 (未拦截)</span>
+                                <span class="stat-desc">访客</span>
                             </div>
                         </div>
+
+                        <!-- 第二行 -->
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">采集异常</span>
+                                <div class="stat-icon" style="background: rgba(255, 159, 28, 0.1); color: var(--warning-color)">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="stat-anomaly-count">0</div>
+                            <div class="stat-footer">
+                                <span class="stat-trend" id="stat-anomaly-trend">采集过程触发异常</span>
+                                <span class="stat-desc">日志</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">防火墙拦截</span>
+                                <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger-color)">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="stat-blocked-count">0</div>
+                            <div class="stat-footer">
+                                <span class="stat-trend" id="stat-blocked-trend">拦截恶意/非法访问</span>
+                                <span class="stat-desc">次数</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">密码错误次数</span>
+                                <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger-color)">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="stat-login-fail-count">0</div>
+                            <div class="stat-footer">
+                                <span class="stat-trend negative">登录尝试失败</span>
+                                <span class="stat-desc">今日累计</span>
+                            </div>
+                        </div>
+
                         <div class="stat-card">
                             <div class="stat-header">
                                 <span class="stat-title">系统存储压力</span>
@@ -193,8 +240,57 @@
                                 </div>
                             </div>
                             <div class="stat-value" id="stat-disk-usage">- %</div>
-                            <div class="stat-footer">
-                                <span class="stat-desc" id="stat-disk-text">正在评估...</span>
+                            <div class="mem-usage-container">
+                                <div class="mem-info-text">
+                                    <span>已使用 <span id="stat-disk-used">0 GB</span></span>
+                                    <span id="stat-disk-total">0 GB</span>
+                                </div>
+                                <div class="progress-bar-bg">
+                                    <div id="stat-disk-progress" class="progress-bar-fill"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 实时系统负载 -->
+                        <div class="stat-card" style="padding: 12px 15px; min-height: 100px; display: flex; flex-direction: column;">
+                            <div class="stat-header" style="margin-bottom: 5px;">
+                                <span class="stat-title">CPU 使用率</span>
+                                <div class="stat-icon" style="background: rgba(79, 70, 229, 0.1); color: #6366f1;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; justify-content: space-between; flex: 1;">
+                                <div class="cpu-usage-circle" style="width: 85px; height: 85px; flex-shrink: 0;">
+                                    <svg viewBox="0 0 36 36" class="circular-chart" style="width: 100%; height: 100%;">
+                                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                        <path id="cpu-circle-path" class="circle" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" style="stroke: #6366f1;"/>
+                                        <text id="stat-cpu-usage" x="18" y="20.35" class="percentage">0 %</text>
+                                    </svg>
+                                </div>
+
+                                <div style="min-width: 0; text-align: right;">
+                                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 500; white-space: nowrap;">实时核心负载</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">内存占用率</span>
+                                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success-color)">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="stat-mem-usage">- %</div>
+                            <div class="mem-usage-container">
+                                <div class="mem-info-text">
+                                    <span>已使用 <span id="mem-used-val">0 GB</span></span>
+                                    <span id="mem-total-val">0 GB</span>
+                                </div>
+                                <div class="progress-bar-bg">
+                                    <div id="mem-progress-fill" class="progress-bar-fill"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -223,6 +319,7 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+                <div id="users-pagination" class="pagination-container"></div>
             </div>
         </div>
 
@@ -254,6 +351,7 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+                <div id="history-pagination" class="pagination-container"></div>
             </div>
         </div>
 
@@ -312,27 +410,37 @@
             </div>
             
             <div style="margin-top:20px;">
-                <h3>今日访客排行 (Top IP)</h3>
+                <h3>今日IP访问数</h3>
                 <div class="table-container">
                     <table id="ip-today-table">
                         <thead>
                             <tr>
                                 <th>IP 地址</th>
+                                <th>地理位置</th>
                                 <th>今日访问次数</th>
+                                <th>最后访问时间</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
                     </table>
+                    <div id="ip-today-pagination" class="pagination-container"></div>
                 </div>
             </div>
 
             <div style="margin-top:30px;">
-                <h3>历史访问记录 (去重 IP+UA)</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0;">历史访问记录 (去重 IP+UA)</h3>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="text" id="ip-history-search" placeholder="搜索 IP 或 地理位置..." style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); width: 220px; font-size: 13px;">
+                        <button class="filled-btn" onclick="fetchIPLogs(1, null)" style="padding: 6px 15px; font-size: 13px;">搜索</button>
+                    </div>
+                </div>
                 <div class="table-container">
                     <table id="ip-history-table">
                         <thead>
                             <tr>
                                 <th>IP 地址</th>
+                                <th>地理位置</th>
                                 <th>浏览器标识 (User-Agent)</th>
                                 <th>最后访问时间</th>
                                 <th>操作</th>
@@ -340,6 +448,7 @@
                         </thead>
                         <tbody></tbody>
                     </table>
+                    <div id="ip-logs-pagination" class="pagination-container"></div>
                 </div>
             </div>
         </div>
@@ -362,6 +471,7 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+                <div id="blacklist-pagination" class="pagination-container"></div>
             </div>
         </div>
 
@@ -384,6 +494,57 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+                <div id="anomalies-pagination" class="pagination-container"></div>
+            </div>
+        </div>
+
+        <!-- 防火墙区块 -->
+        <div id="crawler-defense-section" style="display:none;">
+            <div class="section-card" style="margin-bottom: 25px;">
+                <h2 class="card-title">爬虫防御设置</h2>
+                <div style="background: var(--bg-card); padding: 25px; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+                        <div class="form-group">
+                            <label>User-Agent 最小长度限制</label>
+                            <input type="number" id="crawler-ua-min" value="10" min="0" max="1000" placeholder="访问请求 UA 长度小于此值时拦截">
+                            <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">建议设为 10-20。通常真实浏览器的 UA 长度都在 100 以上。</p>
+                        </div>
+                        <div class="form-group">
+                            <label>UA 拦截关键词 (英文逗号分隔)</label>
+                            <textarea id="crawler-ua-keywords" style="width:100%; height:80px; padding:10px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-secondary); color:var(--text-main); font-family:monospace; resize:none;" placeholder="python,scrapy,spider,bot..."></textarea>
+                            <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">匹配不区分大小写。当 UA 包含任意关键词时将被拦截。</p>
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px; text-align: right;">
+                        <button class="filled-btn" onclick="saveCrawlerSettings()">保存防御配置</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2>全局拦截日志 (爬虫/黑名单)</h2>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="text" id="crawler-log-search" placeholder="搜索 IP/地区/UA..." style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); width: 220px; font-size: 13px;">
+                    <button class="filled-btn secondary" onclick="fetchCrawlerLogs(1)">搜索</button>
+                    <button class="filled-btn danger" onclick="clearCrawlerLogs()">清空记录</button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="crawler-logs-table">
+                    <thead>
+                        <tr>
+                            <th>来源 IP</th>
+                            <th>地理位置</th>
+                            <th>最后拦截时间</th>
+                            <th>拦截原因</th>
+                            <th>拦截次数</th>
+                            <th>User-Agent</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div id="crawler-logs-pagination" class="pagination-container"></div>
             </div>
         </div>
 
@@ -619,7 +780,7 @@
                         <span>管理员: <strong>${u.username}</strong></span>
                         <span>角色: <strong>${u.role}</strong></span>
                         <span>登录IP: <strong>${u.last_login_ip || 'N/A'}</strong></span>
-                        <span>记录时间: <strong>${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'N/A'}</strong></span>
+                        <span>登录时间: <strong>${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'N/A'}</strong></span>
                     </div>
                 `;
             }
@@ -637,10 +798,13 @@
             }
         });
 
-        async function fetchUsers() {
-            const json = await safeFetch('/api/admin/users');
+        async function fetchUsers(page = 1) {
+            const json = await safeFetch(`/api/admin/users?page=${page}&limit=10`);
             if (json && json.success) {
                 renderTable(json.data);
+                const statUsers = document.getElementById('stat-total-users');
+                if (statUsers) statUsers.innerText = json.total;
+                renderPagination('users', json.total, json.page, json.limit, 'fetchUsers');
             }
         }
 
@@ -648,9 +812,7 @@
             const tbody = document.querySelector('#users-table tbody');
             tbody.innerHTML = '';
             
-            // 更新统计卡片
-            const statUsers = document.getElementById('stat-total-users');
-            if (statUsers) statUsers.innerText = users.length;
+            // 更新统计卡片 (Moved to fetchUsers)
 
             users.forEach(u => {
                 const tr = document.createElement('tr');
@@ -769,17 +931,22 @@
             window.location.href = '/Login';
         }
 
-        // --- 异常处理界面逻辑 ---
-        async function fetchAnomalies() {
-            const json = await safeFetch('/api/admin/anomalies');
+        // --- 异常处理界面逻辑 (网页采集异常) ---
+        async function fetchAnomalies(page = 1) {
+            const json = await safeFetch(`/api/admin/anomalies?page=${page}&limit=10`);
             if (json && json.success) {
                 renderAnomalies(json.data);
                 
-                // 更新侧边栏标签 (不破坏 SVG 图标)
+                // 更新侧边栏标签
                 const tabSpan = document.querySelector('#tab-anomalies span');
                 if (tabSpan) {
-                    tabSpan.innerText = json.data.length > 0 ? `读取网页拦截日志 (${json.data.length})` : '读取网页拦截日志';
+                    tabSpan.innerText = json.total > 0 ? `采集异常日志 (${json.total})` : '采集异常日志';
                 }
+                
+                // 注意：旧的 stat-today-anomalies 已更名为 stat-today-blocked (显示在工作台)
+                // 此后的统计更新将通过 fetchTodayStats 统一处理
+
+                renderPagination('anomalies', json.total, json.page, json.limit, 'fetchAnomalies');
             }
         }
 
@@ -787,9 +954,7 @@
             const tbody = document.querySelector('#anomalies-table tbody');
             tbody.innerHTML = '';
 
-            // 更新统计卡片
-            const statAnoms = document.getElementById('stat-today-anomalies');
-            if (statAnoms) statAnoms.innerText = anomalies.length;
+            // 更新统计卡片 (Moved to fetchAnomalies)
 
             [...anomalies].reverse().forEach(a => {
                 const tr = document.createElement('tr');
@@ -836,18 +1001,24 @@
         }
 
         // --- IP 访问日志逻辑 ---
-        async function fetchIPLogs() {
-            const json = await safeFetch('/api/admin/ip-logs');
+        const ipLogsState = { h: 1, t: 1 };
+        async function fetchIPLogs(hPage = null, tPage = null) {
+            if (hPage !== null) ipLogsState.h = hPage;
+            if (tPage !== null) ipLogsState.t = tPage;
+
+            const q = document.getElementById('ip-history-search')?.value || '';
+            const json = await safeFetch(`/api/admin/ip-logs?page=${ipLogsState.h}&tpage=${ipLogsState.t}&limit=10&q=${encodeURIComponent(q)}`);
             if (json && json.success) {
-                renderIPLogs(json.history, json.today);
+                renderIPLogs(json.history, json.today, json.ttotal);
+                renderPagination('ip-logs', json.total, json.page, json.limit, 'fetchHistoryLogPage');
+                renderPagination('ip-today', json.ttotal, json.tpage, json.limit, 'fetchTodayLogPage');
             }
         }
 
-        function renderIPLogs(history, today) {
-            // 更新统计卡片 (去重 IP 数)
-            const statVisitors = document.getElementById('stat-today-visitors');
-            if (statVisitors) statVisitors.innerText = today.length;
+        function fetchHistoryLogPage(p) { fetchIPLogs(p, null); }
+        function fetchTodayLogPage(p) { fetchIPLogs(null, p); }
 
+        function renderIPLogs(history, today, ttotal) {
             // Render Today Stats
             const todayBody = document.querySelector('#ip-today-table tbody');
             todayBody.innerHTML = '';
@@ -857,12 +1028,14 @@
                     '<span style="font-size:11px; color:var(--danger-color); background:rgba(239,68,68,0.1); padding:2px 6px; border-radius:4px; margin-left:8px;">已封禁</span>' : '';
                 tr.innerHTML = `
                     <td style="font-family:monospace; font-weight:600;">${item.ip}${statusHtml}</td>
+                    <td style="font-size:13px; color:var(--text-muted)">${item.region || '-'}</td>
                     <td><strong style="color:var(--primary-color); font-size:16px;">${item.hit_count}</strong></td>
+                    <td style="font-size:11px; color:var(--text-muted)">${item.last_access ? new Date(item.last_access).toLocaleString() : '-'}</td>
                 `;
                 todayBody.appendChild(tr);
             });
             if (today.length === 0) {
-                todayBody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:20px; color:var(--text-muted);">今日暂无访问</td></tr>';
+                todayBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">今日暂无访问</td></tr>';
             }
 
             // Render History
@@ -878,14 +1051,15 @@
 
                 tr.innerHTML = `
                     <td style="font-family:monospace; font-weight:600;">${item.ip}</td>
-                    <td style="font-size:11px; color:var(--text-muted); max-width:400px; word-break:break-all; font-family:monospace;">${item.ua}</td>
+                    <td style="font-size:13px; color:var(--text-muted)">${item.region || '-'}</td>
+                    <td style="font-size:11px; color:var(--text-muted); max-width:300px; word-break:break-all; font-family:monospace;">${item.ua}</td>
                     <td style="font-size:11px; color:var(--text-muted)">${new Date(item.last_access).toLocaleString()}</td>
                     <td>${actions}</td>
                 `;
                 historyBody.appendChild(tr);
             });
             if (history.length === 0) {
-                historyBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">暂无记录</td></tr>';
+                historyBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">暂无记录</td></tr>';
             }
         }
 
@@ -896,10 +1070,11 @@
         }
 
         // --- Blacklist Logic ---
-        async function fetchBlacklist() {
-            const json = await safeFetch('/api/admin/blacklist');
+        async function fetchBlacklist(page = 1) {
+            const json = await safeFetch(`/api/admin/blacklist?page=${page}&limit=10`);
             if (json && json.success) {
                 renderBlacklist(json.data);
+                renderPagination('blacklist', json.total, json.page, json.limit, 'fetchBlacklist');
             }
         }
 
@@ -954,13 +1129,70 @@
             fetchIPLogs();
         }
 
+        // --- Crawler Defense Logic ---
+        async function fetchCrawlerSettings() {
+            const data = await safeFetch('/api/admin/crawler/settings');
+            if (data && data.success) {
+                document.getElementById('crawler-ua-min').value = data.data.ua_min_length || 10;
+                document.getElementById('crawler-ua-keywords').value = data.data.ua_keywords || '';
+            }
+        }
+
+        async function saveCrawlerSettings() {
+            const min = document.getElementById('crawler-ua-min').value;
+            const keywords = document.getElementById('crawler-ua-keywords').value;
+            const res = await post('/api/admin/crawler/settings', {
+                ua_min_length: min,
+                ua_keywords: keywords
+            });
+            if (res && res.success) {
+                alert('爬虫防御配置已更新');
+            }
+        }
+
+        async function fetchCrawlerLogs(page = 1) {
+            const q = document.getElementById('crawler-log-search').value;
+            const json = await safeFetch(`/api/admin/crawler/logs?page=${page}&limit=10&q=${encodeURIComponent(q)}`);
+            if (json && json.success) {
+                renderCrawlerLogs(json.data);
+                renderPagination('crawler-logs', json.total, json.page, json.limit, 'fetchCrawlerLogs');
+            }
+        }
+
+        function renderCrawlerLogs(logs) {
+            const tbody = document.querySelector('#crawler-logs-table tbody');
+            tbody.innerHTML = '';
+            logs.forEach(l => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-family:monospace; font-weight:600;">${l.ip}</td>
+                    <td style="font-size:13px; color:var(--text-muted)">${l.region || '-'}</td>
+                    <td style="font-size:11px; color:var(--text-muted)">${new Date(l.last_blocked_at).toLocaleString()}</td>
+                    <td><span style="color:var(--danger-color); font-size:13px; font-weight:600;">${l.reason}</span></td>
+                    <td><strong style="color:var(--primary-color)">${l.block_count}</strong></td>
+                    <td style="max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; color:var(--text-muted)" title="${l.ua}">${l.ua}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            if (logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">暂无拦截记录</td></tr>';
+            }
+        }
+
+        async function clearCrawlerLogs() {
+            if (!confirm('确定清空所有拦截日志?')) return;
+            await post('/api/admin/crawler/logs/clear', {});
+            fetchCrawlerLogs();
+        }
+
         // --- History Logic ---
-        async function fetchHistory() {
+        async function fetchHistory(page = 1) {
             const q = document.getElementById('history-search').value;
-            const url = q ? `/api/admin/histories?q=${encodeURIComponent(q)}` : '/api/admin/histories';
+            const url = `/api/admin/histories?page=${page}&limit=10${q ? '&q=' + encodeURIComponent(q) : ''}`;
             const json = await safeFetch(url);
             if (json && json.success) {
                 renderHistory(json.data);
+                renderPagination('history', json.total, json.page, json.limit, 'fetchHistory');
             }
         }
 
@@ -1003,6 +1235,59 @@
             if (document.getElementById('system-section').style.display !== 'none') fetchCacheStats();
         }
 
+        // --- Today Stats Logic ---
+        async function fetchTodayStats() {
+            const json = await safeFetch('/api/admin/stats/today');
+            if (json && json.success) {
+                const stats = json.data;
+                const blockedEl = document.getElementById('stat-blocked-count');
+                const visitorEl = document.getElementById('stat-today-visitors');
+                const loginEl = document.getElementById('stat-login-users-count');
+                const loginFailEl = document.getElementById('stat-login-fail-count');
+                const anomalyEl = document.getElementById('stat-anomaly-count');
+
+                if (blockedEl) blockedEl.innerText = stats.blocked_count || 0;
+                if (visitorEl) visitorEl.innerText = stats.unique_visitor_count || 0;
+                if (loginEl) loginEl.innerText = stats.login_user_count || 0;
+                if (loginFailEl) loginFailEl.innerText = stats.login_fail_count || 0;
+                if (anomalyEl) anomalyEl.innerText = stats.anomaly_count || 0;
+
+                // Update system real-time stats
+                if (json.system) {
+                    const cpuUsage = json.system.cpuUsage;
+                    const memUsage = json.system.memUsage;
+                    
+                    // Update CPU Ring
+                    const cpuEl = document.getElementById('stat-cpu-usage');
+                    const cpuPath = document.getElementById('cpu-circle-path');
+                    if (cpuEl) cpuEl.textContent = Math.round(cpuUsage) + ' %';
+                    if (cpuPath) {
+                        cpuPath.setAttribute('stroke-dasharray', `${cpuUsage}, 100`);
+                        // Color color based on usage
+                        if (cpuUsage > 80) cpuPath.style.stroke = 'var(--danger-color)';
+                        else if (cpuUsage > 50) cpuPath.style.stroke = 'var(--warning-color)';
+                        else cpuPath.style.stroke = '#6366f1';
+                    }
+
+                    // Update Memory Progress Bar
+                    const memEl = document.getElementById('stat-mem-usage');
+                    const memProgress = document.getElementById('mem-progress-fill');
+                    const memUsedVal = document.getElementById('mem-used-val');
+                    const memTotalVal = document.getElementById('mem-total-val');
+
+                    if (memEl) memEl.innerText = memUsage + ' %';
+                    if (memProgress) {
+                        memProgress.style.width = memUsage + '%';
+                        if (memUsage > 90) memProgress.style.background = 'var(--danger-color)';
+                        else if (memUsage > 75) memProgress.style.background = 'var(--warning-color)';
+                        else memProgress.style.background = 'var(--success-color)';
+                    }
+                    if (memUsedVal) memUsedVal.innerText = formatBytes(json.system.usedMem, 1);
+                    if (memTotalVal) memTotalVal.innerText = formatBytes(json.system.totalMem, 1);
+                }
+            }
+        }
+
         // --- System/Cache Logic ---
         async function fetchCacheStats() {
             const json = await safeFetch('/api/admin/cache/stats');
@@ -1023,9 +1308,19 @@
                     
                     // 更新统计卡片
                     const statDiskUsage = document.getElementById('stat-disk-usage');
-                    const statDiskText = document.getElementById('stat-disk-text');
+                    const statDiskUsed = document.getElementById('stat-disk-used');
+                    const statDiskTotal = document.getElementById('stat-disk-total');
+                    const statDiskProgress = document.getElementById('stat-disk-progress');
+                    
                     if (statDiskUsage) statDiskUsage.innerText = `${usedPercent}%`;
-                    if (statDiskText) statDiskText.innerText = `可用: ${formatBytes(free)}`;
+                    if (statDiskUsed) statDiskUsed.innerText = formatBytes(used, 1);
+                    if (statDiskTotal) statDiskTotal.innerText = formatBytes(total, 1);
+                    if (statDiskProgress) {
+                        statDiskProgress.style.width = usedPercent + '%';
+                        if (usedPercent > 90) statDiskProgress.style.background = 'var(--danger-color)';
+                        else if (usedPercent > 70) statDiskProgress.style.background = 'var(--warning-color)';
+                        else statDiskProgress.style.background = 'var(--primary-color)';
+                    }
                     
                     // 颜色预警
                     const bar = document.getElementById('disk-bar');
@@ -1053,13 +1348,14 @@
 
         function switchTab(tab) {
             localStorage.setItem('admin_last_tab', tab);
-            const tabs = ['workbench', 'users', 'anomalies', 'ip-logs', 'blacklist', 'history', 'system', 'config', 'appearance'];
+            const tabs = ['workbench', 'users', 'anomalies', 'ip-logs', 'blacklist', 'crawler-defense', 'history', 'system', 'config', 'appearance'];
             const titles = {
                 'workbench': '工作台',
                 'users': '用户管理',
-                'anomalies': '挂马拦截日志',
+                'anomalies': '网页拦截日志',
                 'ip-logs': 'IP 访问日志',
                 'blacklist': 'IP 黑名单',
+                'crawler-defense': '防火墙',
                 'history': '历史记录',
                 'system': '资源管理',
                 'config': 'API 配置',
@@ -1068,7 +1364,7 @@
             const groups = {
                 'workbench': '仪表盘', 'users': '仪表盘',
                 'history': '内容监控', 'anomalies': '内容监控',
-                'ip-logs': '安全中心', 'blacklist': '安全中心',
+                'ip-logs': '安全中心', 'blacklist': '安全中心', 'crawler-defense': '安全中心',
                 'system': '系统运维', 'config': '系统运维',
                 'appearance': '界面定制'
             };
@@ -1096,11 +1392,16 @@
                 fetchAnomalies();
                 fetchIPLogs();
                 fetchCacheStats();
+                fetchTodayStats();
             }
             if (tab === 'users') fetchUsers();
             if (tab === 'anomalies') fetchAnomalies();
             if (tab === 'ip-logs') fetchIPLogs();
             if (tab === 'blacklist') fetchBlacklist();
+            if (tab === 'crawler-defense') {
+                fetchCrawlerSettings();
+                fetchCrawlerLogs();
+            }
             if (tab === 'history') fetchHistory();
             if (tab === 'system') fetchCacheStats();
             if (tab === 'config') fetchConfig();
@@ -1233,6 +1534,51 @@
             } else {
                 alert('保存失败: ' + (data.error || '未知错误'));
             }
+        }
+
+        // --- Pagination Logic ---
+        const pageState = {
+            users: 1,
+            anomalies: 1,
+            'ip-logs': 1,
+            blacklist: 1,
+            history: 1
+        };
+
+        function renderPagination(tab, total, page, limit, fetchFunc) {
+            const container = document.getElementById(`${tab}-pagination`);
+            if (!container) return;
+            
+            const totalPages = Math.ceil(total / limit);
+            if (totalPages <= 1 && total <= limit) {
+                container.innerHTML = `<div class="pagination-info">共 <b>${total}</b> 条记录</div>`;
+                return;
+            }
+
+            let html = `
+                <div class="pagination-info">第 <b>${page}</b> / ${totalPages} 页 (共 ${total} 条)</div>
+                <div class="pagination-btns">
+                    <button class="pagination-btn" ${page <= 1 ? 'disabled' : ''} onclick="${fetchFunc}(${page - 1})">
+                        &laquo;
+                    </button>
+            `;
+
+            let start = Math.max(1, page - 2);
+            let end = Math.min(totalPages, start + 4);
+            if (end - start < 4) start = Math.max(1, end - 4);
+            start = Math.max(1, start);
+
+            for (let i = start; i <= end; i++) {
+                html += `<button class="pagination-btn ${i === page ? 'active' : ''}" onclick="${fetchFunc}(${i})">${i}</button>`;
+            }
+
+            html += `
+                    <button class="pagination-btn" ${page >= totalPages ? 'disabled' : ''} onclick="${fetchFunc}(${page + 1})">
+                        &raquo;
+                    </button>
+                </div>
+            `;
+            container.innerHTML = html;
         }
 
         // Init

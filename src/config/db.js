@@ -35,6 +35,7 @@ async function initDB() {
         try { await connection.query("ALTER TABLE users ADD COLUMN last_login_at DATETIME"); } catch (e) {}
         try { await connection.query("ALTER TABLE users ADD COLUMN last_login_ip VARCHAR(45)"); } catch (e) {}
         try { await connection.query("ALTER TABLE users ADD COLUMN token_version INT DEFAULT 0"); } catch (e) {}
+        try { await connection.query("ALTER TABLE users ADD COLUMN last_login_region VARCHAR(100)"); } catch (e) {}
         
         // Ensure at least one admin exists
         const [adminRows] = await connection.query("SELECT * FROM users WHERE role = 'admin'");
@@ -75,16 +76,71 @@ async function initDB() {
                 ip VARCHAR(45),
                 ua TEXT,
                 last_access DATETIME,
+                region VARCHAR(100),
                 PRIMARY KEY (ip, ua(255))
             )
         `);
+
+        // Migration for access_history
+        try { await connection.query("ALTER TABLE access_history ADD COLUMN region VARCHAR(100)"); } catch (e) {}
         
         await connection.query(`
             CREATE TABLE IF NOT EXISTS access_today (
                 ip VARCHAR(45),
                 access_date DATE,
                 hit_count INT DEFAULT 1,
+                region VARCHAR(100),
+                last_access DATETIME,
                 PRIMARY KEY (ip, access_date)
+            )
+        `);
+
+        // Migration for access_today
+        try { await connection.query("ALTER TABLE access_today ADD COLUMN region VARCHAR(100)"); } catch (e) {}
+        try { await connection.query("ALTER TABLE access_today ADD COLUMN last_access DATETIME"); } catch (e) {}
+        
+        // Fix empty last_access in access_today
+        try { await connection.query("UPDATE access_today SET last_access = DATE_FORMAT(access_date, '%Y-%m-%d 00:00:00') WHERE last_access IS NULL"); } catch (e) {}
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS crawler_settings (
+                setting_key VARCHAR(50) PRIMARY KEY,
+                setting_value TEXT
+            )
+        `);
+
+        // Init default crawler settings
+        await connection.query("INSERT IGNORE INTO crawler_settings (setting_key, setting_value) VALUES ('ua_min_length', '10')");
+        await connection.query("INSERT IGNORE INTO crawler_settings (setting_key, setting_value) VALUES ('ua_keywords', 'python,go-http,postman,curl,wget,scrapy,spider')");
+
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS system_stats (
+                stat_date DATE PRIMARY KEY,
+                access_count INT DEFAULT 0,
+                unique_visitor_count INT DEFAULT 0,
+                login_user_count INT DEFAULT 0,
+                login_fail_count INT DEFAULT 0,
+                anomaly_count INT DEFAULT 0,
+                blocked_count INT DEFAULT 0
+            )
+        `);
+
+        // Migration for system_stats
+        try { await connection.query("ALTER TABLE system_stats ADD COLUMN login_fail_count INT DEFAULT 0"); } catch (e) {}
+
+        // Rename crawler_blocked_logs to blocked_logs for general use
+        try { await connection.query("RENAME TABLE crawler_blocked_logs TO blocked_logs"); } catch (e) {}
+        
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS blocked_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ip VARCHAR(45),
+                ua TEXT,
+                region VARCHAR(100),
+                reason VARCHAR(255),
+                last_blocked_at DATETIME,
+                block_count INT DEFAULT 1,
+                UNIQUE KEY (ip, reason)
             )
         `);
 

@@ -95,10 +95,26 @@ function truncateText(text, maxLength = 20000, suffix = '...') {
 }
 
 /**
- * 清理HTML标签
- * @param {string} html HTML字符串
- * @returns {string}
+ * 获取 IP 地理位置信息 (百度 API)
+ * @param {string} ip IP 地址
+ * @returns {Promise<string>} 地理位置字符串
  */
+async function getIpRegion(ip) {
+    if (!ip || ip === '::1' || ip === '127.0.0.1') return '内网/本地';
+    try {
+        const res = await fetch(`https://opendata.baidu.com/api.php?co=&resource_id=6006&oe=utf8&query=${encodeURIComponent(ip)}`, {
+            signal: AbortSignal.timeout(3000)
+        });
+        const json = await res.json();
+        if (json && json.status === '0' && json.data && json.data[0]) {
+            return json.data[0].location || '未知地区';
+        }
+    } catch (e) {
+        console.error('IP Region lookup failed:', e.message);
+    }
+    return '';
+}
+
 function stripHtmlTags(html) {
   if (!html || typeof html !== 'string') {
     return '';
@@ -358,5 +374,6 @@ module.exports = {
   isEmpty,
   extractDomain,
   formatDate,
-  getImageDimensions
+  getImageDimensions,
+  getIpRegion
 };

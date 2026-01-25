@@ -68,6 +68,15 @@ router.post('/login', async (req, res) => {
             await pool.query('UPDATE users SET last_login_at = NOW(), last_login_ip = ?, token_version = ? WHERE id = ?', 
                 [ip, newTokenVersion, user.id]);
 
+            // Update login stats
+            try {
+                await pool.query(`
+                    INSERT INTO system_stats (stat_date, login_user_count)
+                    VALUES (CURDATE(), 1)
+                    ON DUPLICATE KEY UPDATE login_user_count = login_user_count + 1
+                `);
+            } catch(e) {}
+
             // Sign token with version
             const token = jwt.sign({ userId: user.id, role: user.role, token_version: newTokenVersion }, SECRET_KEY, { expiresIn: '24h' });
             
@@ -85,6 +94,15 @@ router.post('/login', async (req, res) => {
             attempts.count++;
             attempts.lastAttempt = now;
             loginAttempts.set(ip, attempts);
+
+            // Update login fail stats
+            try {
+                await pool.query(`
+                    INSERT INTO system_stats (stat_date, login_fail_count)
+                    VALUES (CURDATE(), 1)
+                    ON DUPLICATE KEY UPDATE login_fail_count = login_fail_count + 1
+                `);
+            } catch(e) {}
             
             // Check if this failure triggers a block
             if (attempts.count >= 3) {
