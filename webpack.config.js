@@ -19,7 +19,6 @@ const minifyOptions = isProduction ? {
 
 module.exports = {
   mode: isProduction ? 'production' : 'development',
-  // 由于我们使用纯HTML文件，不需要入口JavaScript文件
   entry: {},
   output: {
     path: path.join(__dirname, 'dist'),

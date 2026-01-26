@@ -42,14 +42,66 @@ app.use('/api', apiRouter(services, state));
 // Public Theme Config
 const fs = require('fs');
 app.get('/api/public/theme', (req, res) => {
+    // 1. Get Global Config (Default)
     const configPath = path.join(__dirname, '../data/config.json');
-    try {
-        if (fs.existsSync(configPath)) {
+    let themeConfig = {};
+    if (fs.existsSync(configPath)) {
+        try {
             const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-            return res.json({ success: true, theme: config.theme || {} });
-        }
-    } catch (e) { }
-    res.json({ success: true, theme: {} });
+            themeConfig = config.theme || {};
+        } catch (e) { }
+    }
+
+    // 2. Check User Override
+    const token = req.cookies.token;
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, SECRET_KEY);
+            const userId = decoded.userId;
+            const userPrefsPath = path.join(__dirname, '../data/users', String(userId), 'preferences.json');
+            
+            if (fs.existsSync(userPrefsPath)) {
+                const prefs = JSON.parse(fs.readFileSync(userPrefsPath, 'utf8'));
+                if (prefs.themeId) {
+                    const presetsPath = path.join(__dirname, '../data/presets/themes.json');
+                    if (fs.existsSync(presetsPath)) {
+                        const presets = JSON.parse(fs.readFileSync(presetsPath, 'utf8'));
+                        const preset = presets.find(p => p.id === prefs.themeId);
+                        if (preset && preset.colors && preset.colors.length >= 22) {
+                             // Override themeConfig with preset
+                             const c = preset.colors;
+                             themeConfig = {
+                                lightPrimary: c[0],
+                                lightBackground: c[1],
+                                darkPrimary: c[2],
+                                darkBackground: c[3],
+                                lightSecondary: c[4],
+                                darkSecondary: c[5],
+                                lightCard: c[6],
+                                darkCard: c[7],
+                                lightBgSec: c[8],
+                                darkBgSec: c[9],
+                                lightBorder: c[10],
+                                darkBorder: c[11],
+                                lightGlassBorder: c[12],
+                                darkGlassBorder: c[13],
+                                lightTextMain: c[14],
+                                darkTextMain: c[15],
+                                lightTextMuted: c[16],
+                                darkTextMuted: c[17],
+                                lightBgTertiary: c[18],
+                                darkBgTertiary: c[19],
+                                lightBgMenu: c[20],
+                                darkBgMenu: c[21]
+                             };
+                        }
+                    }
+                }
+            }
+        } catch(e) { /* Ignore token errors */ }
+    }
+
+    res.json({ success: true, theme: themeConfig });
 });
 
 // Static Pages and Access Control

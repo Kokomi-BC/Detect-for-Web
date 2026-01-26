@@ -170,10 +170,15 @@ body {
     border-radius: 8px;
     cursor: pointer;
     transition: var(--transition-fast);
+    background: var(--bg-glass);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
 }
 
 .user-profile:hover {
-    background: var(--bg-secondary);
+    background: var(--bg-card);
+    border-color: var(--primary-color);
 }
 
 .user-profile svg {
@@ -317,29 +322,43 @@ tr:hover { background-color: var(--accent-light); }
 
 /* Buttons */
 button.icon-btn {
-    border: 1px solid var(--border-color);
+    background: var(--bg-glass);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
     color: var(--text-main);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 8px;
     border-radius: 8px;
+    transition: var(--transition-fast);
 }
 button.icon-btn:hover {
-    background: var(--border-color);
-    border-color: var(--text-muted);
+    background: var(--bg-card);
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
 }
 button.icon-btn.primary {
-    background: var(--primary-color);
-    color: white;
+    background: var(--accent-light);
+    color: var(--primary-color);
+    border-color: var(--accent-light);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+button.icon-btn.primary:hover { 
+    background: var(--primary-color); 
+    color: white; 
     border-color: var(--primary-color);
 }
-button.icon-btn.primary:hover { background: var(--primary-hover); }
 
 button.icon-btn.secondary {
     background: var(--bg-secondary);
     color: var(--primary-color);
     border-color: var(--border-color);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 button.icon-btn.secondary:hover { 
     background: var(--primary-color); 
@@ -351,6 +370,8 @@ button.icon-btn.danger {
     background: var(--danger-light);
     color: var(--danger-color);
     border-color: var(--danger-light);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 button.icon-btn.danger:hover { background: var(--danger-color); color: white; }
 
@@ -464,29 +485,31 @@ button.filled-btn.danger:hover {
 
 .search-group:focus-within {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--accent-light);
+    box-shadow: var(--shadow-accent);
 }
 
 .search-group input {
     border: none !important;
     background: transparent !important;
-    height: 34px !important;
+    height: 32px !important;
     padding: 0 12px !important;
     box-shadow: none !important;
     width: 200px;
 }
 
 .search-group .search-btn {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--primary-color);
-    color: white;
+    color: #ffffff !important; /* 始终保持纯白 */
     cursor: pointer;
     transition: var(--transition-fast);
+    padding: 0;
+    margin: 0;
 }
 
 .search-group .search-btn:hover {
@@ -653,4 +676,47 @@ button.filled-btn.danger:hover {
     background: var(--success-color);
     width: 0%;
     transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* --- Search Box & Clear Button --- */
+.search-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-wrapper input {
+    color: var(--text-main) !important;
+    padding-right: 35px !important;
+}
+
+.clear-icon {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-55%);
+    width: 20px;
+    height: 20px;
+    display: none; /* Initially hidden */
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 18px;
+    line-height: 1; 
+    border-radius: 50%;
+    transition: all 0.2s;
+    user-select: none;
+    z-index: 5;
+}
+
+.clear-icon:hover {
+    color: var(--text-main);
+    background: var(--bg-secondary);
 }

@@ -81,6 +81,14 @@
                 </svg>
                 <div class="dropdown-menu" id="moreDropdown">
                     
+                    <div class="dropdown-item-row" id="colorPaletteRow" style="padding: 10px 16px; flex-direction: column; align-items: flex-start;">
+                        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">颜色主题</div>
+                        <div class="color-palette-row" id="colorPaletteContainer" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                             <!-- JS Injected -->
+                        </div>
+                    </div>
+                    <div class="dropdown-separator"></div>
+
                     <div class="dropdown-item-row">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M10.212 17.11 15.043 3.5c.223-.627 1.07-.664 1.365-.111l.049.11 5.5 15.5a.75.75 0 0 1-1.373.596l-.04-.094L18.945 15h-6.394l-1.58 4.452a.75.75 0 0 1-.354.452l-.093.044a.75.75 0 0 1-.929-.33l-.044-.092L8.556 17H4.443l-.995 2.52a.75.75 0 0 1-.876.454l-.098-.031a.75.75 0 0 1-.452-.876l.03-.098 3.754-9.495c.236-.595 1.043-.63 1.345-.104l.05.105 3.011 7.635L15.043 3.5l-4.831 13.61Zm-3.71-5.318L5.037 15.5h2.928l-1.461-3.708Zm9.248-5.8L13.084 13.5h5.33L15.75 5.992Z"/>
@@ -6023,6 +6031,79 @@
             showToast('批量检测完成', 'success');
         }
         
+
+        // --- Color Palette Logic ---
+        async function initColorPalette() {
+            const container = document.getElementById('colorPaletteContainer');
+            if (!container) return;
+            
+            try {
+                // Fetch public presets and user prefs
+                const [presetsRes, prefsRes] = await Promise.all([
+                   fetch('/api/public/presets').then(r => r.json()),
+                   fetch('/api/user/preferences').then(r => r.json())
+                ]);
+
+                const presets = presetsRes.success ? presetsRes.data : [];
+                // Allow "0" or null to mean default
+                const userThemeId = (prefsRes.success && prefsRes.preferences && prefsRes.preferences.themeId) ? prefsRes.preferences.themeId : 0;
+                
+                container.innerHTML = '';
+                
+                // 1. Default (White/Server) Button
+                const defaultBtn = document.createElement('div');
+                defaultBtn.className = `color-circle-btn server-default ${!userThemeId ? 'active' : ''}`;
+                defaultBtn.title = "跟随服务器 (默认)";
+                defaultBtn.onclick = () => applyThemePreference(0);
+                container.appendChild(defaultBtn);
+                
+                // 2. Preset Buttons
+                presets.forEach(p => {
+                    const btn = document.createElement('div');
+                    // Check strict equality or loose equality for ID
+                    const isActive = userThemeId == p.id;
+                    btn.className = `color-circle-btn ${isActive ? 'active' : ''}`;
+                    btn.title = p.title;
+                    if (p.colors && p.colors.length > 0) {
+                        btn.style.backgroundColor = p.colors[0]; // Primary color
+                    }
+                    btn.onclick = () => applyThemePreference(p.id);
+                    container.appendChild(btn);
+                });
+                
+            } catch (e) {
+                console.error("Failed to init color palette", e);
+            }
+        }
+        
+        async function applyThemePreference(themeId) {
+             try {
+                const res = await fetch('/api/user/preferences', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ themeId: themeId })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                     // Reload theme from server (which now respects user pref)
+                     if (window.applyDynamicTheme) {
+                         await window.applyDynamicTheme();
+                     }
+                     // Updates active class
+                     initColorPalette(); 
+                     showToast('主题已更新', 'success');
+                }
+             } catch(e) {
+                 showToast('保存设置失败', 'error');
+             }
+        }
+
+        // Initialize Palette
+        document.addEventListener('DOMContentLoaded', () => {
+             initColorPalette();
+        });
+
     </script>
 </body>
 </html>

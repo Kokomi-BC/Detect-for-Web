@@ -2045,13 +2045,24 @@
             background: var(--bg-glass);
             border-radius: var(--radius-md);
             transition: var(--transition);
-            border-left: 4px solid transparent;
             border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .analysis-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: transparent;
+            z-index: 1;
         }
 
         .analysis-item:hover {
             transform: translateX(4px);
-            background: var(--bg-glass);
             box-shadow: var(--shadow-sm);
         }
 
@@ -2068,13 +2079,13 @@
         }
 
         /* Analysis Status Styles */
-        .analysis-item.positive { border-left-color: var(--success-color); }
+        .analysis-item.positive::before { background: var(--success-color); }
         .analysis-item.positive .analysis-icon { color: var(--success-color); background: var(--success-light); }
         
-        .analysis-item.negative { border-left-color: var(--danger-color); }
+        .analysis-item.negative::before { background: var(--danger-color); }
         .analysis-item.negative .analysis-icon { color: var(--danger-color); background: var(--danger-light); }
         
-        .analysis-item.warning { border-left-color: var(--warning-color); }
+        .analysis-item.warning::before { background: var(--warning-color); }
         .analysis-item.warning .analysis-icon { color: var(--warning-color); background: var(--warning-light); }
 
         .analysis-text {
@@ -2576,13 +2587,28 @@
             align-items: flex-start;
             margin-bottom: 12px;
             padding: 12px;
-            background: var(--bg-tertiary);
+            background: var(--bg-glass);
             border-radius: 8px;
             transition: var(--transition);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .analysis-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: transparent;
+            z-index: 1;
         }
 
         .analysis-item:hover {
             transform: translateX(4px);
+            background: var(--bg-tertiary);
         }
 
         .analysis-icon {
@@ -3120,3 +3146,41 @@
         .fake-highlight.active {
             background-color: rgba(231, 29, 54, 0.3); /* Darker highlight when active */
         }
+
+/* Color Palette in Settings */
+.color-circle-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+    position: relative;
+    box-sizing: border-box;
+}
+.color-circle-btn:hover {
+    transform: scale(1.1);
+    border-color: var(--text-primary);
+    z-index: 1;
+}
+.color-circle-btn.active {
+    border-color: var(--text-primary);
+    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent-color);
+    z-index: 2;
+}
+.color-circle-btn.server-default {
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+[data-theme="dark"] .color-circle-btn.server-default {
+    background: #333333;
+}
+.color-circle-btn.server-default::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #888;
+}

@@ -94,23 +94,23 @@
                     <div class="breadcrumb">
                         <span id="breadcrumb-parent">仪表盘</span> / <span id="current-tab-title">工作台</span>
                     </div>
-                    <button class="icon-btn" onclick="refreshCurrentTab()" title="刷新数据" style="margin-left: -8px;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>
+                    <button class="icon-btn" onclick="refreshCurrentTab()" title="刷新数据" style="margin-left: -8px; width: 38px; height: 38px;">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 4.5a7.5 7.5 0 1 0 7.419 6.392c-.067-.454.265-.892.724-.892.37 0 .696.256.752.623A9 9 0 1 1 18 5.292V4.25a.75.75 0 0 1 1.5 0v3a.75.75 0 0 1-.75.75h-3a.75.75 0 0 1 0-1.5h1.35a7.474 7.474 0 0 0-5.1-2Z" fill="currentColor"/></svg>
                     </button>
                 </div>
 
                 <div class="header-actions">
-                    <button class="icon-btn" onclick="window.location.href='/Welcome'" title="返回前台主页">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    <button class="icon-btn" onclick="window.location.href='/Welcome'" title="返回前台主页" style="width: 38px; height: 38px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                     </button>
 
-                    <button class="icon-btn" title="消息中心">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <button class="icon-btn" title="消息中心" style="width: 38px; height: 38px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
                     </button>
 
-                    <button class="icon-btn" onclick="toggleTheme()" title="切换深色模式" id="theme-toggle">
-                        <svg id="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-                        <svg id="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                    <button class="icon-btn" onclick="toggleTheme()" title="切换深色模式" id="theme-toggle" style="width: 38px; height: 38px;">
+                        <svg id="sun-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                        <svg id="moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
                     </button>
                     
                     <div style="width: 1px; height: 18px; background: var(--border-color); margin: 0 4px;"></div>
@@ -213,7 +213,7 @@
                             </div>
                             <div class="stat-value" id="stat-blocked-count">0</div>
                             <div class="stat-footer">
-                                <span class="stat-trend" id="stat-blocked-trend">拦截恶意/非法访问</span>
+                                <span class="stat-trend" id="stat-blocked-trend">拦截恶意扫描爬虫</span>
                                 <span class="stat-desc">次数</span>
                             </div>
                         </div>
@@ -328,11 +328,16 @@
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h2>所有用户历史记录</h2>
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <button class="filled-btn" onclick="fetchHistory()" style="height: 40px;">刷新记录</button>
+                    <button class="icon-btn primary" onclick="fetchHistory()" style="width: 40px; height: 40px;" title="刷新记录">
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 4.5a7.5 7.5 0 1 0 7.419 6.392c-.067-.454.265-.892.724-.892.37 0 .696.256.752.623A9 9 0 1 1 18 5.292V4.25a.75.75 0 0 1 1.5 0v3a.75.75 0 0 1-.75.75h-3a.75.75 0 0 1 0-1.5h1.35a7.474 7.474 0 0 0-5.1-2Z" fill="currentColor"/></svg>
+                    </button>
                     <div class="search-group">
-                        <input type="text" id="history-search" placeholder="搜索标题或内容..." style="width: 250px;">
+                        <div class="search-wrapper">
+                            <input type="text" id="history-search" placeholder="搜索标题或内容..." style="width: 250px;" oninput="handleSearchInput(this)">
+                            <span class="clear-icon" onclick="clearSearchInput(this, 'history-search', fetchHistory)">&times;</span>
+                        </div>
                         <button class="search-btn" onclick="fetchHistory()" title="搜索">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"></circle><line x1="22" y1="22" x2="17.65" y2="17.65"></line></svg>
                         </button>
                     </div>
                 </div>
@@ -431,9 +436,12 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h3 style="margin:0;">历史访问记录 (去重 IP+UA)</h3>
                     <div class="search-group">
-                        <input type="text" id="ip-history-search" placeholder="搜索 IP 或 地理位置..." style="width: 220px;">
+                        <div class="search-wrapper">
+                            <input type="text" id="ip-history-search" placeholder="搜索 IP 或 地理位置..." style="width: 220px;" oninput="handleSearchInput(this)">
+                            <span class="clear-icon" onclick="clearSearchInput(this, 'ip-history-search', fetchIPLogs)">&times;</span>
+                        </div>
                         <button class="search-btn" onclick="fetchIPLogs(1, null)" title="搜索">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"></circle><line x1="22" y1="22" x2="17.65" y2="17.65"></line></svg>
                         </button>
                     </div>
                 </div>
@@ -518,7 +526,9 @@
                         </div>
                     </div>
                     <div style="margin-top: 20px; text-align: right;">
-                        <button class="filled-btn" onclick="saveCrawlerSettings()" style="height: 40px;">保存防御配置</button>
+                        <button class="icon-btn primary" onclick="saveCrawlerSettings()" style="width: 40px; height: 40px;" title="保存防御配置">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 5.75A2.75 2.75 0 0 1 5.75 3h9.964a3.25 3.25 0 0 1 2.299.952l2.035 2.035c.61.61.952 1.437.952 2.299v9.964A2.75 2.75 0 0 1 18.25 21H5.75A2.75 2.75 0 0 1 3 18.25V5.75ZM5.75 4.5c-.69 0-1.25.56-1.25 1.25v12.5c0 .69.56 1.25 1.25 1.25H6v-5.25A2.25 2.25 0 0 1 8.25 12h7.5A2.25 2.25 0 0 1 18 14.25v5.25h.25c.69 0 1.25-.56 1.25-1.25V8.286c0-.465-.184-.91-.513-1.238l-2.035-2.035a1.75 1.75 0 0 0-.952-.49V7.25a2.25 2.25 0 0 1-2.25 2.25h-4.5A2.25 2.25 0 0 1 7 7.25V4.5H5.75Zm10.75 15v-5.25a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0-.75.75v5.25h9Zm-8-15v2.75c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75V4.5h-6Z" fill="currentColor"/></svg>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -528,9 +538,12 @@
                 <div style="display:flex; gap:10px; align-items:center;">
                     <button class="filled-btn danger" onclick="clearCrawlerLogs()" style="height: 40px;">清空记录</button>
                     <div class="search-group">
-                        <input type="text" id="crawler-log-search" placeholder="搜索 IP/地区/UA..." style="width: 220px;">
+                        <div class="search-wrapper">
+                            <input type="text" id="crawler-log-search" placeholder="搜索 IP/地区/UA..." style="width: 220px;" oninput="handleSearchInput(this)">
+                            <span class="clear-icon" onclick="clearSearchInput(this, 'crawler-log-search', fetchCrawlerLogs)">&times;</span>
+                        </div>
                         <button class="search-btn" onclick="fetchCrawlerLogs(1)" title="搜索">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"></circle><line x1="22" y1="22" x2="17.65" y2="17.65"></line></svg>
                         </button>
                     </div>
                 </div>
@@ -588,7 +601,9 @@
 
                 <div style="margin-top:40px; display:flex; gap:15px; justify-content: flex-end;">
                     <span id="save-status" style="display:none; color:var(--success-color); align-self: center; font-size: 14px; font-weight: bold;">已保存生效 ✓</span>
-                    <button class="filled-btn" onclick="saveConfig()" id="save-config-btn">保存配置</button>
+                    <button class="icon-btn primary" onclick="saveConfig()" id="save-config-btn" style="width: 40px; height: 40px;" title="保存配置">
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 5.75A2.75 2.75 0 0 1 5.75 3h9.964a3.25 3.25 0 0 1 2.299.952l2.035 2.035c.61.61.952 1.437.952 2.299v9.964A2.75 2.75 0 0 1 18.25 21H5.75A2.75 2.75 0 0 1 3 18.25V5.75ZM5.75 4.5c-.69 0-1.25.56-1.25 1.25v12.5c0 .69.56 1.25 1.25 1.25H6v-5.25A2.25 2.25 0 0 1 8.25 12h7.5A2.25 2.25 0 0 1 18 14.25v5.25h.25c.69 0 1.25-.56 1.25-1.25V8.286c0-.465-.184-.91-.513-1.238l-2.035-2.035a1.75 1.75 0 0 0-.952-.49V7.25a2.25 2.25 0 0 1-2.25 2.25h-4.5A2.25 2.25 0 0 1 7 7.25V4.5H5.75Zm10.75 15v-5.25a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0-.75.75v5.25h9Zm-8-15v2.75c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75V4.5h-6Z" fill="currentColor"/></svg>
+                    </button>
                 </div>
             </div>
             
@@ -630,17 +645,65 @@
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                             <div class="form-group">
-                                <label>次级背景 (Secondary BG)</label>
+                                <label>容器次级背景 (Secondary BG)</label>
                                 <div style="display:flex; gap:10px; align-items:center;">
                                     <input type="color" id="light-bg-sec" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
                                     <input type="text" id="light-bg-sec-text" placeholder="#f8f9fa" style="flex:1;">
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label>容器背景 (Card BG)</label>
+                                <label>卡片容器背景 (Card BG)</label>
                                 <div style="display:flex; gap:10px; align-items:center;">
                                     <input type="color" id="light-card" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
                                     <input type="text" id="light-card-text" placeholder="#ffffff" style="flex:1;">
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>三级背景 (Tertiary BG)</label>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="color" id="light-bg-tertiary" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
+                                    <input type="text" id="light-bg-tertiary-text" placeholder="#f1f3f5" style="flex:1;">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>菜单/下拉背景 (Menu BG)</label>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="color" id="light-bg-menu" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
+                                    <input type="text" id="light-bg-menu-text" placeholder="rgba(255, 255, 255, 0.95)" style="flex:1;">
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>标准容器边框 (Border)</label>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="color" id="light-border" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
+                                    <input type="text" id="light-border-text" placeholder="#e9ecef" style="flex:1;">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>毛玻璃容器边框 (Glass)</label>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="color" id="light-glass-border" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
+                                    <input type="text" id="light-glass-border-text" placeholder="rgba(255, 255, 255, 0.8)" style="flex:1;">
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>正文文本颜色 (Text Main)</label>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="color" id="light-text-main" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
+                                    <input type="text" id="light-text-main-text" placeholder="#111827" style="flex:1;">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>次要文本颜色 (Text Muted)</label>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="color" id="light-text-muted" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
+                                    <input type="text" id="light-text-muted-text" placeholder="#6b7280" style="flex:1;">
                                 </div>
                             </div>
                         </div>
@@ -674,17 +737,65 @@
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                             <div class="form-group">
-                                <label>次级背景 (Secondary BG)</label>
+                                <label>容器次级背景 (Secondary BG)</label>
                                 <div style="display:flex; gap:10px; align-items:center;">
                                     <input type="color" id="dark-bg-sec" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
                                     <input type="text" id="dark-bg-sec-text" placeholder="#1a1d20" style="flex:1;">
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label>容器背景 (Card BG)</label>
+                                <label>卡片容器背景 (Card BG)</label>
                                 <div style="display:flex; gap:10px; align-items:center;">
                                     <input type="color" id="dark-card" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
                                     <input type="text" id="dark-card-text" placeholder="#1e293b" style="flex:1;">
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>三级背景 (Tertiary BG)</label>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="color" id="dark-bg-tertiary" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
+                                    <input type="text" id="dark-bg-tertiary-text" placeholder="#212529" style="flex:1;">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>菜单/下拉背景 (Menu BG)</label>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="color" id="dark-bg-menu" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
+                                    <input type="text" id="dark-bg-menu-text" placeholder="rgba(25, 25, 26, 0.95)" style="flex:1;">
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>标准容器边框 (Border)</label>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="color" id="dark-border" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
+                                    <input type="text" id="dark-border-text" placeholder="#343333" style="flex:1;">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>毛玻璃容器边框 (Glass)</label>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="color" id="dark-glass-border" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
+                                    <input type="text" id="dark-glass-border-text" placeholder="rgba(255, 255, 255, 0.15)" style="flex:1;">
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>正文文本颜色 (Text Main)</label>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="color" id="dark-text-main" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
+                                    <input type="text" id="dark-text-main-text" placeholder="#f8fafc" style="flex:1;">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>次要文本颜色 (Text Muted)</label>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="color" id="dark-text-muted" style="width:40px; height:38px; padding:2px; border:none; cursor:pointer; background:none;">
+                                    <input type="text" id="dark-text-muted-text" placeholder="#94a3b8" style="flex:1;">
                                 </div>
                             </div>
                         </div>
@@ -694,17 +805,18 @@
                 <div style="margin-top:30px;">
                     <h3 style="margin-top:0; border-left: 4px solid var(--success-color); padding-left: 10px; margin-bottom: 20px;">快速预设 (Presets)</h3>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap:12px;" id="theme-presets">
-                        <div onclick="applyFullPreset('#4361ee', '#f3f4f6', '#4cc9f0', '#0f172a', '#3f37c9', '#4895ef', '#ffffff', '#1e293b', '#f8f9fa', '#1a1d20')" style="background:linear-gradient(135deg, #4361ee 50%, #0f172a 50%); width:100%; aspect-ratio:1; border-radius:12px; cursor:pointer; border:2px solid var(--border-color);" title="Indigo & Night"></div>
-                        <div onclick="applyFullPreset('#006a6a', '#f0fdfa', '#4db6ac', '#002020', '#004d4d', '#80cbc4', '#ffffff', '#003333', '#f0fdfa', '#002020')" style="background:linear-gradient(135deg, #006a6a 50%, #002020 50%); width:100%; aspect-ratio:1; border-radius:12px; cursor:pointer; border:2px solid var(--border-color);" title="Teal & Ocean"></div>
-                        <div onclick="applyFullPreset('#9c425b', '#fff1f2', '#f06292', '#2a0a11', '#880e4f', '#f48fb1', '#ffffff', '#3d0c11', '#fff1f2', '#2a0a11')" style="background:linear-gradient(135deg, #9c425b 50%, #2a0a11 50%); width:100%; aspect-ratio:1; border-radius:12px; cursor:pointer; border:2px solid var(--border-color);" title="Rose & Wine"></div>
-                        <div onclick="applyFullPreset('#6750a4', '#f5f3ff', '#b39ddb', '#1c1b1f', '#512da8', '#d1c4e9', '#ffffff', '#2d2a33', '#f5f3ff', '#1c1b1f')" style="background:linear-gradient(135deg, #6750a4 50%, #1c1b1f 50%); width:100%; aspect-ratio:1; border-radius:12px; cursor:pointer; border:2px solid var(--border-color);" title="Violet & Abyss"></div>
-                        <div onclick="applyFullPreset('#386a20', '#f7fee7', '#8bc34a', '#0a1a05', '#2e7d32', '#a5d6a7', '#ffffff', '#152a0c', '#f7fee7', '#0a1a05')" style="background:linear-gradient(135deg, #386a20 50%, #0a1a05 50%); width:100%; aspect-ratio:1; border-radius:12px; cursor:pointer; border:2px solid var(--border-color);" title="Green & Forest"></div>
+                        <p style="color:var(--text-muted); font-size:14px;">正在加载预设...</p>
                     </div>
                 </div>
 
                 <div style="margin-top:40px; display:flex; gap:15px; justify-content: flex-end;">
                     <button class="filled-btn secondary" onclick="resetTheme()">恢复默认</button>
-                    <button class="filled-btn" onclick="saveTheme()">应用并保存</button>
+                    <button class="icon-btn" onclick="previewTheme()" title="预览当前设置 (不保存)" style="width: 40px; height: 40px; color: var(--primary-color);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                    <button class="icon-btn primary" onclick="saveTheme()" style="width: 40px; height: 40px;" title="应用并保存">
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 5.75A2.75 2.75 0 0 1 5.75 3h9.964a3.25 3.25 0 0 1 2.299.952l2.035 2.035c.61.61.952 1.437.952 2.299v9.964A2.75 2.75 0 0 1 18.25 21H5.75A2.75 2.75 0 0 1 3 18.25V5.75ZM5.75 4.5c-.69 0-1.25.56-1.25 1.25v12.5c0 .69.56 1.25 1.25 1.25H6v-5.25A2.25 2.25 0 0 1 8.25 12h7.5A2.25 2.25 0 0 1 18 14.25v5.25h.25c.69 0 1.25-.56 1.25-1.25V8.286c0-.465-.184-.91-.513-1.238l-2.035-2.035a1.75 1.75 0 0 0-.952-.49V7.25a2.25 2.25 0 0 1-2.25 2.25h-4.5A2.25 2.25 0 0 1 7 7.25V4.5H5.75Zm10.75 15v-5.25a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0-.75.75v5.25h9Zm-8-15v2.75c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75V4.5h-6Z" fill="currentColor"/></svg>
+                    </button>
                 </div>
             </div>
             </div> <!-- end content-wrapper -->
@@ -788,6 +900,10 @@
             // Re-apply dynamic custom colors for the new mode
             if (typeof applyDynamicTheme === 'function') {
                 applyDynamicTheme();
+            }
+            // 额外触发管理页面的预览刷新
+            if (typeof previewTheme === 'function') {
+                previewTheme();
             }
         }
 
@@ -1471,45 +1587,148 @@
             if (data && data.success) {
                 const theme = data.data.theme || {};
                 
-                // Light mode
-                const lp = theme.lightPrimary || theme.primary || '#4361ee';
-                const ls = theme.lightSecondary || '#3f37c9';
-                const lb = theme.lightBackground || theme.background || '#f3f4f6';
-                const lbs = theme.lightBgSec || '#f8f9fa';
-                const lc = theme.lightCard || '#ffffff';
-                
-                document.getElementById('light-primary').value = lp;
-                document.getElementById('light-primary-text').value = lp;
-                document.getElementById('light-secondary').value = ls;
-                document.getElementById('light-secondary-text').value = ls;
-                document.getElementById('light-bg').value = lb;
-                document.getElementById('light-bg-text').value = lb;
-                document.getElementById('light-bg-sec').value = lbs;
-                document.getElementById('light-bg-sec-text').value = lbs;
-                document.getElementById('light-card').value = lc;
-                document.getElementById('light-card-text').value = lc;
-
-                // Dark mode
-                const dp = theme.darkPrimary || '#4cc9f0';
-                const ds = theme.darkSecondary || '#4895ef';
-                const db = theme.darkBackground || '#0f172a';
-                const dbs = theme.darkBgSec || '#1a1d20';
-                const dc = theme.darkCard || '#1e293b';
-                
-                document.getElementById('dark-primary').value = dp;
-                document.getElementById('dark-primary-text').value = dp;
-                document.getElementById('dark-secondary').value = ds;
-                document.getElementById('dark-secondary-text').value = ds;
-                document.getElementById('dark-bg').value = db;
-                document.getElementById('dark-bg-text').value = db;
-                document.getElementById('dark-bg-sec').value = dbs;
-                document.getElementById('dark-bg-sec-text').value = dbs;
-                document.getElementById('dark-card').value = dc;
-                document.getElementById('dark-card-text').value = dc;
+                applyFullPreset(
+                    theme.lightPrimary || theme.primary || '#4361ee',
+                    theme.lightBackground || theme.background || '#f3f4f6',
+                    theme.darkPrimary || '#4cc9f0',
+                    theme.darkBackground || '#0f172a',
+                    theme.lightSecondary || '#3f37c9',
+                    theme.darkSecondary || '#4895ef',
+                    theme.lightCard || '#ffffff',
+                    theme.darkCard || '#1e293b',
+                    theme.lightBgSec || '#f8f9fa',
+                    theme.darkBgSec || '#1a1d20',
+                    theme.lightBorder || '#e9ecef',
+                    theme.darkBorder || '#343333',
+                    theme.lightGlassBorder || 'rgba(255, 255, 255, 0.8)',
+                    theme.darkGlassBorder || 'rgba(255, 255, 255, 0.15)',
+                    theme.lightTextMain || '#111827',
+                    theme.darkTextMain || '#f8fafc',
+                    theme.lightTextMuted || '#6b7280',
+                    theme.darkTextMuted || '#94a3b8',
+                    theme.lightBgTertiary || '#f1f3f5',
+                    theme.darkBgTertiary || '#212529',
+                    theme.lightBgMenu || 'rgba(255, 255, 255, 0.95)',
+                    theme.darkBgMenu || 'rgba(25, 25, 26, 0.95)'
+                );
+                // 立即刷新预览显示
+                previewTheme();
             }
         }
 
-        function applyFullPreset(lp, lb, dp, db, ls, ds, lc, dc, lbs, dbs) {
+        // --- 主题预设 ---
+        let allPresets = [];
+
+        async function loadPresets() {
+            const data = await safeFetch('/api/admin/presets');
+            if (data && data.success) {
+                allPresets = data.data;
+                renderPresets();
+            }
+        }
+
+        function renderPresets() {
+            const container = document.getElementById('theme-presets');
+            if (!container) return;
+            container.innerHTML = allPresets.map(p => `
+                <div class="preset-item" 
+                     title="${p.title}"
+                     onclick="applyPreset(${p.id})"
+                     style="background: linear-gradient(135deg, ${p.colors[0]} 50%, ${p.colors[1]} 50%); 
+                            width:100%; aspect-ratio:1; border-radius:12px; cursor:pointer; 
+                            border:1px solid var(--border-color); 
+                            position: relative; transition: all 0.2s; overflow: visible;">
+                    
+                    <!-- 覆盖保存按钮 -->
+                    <div class="preset-save-btn" 
+                         onclick="event.stopPropagation(); updatePresetItem(${p.id})"
+                         title="将当前配置保存到此预设"
+                         style="position:absolute; bottom:-5px; right:-5px; background:var(--bg-card); color:var(--text-main); 
+                                border:1px solid var(--border-color); border-radius:6px; width:22px; height:22px; 
+                                display:flex; align-items:center; justify-content:center; font-size:12px; 
+                                box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index:10;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function applyPreset(id) {
+            const p = allPresets.find(x => x.id === id);
+            if (p) {
+                applyFullPreset(...p.colors);
+                // 自动刷新预览
+                previewTheme();
+            }
+        }
+
+        async function updatePresetItem(id) {
+            const p = allPresets.find(x => x.id === id);
+            if (!p) return;
+            
+            if (!confirm(`确定要将当前所有调色板的颜色覆盖保存到预设 "${p.title}" 吗？`)) return;
+
+            const lp = document.getElementById('light-primary-text').value;
+            const lb = document.getElementById('light-bg-text').value;
+            const dp = document.getElementById('dark-primary-text').value;
+            const db = document.getElementById('dark-bg-text').value;
+            const ls = document.getElementById('light-secondary-text').value;
+            const ds = document.getElementById('dark-secondary-text').value;
+            const lc = document.getElementById('light-card-text').value;
+            const dc = document.getElementById('dark-card-text').value;
+            const lbs = document.getElementById('light-bg-sec-text').value;
+            const dbs = document.getElementById('dark-bg-sec-text').value;
+            const lbdr = document.getElementById('light-border-text').value;
+            const dbdr = document.getElementById('dark-border-text').value;
+            const lgb = document.getElementById('light-glass-border-text').value;
+            const dgb = document.getElementById('dark-glass-border-text').value;
+            const ltm = document.getElementById('light-text-main-text').value;
+            const dtm = document.getElementById('dark-text-main-text').value;
+            const ltm_muted = document.getElementById('light-text-muted-text').value;
+            const dtm_muted = document.getElementById('dark-text-muted-text').value;
+            const lbt = document.getElementById('light-bg-tertiary-text').value;
+            const dbt = document.getElementById('dark-bg-tertiary-text').value;
+            const lbm = document.getElementById('light-bg-menu-text').value;
+            const dbm = document.getElementById('dark-bg-menu-text').value;
+
+            p.colors = [lp, lb, dp, db, ls, ds, lc, dc, lbs, dbs, lbdr, dbdr, lgb, dgb, ltm, dtm, ltm_muted, dtm_muted, lbt, dbt, lbm, dbm];
+            
+            const res = await post('/api/admin/presets', allPresets);
+            if (res && res.success) {
+                alert('预设已更新');
+                renderPresets();
+            }
+        }
+
+        function applyFullPreset(lp, lb, dp, db, ls, ds, lc, dc, lbs, dbs, lbdr, dbdr, lgb, dgb, ltm, dtm, ltm_muted, dtm_muted, lbt, dbt, lbm, dbm) {
+            // Apply defaults for missing arguments (backward compatibility with 10-color or 18-color presets)
+            lp = lp || '#4361ee';
+            lb = lb || '#f3f4f6';
+            dp = dp || '#4cc9f0';
+            db = db || '#0f172a';
+            ls = ls || '#3f37c9';
+            ds = ds || '#4895ef';
+            lc = lc || '#ffffff';
+            dc = dc || '#1e293b';
+            lbs = lbs || '#f8f9fa';
+            dbs = dbs || '#1a1d20';
+            lbdr = lbdr || '#e9ecef';
+            dbdr = dbdr || '#343333';
+            lgb = lgb || 'rgba(255, 255, 255, 0.8)';
+            dgb = dgb || 'rgba(255, 255, 255, 0.15)';
+            ltm = ltm || '#111827';
+            dtm = dtm || '#f8fafc';
+            ltm_muted = ltm_muted || '#6b7280';
+            dtm_muted = dtm_muted || '#94a3b8';
+            lbt = lbt || '#f1f3f5';
+            dbt = dbt || '#212529';
+            lbm = lbm || 'rgba(255, 255, 255, 0.95)';
+            dbm = dbm || 'rgba(25, 25, 26, 0.95)';
+
             document.getElementById('light-primary').value = lp;
             document.getElementById('light-primary-text').value = lp;
             document.getElementById('light-bg').value = lb;
@@ -1519,30 +1738,112 @@
             document.getElementById('dark-bg').value = db;
             document.getElementById('dark-bg-text').value = db;
             
-            if (ls) {
-                document.getElementById('light-secondary').value = ls;
-                document.getElementById('light-secondary-text').value = ls;
+            document.getElementById('light-secondary').value = ls;
+            document.getElementById('light-secondary-text').value = ls;
+            document.getElementById('dark-secondary').value = ds;
+            document.getElementById('dark-secondary-text').value = ds;
+            document.getElementById('light-card').value = lc;
+            document.getElementById('light-card-text').value = lc;
+            document.getElementById('dark-card').value = dc;
+            document.getElementById('dark-card-text').value = dc;
+            document.getElementById('light-bg-sec').value = lbs;
+            document.getElementById('light-bg-sec-text').value = lbs;
+            document.getElementById('dark-bg-sec').value = dbs;
+            document.getElementById('dark-bg-sec-text').value = dbs;
+            document.getElementById('light-border').value = lbdr;
+            document.getElementById('light-border-text').value = lbdr;
+            document.getElementById('dark-border').value = dbdr;
+            document.getElementById('dark-border-text').value = dbdr;
+            document.getElementById('light-glass-border').value = lgb;
+            document.getElementById('light-glass-border-text').value = lgb;
+            document.getElementById('dark-glass-border').value = dgb;
+            document.getElementById('dark-glass-border-text').value = dgb;
+            document.getElementById('light-text-main').value = ltm;
+            document.getElementById('light-text-main-text').value = ltm;
+            document.getElementById('dark-text-main').value = dtm;
+            document.getElementById('dark-text-main-text').value = dtm;
+            document.getElementById('light-text-muted').value = ltm_muted;
+            document.getElementById('light-text-muted-text').value = ltm_muted;
+            document.getElementById('dark-text-muted').value = dtm_muted;
+            document.getElementById('dark-text-muted-text').value = dtm_muted;
+            document.getElementById('light-bg-tertiary').value = lbt;
+            document.getElementById('light-bg-tertiary-text').value = lbt;
+            document.getElementById('dark-bg-tertiary').value = dbt;
+            document.getElementById('dark-bg-tertiary-text').value = dbt;
+            document.getElementById('light-bg-menu').value = lbm;
+            document.getElementById('light-bg-menu-text').value = lbm;
+            document.getElementById('dark-bg-menu').value = dbm;
+            document.getElementById('dark-bg-menu-text').value = dbm;
+        }
+
+        function previewTheme() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const prefix = isDark ? 'dark' : 'light';
+            
+            const root = document.documentElement;
+            const primary = document.getElementById(`${prefix}-primary-text`).value;
+            const secondary = document.getElementById(`${prefix}-secondary-text`).value;
+            const background = document.getElementById(`${prefix}-bg-text`).value;
+            const bgSec = document.getElementById(`${prefix}-bg-sec-text`).value;
+            const card = document.getElementById(`${prefix}-card-text`).value;
+            const border = document.getElementById(`${prefix}-border-text`).value;
+            const glassBorder = document.getElementById(`${prefix}-glass-border-text`).value;
+            const textMain = document.getElementById(`${prefix}-text-main-text`).value;
+            const textMuted = document.getElementById(`${prefix}-text-muted-text`).value;
+            const bgTertiary = document.getElementById(`${prefix}-bg-tertiary-text`).value;
+            const bgMenu = document.getElementById(`${prefix}-bg-menu-text`).value;
+
+            if (primary) {
+                root.style.setProperty('--primary-color', primary);
+                root.style.setProperty('--accent-color', primary);
+                
+                // Technical Derived Colors
+                const rgb = window.hexToRgb(primary);
+                if (rgb) {
+                    root.style.setProperty('--accent-light', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`);
+                    root.style.setProperty('--accent-hover', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.25)`);
+                    root.style.setProperty('--shadow-accent', `0 4px 12px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.25)`);
+                    root.style.setProperty('--divider-color', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${isDark ? 0.2 : 0.15})`);
+                }
+                if (window.adjustColor) {
+                    root.style.setProperty('--primary-hover', adjustColor(primary, isDark ? 20 : -20));
+                }
             }
-            if (ds) {
-                document.getElementById('dark-secondary').value = ds;
-                document.getElementById('dark-secondary-text').value = ds;
+
+            if (secondary) {
+                root.style.setProperty('--secondary-color', secondary);
+                const rgb = window.hexToRgb(secondary);
+                if (rgb) {
+                    root.style.setProperty('--secondary-light', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`);
+                    root.style.setProperty('--secondary-hover', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.25)`);
+                }
             }
-            if (lc) {
-                document.getElementById('light-card').value = lc;
-                document.getElementById('light-card-text').value = lc;
+
+            if (background) {
+                root.style.setProperty('--bg-main', background);
+                root.style.setProperty('--bg-color', background);
+                const rgb = window.hexToRgb(background);
+                if (rgb) {
+                    root.style.setProperty('--bg-glass', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${isDark ? 0.6 : 0.45})`);
+                }
             }
-            if (dc) {
-                document.getElementById('dark-card').value = dc;
-                document.getElementById('dark-card-text').value = dc;
+
+            if (bgSec) root.style.setProperty('--bg-secondary', bgSec);
+            if (border) root.style.setProperty('--border-color', border);
+            if (glassBorder) root.style.setProperty('--glass-border', glassBorder);
+            if (textMain) root.style.setProperty('--text-main', textMain);
+            if (textMuted) root.style.setProperty('--text-muted', textMuted);
+            if (bgTertiary) root.style.setProperty('--bg-tertiary', bgTertiary);
+            if (bgMenu) root.style.setProperty('--bg-menu', bgMenu);
+
+            if (card) {
+                root.style.setProperty('--bg-card', card);
+                root.style.setProperty('--card-bg', card);
+                root.style.setProperty('--bg-card-solid', card);
+                root.style.setProperty('--bg-primary', card);
             }
-            if (lbs) {
-                document.getElementById('light-bg-sec').value = lbs;
-                document.getElementById('light-bg-sec-text').value = lbs;
-            }
-            if (dbs) {
-                document.getElementById('dark-bg-sec').value = dbs;
-                document.getElementById('dark-bg-sec-text').value = dbs;
-            }
+            
+            console.log('Theme preview updated (Sync Technical Colors).');
         }
 
         async function saveTheme() {
@@ -1551,12 +1852,24 @@
             const lb = document.getElementById('light-bg-text').value;
             const lbs = document.getElementById('light-bg-sec-text').value;
             const lc = document.getElementById('light-card-text').value;
+            const lbdr = document.getElementById('light-border-text').value;
+            const lgb = document.getElementById('light-glass-border-text').value;
+            const ltm = document.getElementById('light-text-main-text').value;
+            const ltm_muted = document.getElementById('light-text-muted-text').value;
+            const lbt = document.getElementById('light-bg-tertiary-text').value;
+            const lbm = document.getElementById('light-bg-menu-text').value;
             
             const dp = document.getElementById('dark-primary-text').value;
             const ds = document.getElementById('dark-secondary-text').value;
             const db = document.getElementById('dark-bg-text').value;
             const dbs = document.getElementById('dark-bg-sec-text').value;
             const dc = document.getElementById('dark-card-text').value;
+            const dbdr = document.getElementById('dark-border-text').value;
+            const dgb = document.getElementById('dark-glass-border-text').value;
+            const dtm = document.getElementById('dark-text-main-text').value;
+            const dtm_muted = document.getElementById('dark-text-muted-text').value;
+            const dbt = document.getElementById('dark-bg-tertiary-text').value;
+            const dbm = document.getElementById('dark-bg-menu-text').value;
 
             const configData = await safeFetch('/api/admin/config');
             if (configData && configData.success) {
@@ -1567,26 +1880,54 @@
                     lightBackground: lb,
                     lightBgSec: lbs,
                     lightCard: lc,
+                    lightBorder: lbdr,
+                    lightGlassBorder: lgb,
+                    lightTextMain: ltm,
+                    lightTextMuted: ltm_muted,
+                    lightBgTertiary: lbt,
+                    lightBgMenu: lbm,
                     darkPrimary: dp,
                     darkSecondary: ds,
                     darkBackground: db,
                     darkBgSec: dbs,
                     darkCard: dc,
+                    darkBorder: dbdr,
+                    darkGlassBorder: dgb,
+                    darkTextMain: dtm,
+                    darkTextMuted: dtm_muted,
+                    darkBgTertiary: dbt,
+                    darkBgMenu: dbm,
                     primary: lp,
                     background: lb
                 };
                 
                 const res = await post('/api/admin/config', config);
                 if (res && res.success) {
-                    alert('全站主题配置已保存，正在应用...');
+                    alert('全站主题配置已保存并应用。');
                     location.reload();
+                } else {
+                    alert('保存配置失败，请重试。');
                 }
+            } else {
+                alert('获取系统配置失败，请检查网络。');
             }
         }
 
         async function resetTheme() {
             if (!confirm('确定恢复默认配色吗？')) return;
-            applyFullPreset('#4361ee', '#f3f4f6', '#4cc9f0', '#0f172a');
+            // Apply default 22-color values
+            applyFullPreset(
+                '#4361ee', '#f3f4f6', '#4cc9f0', '#0f172a',
+                '#3f37c9', '#4895ef',
+                '#ffffff', '#1e293b',
+                '#f8f9fa', '#1a1d20',
+                '#e9ecef', '#343333',
+                'rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.15)',
+                '#111827', '#f8fafc',
+                '#6b7280', '#94a3b8',
+                '#f1f3f5', '#212529',
+                'rgba(255, 255, 255, 0.95)', 'rgba(25, 25, 26, 0.95)'
+            );
             await saveTheme();
         }
 
@@ -1599,9 +1940,15 @@
         const syncColor = (colorId, textId) => {
             const colorEl = document.getElementById(colorId);
             const textEl = document.getElementById(textId);
-            colorEl.addEventListener('input', (e) => { textEl.value = e.target.value; });
+            colorEl.addEventListener('input', (e) => { 
+                textEl.value = e.target.value; 
+                previewTheme(); // 实时预览
+            });
             textEl.addEventListener('input', (e) => {
-                if (/^#[0-9A-F]{6}$/i.test(e.target.value)) colorEl.value = e.target.value;
+                if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
+                    colorEl.value = e.target.value;
+                    previewTheme(); // 实时预览
+                }
             });
         };
         syncColor('light-primary', 'light-primary-text');
@@ -1609,11 +1956,24 @@
         syncColor('light-bg', 'light-bg-text');
         syncColor('light-bg-sec', 'light-bg-sec-text');
         syncColor('light-card', 'light-card-text');
+        syncColor('light-border', 'light-border-text');
+        syncColor('light-glass-border', 'light-glass-border-text');
+        syncColor('light-text-main', 'light-text-main-text');
+        syncColor('light-text-muted', 'light-text-muted-text');
+        syncColor('light-bg-tertiary', 'light-bg-tertiary-text');
+        syncColor('light-bg-menu', 'light-bg-menu-text');
+        
         syncColor('dark-primary', 'dark-primary-text');
         syncColor('dark-secondary', 'dark-secondary-text');
         syncColor('dark-bg', 'dark-bg-text');
         syncColor('dark-bg-sec', 'dark-bg-sec-text');
         syncColor('dark-card', 'dark-card-text');
+        syncColor('dark-border', 'dark-border-text');
+        syncColor('dark-glass-border', 'dark-glass-border-text');
+        syncColor('dark-text-main', 'dark-text-main-text');
+        syncColor('dark-text-muted', 'dark-text-muted-text');
+        syncColor('dark-bg-tertiary', 'dark-bg-tertiary-text');
+        syncColor('dark-bg-menu', 'dark-bg-menu-text');
 
         async function fetchConfig() {
             const data = await safeFetch('/api/admin/config');
@@ -1632,7 +1992,6 @@
             const status = document.getElementById('save-status');
             
             btn.disabled = true;
-            btn.innerText = '正在保存...';
             
             const config = {
                 llm: {
@@ -1648,7 +2007,6 @@
 
             const data = await post('/api/admin/config', config);
             btn.disabled = false;
-            btn.innerText = '保存配置';
 
             if (data && data.success) {
                 status.style.display = 'inline';
@@ -1703,8 +2061,34 @@
             container.innerHTML = html;
         }
 
+        // Search Input Handlers
+        function handleSearchInput(input) {
+            const clearIcon = input.nextElementSibling;
+            if (input.value.length > 0) {
+                clearIcon.style.display = 'flex';
+            } else {
+                clearIcon.style.display = 'none';
+            }
+        }
+
+        function clearSearchInput(icon, inputId, refreshFunc) {
+            const input = document.getElementById(inputId);
+            input.value = '';
+            icon.style.display = 'none';
+            input.focus();
+            if (refreshFunc) {
+                // Determine if it's fetchIPLogs which needs two params
+                if (refreshFunc.name === 'fetchIPLogs') {
+                    refreshFunc(1, null);
+                } else {
+                    refreshFunc(1);
+                }
+            }
+        }
+
         // Init
         fetchAdminInfo();
+        loadPresets();
         const lastTab = localStorage.getItem('admin_last_tab') || 'workbench';
         switchTab(lastTab);
     </script>

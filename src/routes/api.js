@@ -12,8 +12,13 @@ const { authenticate, authenticateAdmin } = require('../middleware/auth');
 
 const IMG_CACHE_DIR = path.join(__dirname, '../../data/img_cache');
 const USERS_DATA_DIR = path.join(__dirname, '../../data/users');
+const PRESETS_DIR = path.join(__dirname, '../../data/presets');
+
 if (!fs.existsSync(IMG_CACHE_DIR)) {
     fs.mkdirSync(IMG_CACHE_DIR, { recursive: true });
+}
+if (!fs.existsSync(PRESETS_DIR)) {
+    fs.mkdirSync(PRESETS_DIR, { recursive: true });
 }
 
 // Multer storage configuration for avatars
@@ -652,6 +657,36 @@ module.exports = function(services, state) {
         } catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });
 
+    // Theme Presets Management
+    router.get('/admin/presets', authenticate, authenticateAdmin, async (req, res) => {
+        const presetsPath = path.join(PRESETS_DIR, 'themes.json');
+        const defaultPresets = [
+            { id: 1, title: 'Indigo & Night', colors: ['#4361ee', '#f3f4f6', '#4cc9f0', '#0f172a', '#3f37c9', '#4895ef', '#ffffff', '#1e293b', '#f8f9fa', '#1a1d20', '#e9ecef', '#343333', 'rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 0.15)', '#111827', '#f8fafc', '#6b7280', '#94a3b8', '#f1f3f5', '#212529', 'rgba(255, 255, 255, 0.95)', 'rgba(25, 25, 26, 0.95)'] },
+            { id: 2, title: 'Black & White', colors: ['#000000', '#ffffff', '#ffffff', '#000000', '#333333', '#cccccc', '#ffffff', '#1a1a1a', '#f5f5f5', '#0d0d0d', '#e0e0e0', '#333333', 'rgba(0, 0, 0, 0.1)', 'rgba(255, 255, 255, 0.1)', '#000000', '#ffffff', '#666666', '#999999', '#eeeeee', '#111111', 'rgba(255, 255, 255, 0.98)', 'rgba(0, 0, 0, 0.95)'] },
+            { id: 3, title: 'Rose & Wine', colors: ['#9c425b', '#fff1f2', '#f06292', '#2a0a11', '#880e4f', '#f48fb1', '#ffffff', '#3d0c11', '#fff1f2', '#2a0a11', '#ffdde1', '#3d0c11', 'rgba(156, 66, 91, 0.2)', 'rgba(240, 98, 146, 0.2)', '#1a0505', '#fff1f2', '#9c425b', '#f48fb1', '#fff1f2', '#1a0505', 'rgba(255, 255, 255, 0.95)', 'rgba(42, 10, 17, 0.95)'] },
+            { id: 4, title: 'Violet & Abyss', colors: ['#6750a4', '#f5f3ff', '#b39ddb', '#1c1b1f', '#512da8', '#d1c4e9', '#ffffff', '#2d2a33', '#f5f3ff', '#1c1b1f', '#e9e4ff', '#2d2a33', 'rgba(103, 80, 164, 0.2)', 'rgba(179, 157, 219, 0.2)', '#1c1b1f', '#f5f3ff', '#6750a4', '#b39ddb', '#f5f3ff', '#1c1b1f', 'rgba(255, 255, 255, 0.95)', 'rgba(28, 27, 31, 0.95)'] },
+            { id: 5, title: 'Green & Forest', colors: ['#386a20', '#f7fee7', '#8bc34a', '#0a1a05', '#2e7d32', '#a5d6a7', '#ffffff', '#152a0c', '#f7fee7', '#0a1a05', '#ecfccb', '#152a0c', 'rgba(56, 106, 32, 0.2)', 'rgba(139, 195, 74, 0.2)', '#0a1a05', '#f7fee7', '#386a20', '#8bc34a', '#f7fee7', '#0a1a05', 'rgba(255, 255, 255, 0.95)', 'rgba(10, 26, 5, 0.95)'] }
+        ];
+
+        try {
+            if (!fs.existsSync(presetsPath)) {
+                await fsPromises.writeFile(presetsPath, JSON.stringify(defaultPresets, null, 2));
+                return res.json({ success: true, data: defaultPresets });
+            }
+            const data = await fsPromises.readFile(presetsPath, 'utf8');
+            res.json({ success: true, data: JSON.parse(data) });
+        } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/presets', authenticate, authenticateAdmin, async (req, res) => {
+        const presetsPath = path.join(PRESETS_DIR, 'themes.json');
+        try {
+            const newPresets = req.body;
+            await fsPromises.writeFile(presetsPath, JSON.stringify(newPresets, null, 2));
+            res.json({ success: true });
+        } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
     // Avatar Management
     router.get('/public/avatar/:userId', authenticate, async (req, res) => {
         try {
@@ -720,6 +755,52 @@ module.exports = function(services, state) {
             const avatarPath = await findAvatarFile(req.userId);
             if (avatarPath) await fsPromises.unlink(avatarPath);
             res.json({ success: true });
+        } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    });
+
+    // User Preferences (Theme, etc.)
+    const getUserPrefsPath = (userId) => path.join(USERS_DATA_DIR, String(userId), 'preferences.json');
+
+    router.get('/user/preferences', authenticate, async (req, res) => {
+        try {
+            const prefsPath = getUserPrefsPath(req.userId);
+            try {
+                const data = await fsPromises.readFile(prefsPath, 'utf8');
+                res.json({ success: true, preferences: JSON.parse(data) });
+            } catch (e) {
+                // Return defaults if no file
+                res.json({ success: true, preferences: { themeId: null } }); 
+            }
+        } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    });
+
+    router.post('/user/preferences', authenticate, async (req, res) => {
+        try {
+            await ensureUserDir(req.userId);
+            const prefsPath = getUserPrefsPath(req.userId);
+            
+            let current = {};
+            try {
+                const data = await fsPromises.readFile(prefsPath, 'utf8');
+                current = JSON.parse(data);
+            } catch (e) {}
+
+            const updated = { ...current, ...req.body };
+            await fsPromises.writeFile(prefsPath, JSON.stringify(updated, null, 2));
+            res.json({ success: true });
+        } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    });
+
+    // Public Presets (Read-only)
+    router.get('/public/presets', async (req, res) => {
+        try {
+            const themesPath = path.join(PRESETS_DIR, 'themes.json');
+            if (fs.existsSync(themesPath)) {
+                const data = await fsPromises.readFile(themesPath, 'utf8');
+                res.json({ success: true, data: JSON.parse(data) });
+            } else {
+                res.json({ success: true, data: [] });
+            }
         } catch (e) { res.status(500).json({ success: false, error: e.message }); }
     });
 
