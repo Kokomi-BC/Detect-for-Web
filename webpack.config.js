@@ -2,42 +2,65 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
 
+const isProduction = process.env.NODE_ENV === 'production' || process.argv.includes('production');
+
+const minifyOptions = isProduction ? {
+  removeComments: true,
+  collapseWhitespace: true,
+  removeRedundantAttributes: true,
+  useShortDoctype: true,
+  removeEmptyAttributes: true,
+  removeStyleLinkTypeAttributes: true,
+  keepClosingSlash: true,
+  minifyJS: true,
+  minifyCSS: true,
+  minifyURLs: true,
+} : false;
+
 module.exports = {
-  mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+  mode: isProduction ? 'production' : 'development',
   // 由于我们使用纯HTML文件，不需要入口JavaScript文件
   entry: {},
   output: {
     path: path.join(__dirname, 'dist'),
-    filename: 'bundle.js',
+    filename: '[name].[contenthash:8].js',
+    clean: true, // 构建前清理 dist
   },
-  cache: false,
+  cache: isProduction ? { type: 'filesystem' } : false,
+  optimization: {
+    minimize: isProduction,
+    splitChunks: {
+      chunks: 'all',
+    },
+  },
   plugins: [
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'public/Main.html'),
       filename: 'Main.html',
       cache: false,
-      minify: false,
+      minify: minifyOptions,
     }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'public/Welcome.html'),
       filename: 'Welcome.html',
       cache: false,
-      minify: false,
+      minify: minifyOptions,
     }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'public/Login.html'),
       filename: 'Login.html',
       cache: false,
-      minify: false,
+      minify: minifyOptions,
     }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'public/Admin.html'),
       filename: 'Admin.html',
       cache: false,
-      minify: false,
+      minify: minifyOptions,
     }),
     new webpack.DefinePlugin({
       'global': 'global',
+      'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
     }),
   ],
   devServer: {

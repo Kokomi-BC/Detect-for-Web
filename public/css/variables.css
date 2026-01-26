@@ -58,7 +58,7 @@
     --bg-color: var(--bg-main);
     --card-bg: var(--bg-card);
     --shadow: var(--shadow-md);
-    --bg-overlay: linear-gradient(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.05));
+    --bg-overlay: rgba(0, 0, 0, 0.05);
 
     /* Misc */
     --font-scale: 1.0;
@@ -80,7 +80,7 @@
     --bg-tertiary: #212529;
     --bg-card: rgba(30, 41, 59, 0.7); /* Slightly more opaque for glass stability */
     --bg-glass: rgba(15, 23, 42, 0.55);
-    --bg-menu: rgba(25, 28, 32, 0.95);
+    --bg-menu: rgba(25, 25, 26, 0.95);
     
     --text-main: #f8fafc;
     --text-primary: #e9ecef;

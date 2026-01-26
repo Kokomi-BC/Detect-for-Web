@@ -715,6 +715,7 @@
     </div>
 
     <script src="/user-editor.js"></script>
+    <script src="/export-manager.js"></script>
     <script>
         // API Bridge for Web compatibility (Migration)
         window.api = {
@@ -3764,233 +3765,12 @@
         }
 
         async function exportResult() {
-             const resultItem = document.getElementById('resultItem');
-            if (!resultItem || !resultItem.classList.contains('active')) {
-                showToast('暂无检测结果可导出', 'warning');
-                return;
+            if (window.exportManager) {
+                await window.exportManager.exportResult();
+            } else {
+                console.error('ExportManager not loaded');
+                showToast('导出模块加载失败', 'error');
             }
-            
-            showToast('正在准备导出...', 'info');
-
-            // Clone the result item to modify it for export if needed
-            const clone = resultItem.cloneNode(true);
-            
-            // Remove export button from clone
-            const exportBtnInClone = clone.querySelector('#exportBtn');
-            if (exportBtnInClone) {
-                exportBtnInClone.remove();
-            }
-            
-            // Convert images to Base64 to ensure they display correctly in exported file
-            const imagesToConvert = clone.querySelectorAll('img');
-            for (let img of imagesToConvert) {
-                try {
-                    const src = img.src;
-                    // Skip if already base64 or empty
-                    if (src && !src.startsWith('data:')) {
-                        let base64 = null;
-                        if (src.startsWith('blob:')) {
-                            // Use frontend conversion for local blobs
-                            base64 = await blobUrlToBase64(src);
-                        } else {
-                            // Use backend conversion for remote URLs (avoids CORS)
-                            base64 = await api.invoke('convert-image-to-base64', src);
-                        }
-                        
-                        if (base64) {
-                            img.src = base64;
-                        }
-                    }
-                } catch (e) {
-                        console.error('Failed to convert image:', e);
-                }
-            }
-            
-            // Get styles
-            let styles = '';
-            document.querySelectorAll('style').forEach(style => {
-                styles += style.outerHTML;
-            });
-            
-            // Construct HTML
-            const html = `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>检测报告</title>
-    ${styles}
-    <link rel="stylesheet" href="/css/variables.css">
-    <link rel="stylesheet" href="/css/common.css">
-    <link rel="stylesheet" href="/css/main.css">
-</head>
-<body>
-    <div class="container">
-        <div class="right-panel">
-            <div class="result-header" style="justify-content: center; margin-bottom: 20px;">
-                <h2 class="result-title">检测结果报告</h2>
-            </div>
-            <div class="result-content">
-                ${clone.outerHTML}
-            </div>
-        </div>
-    </div>
-
-    <!-- Image Modal -->
-    <div class="image-modal" id="imageModal">
-        <button class="modal-close" id="modalClose">×</button>
-        <img class="modal-image" id="modalImage" src="" alt="预览图片">
-    </div>
-
-    <!-- Tooltip -->
-    <div id="customTooltip" class="custom-tooltip"></div>
-
-    <script>
-        // Image Modal Logic
-        const modal = document.getElementById('imageModal');
-        const modalImage = document.getElementById('modalImage');
-        const modalClose = document.getElementById('modalClose');
-
-        function showImageModal(url, reason = null) {
-            const modal = document.getElementById('imageModal');
-            const modalImage = document.getElementById('modalImage');
-            const modalReason = document.getElementById('modalReason');
-            
-            modalImage.src = url;
-            if (modalReason) {
-                if (reason) {
-                    modalReason.textContent = reason;
-                    modalReason.classList.add('active');
-                } else {
-                    modalReason.classList.remove('active');
-                }
-            }
-            modal.classList.add('active');
-        }
-
-        if (modalClose) {
-            modalClose.addEventListener('click', () => {
-                modal.classList.remove('active');
-            });
-        }
-
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.classList.remove('active');
-                }
-            });
-        }
-
-        // Re-bind click events to images
-        document.querySelectorAll('.parsed-image-item img').forEach(img => {
-            img.style.cursor = 'pointer';
-            img.onclick = function() {
-                showImageModal(this.src);
-            };
-        });
-
-        // Tooltip Logic
-        let activeTooltipElement = null;
-        let tooltipUpdateRaf = null;
-
-        function updateTooltipPosition() {
-            const tooltip = document.getElementById('customTooltip');
-            if (!tooltip || !tooltip.classList.contains('active') || !activeTooltipElement) return;
-
-            const rect = activeTooltipElement.getBoundingClientRect();
-            const tooltipRect = tooltip.getBoundingClientRect();
-            
-            const scrollX = window.scrollX || window.pageXOffset;
-            const scrollY = window.scrollY || window.pageYOffset;
-
-            let top = rect.bottom + scrollY + 10;
-            let left = rect.left + scrollX + (rect.width / 2) - (tooltipRect.width / 2);
-
-            const padding = 16;
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            
-            if (left < scrollX + padding) {
-                left = scrollX + padding;
-            } else if (left + tooltipRect.width > scrollX + viewportWidth - padding) {
-                left = scrollX + viewportWidth - tooltipRect.width - padding;
-            }
-            
-            if (rect.bottom + 10 + tooltipRect.height > viewportHeight - padding) {
-                top = rect.top + scrollY - tooltipRect.height - 10;
-            }
-
-            tooltip.style.top = top + 'px';
-            tooltip.style.left = left + 'px';
-        }
-
-        // Expose to global scope for onclick attribute
-        window.showReasonTooltip = function(event, element) {
-            event.stopPropagation();
-            
-            if (activeTooltipElement) {
-                activeTooltipElement.classList.remove('active');
-            }
-
-            const reason = element.getAttribute('data-reason');
-            if (!reason) return;
-
-            activeTooltipElement = element;
-            activeTooltipElement.classList.add('active');
-
-            const tooltip = document.getElementById('customTooltip');
-            tooltip.textContent = reason;
-            tooltip.classList.add('active');
-
-            updateTooltipPosition();
-        };
-
-        function hideTooltip() {
-            const tooltip = document.getElementById('customTooltip');
-            if (tooltip) {
-                tooltip.classList.remove('active');
-            }
-            if (activeTooltipElement) {
-                activeTooltipElement.classList.remove('active');
-                activeTooltipElement = null;
-            }
-        }
-
-        document.addEventListener('click', function(e) {
-            const tooltip = document.getElementById('customTooltip');
-            if (tooltip && tooltip.contains(e.target)) return;
-            if (e.target.classList.contains('fake-highlight')) return;
-            hideTooltip();
-        });
-
-        window.addEventListener('scroll', function() {
-            if (activeTooltipElement) {
-                if (tooltipUpdateRaf) cancelAnimationFrame(tooltipUpdateRaf);
-                tooltipUpdateRaf = requestAnimationFrame(updateTooltipPosition);
-            }
-        }, true);
-
-        window.addEventListener('resize', function() {
-            if (activeTooltipElement) {
-                updateTooltipPosition();
-            }
-        });
-    <\/script>
-</body>
-</html>`;
-
-            // Web adaptation: Trigger download
-            const blob = new Blob([html], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `分析结果_${new Date().getTime()}.html`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast('已生成分析结果导出文件', 'success');
         }
 
         // Search Results Overlay Logic
@@ -4848,7 +4628,7 @@
                     sortedParts.forEach(part => {
                         if (part.text && displayText.includes(part.text)) {
                             const reasonStr = (part.reason || '').replace(/"/g, '&quot;');
-                            const highlight = `<span class="fake-highlight" data-reason="${reasonStr}" onclick="showReasonTooltip(event, this)">${part.text}</span>`;
+                            const highlight = `<span class="fake-highlight" data-reason="${reasonStr}" onclick="showReasonTooltip(event, this, 'click')" onmouseenter="showReasonTooltip(event, this, 'hover')" onmouseleave="hideTooltip(false)">${part.text}</span>`;
                             safeText = safeText.replace(part.text, highlight);
                         }
                     });
@@ -4862,7 +4642,7 @@
                         if (part.text) {
                             const safePart = part.text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
                             const reasonStr = (part.reason || '').replace(/"/g, '&quot;');
-                            const highlight = `<span class="fake-highlight" data-reason="${reasonStr}" onclick="showReasonTooltip(event, this)">${safePart}</span>`;
+                            const highlight = `<span class="fake-highlight" data-reason="${reasonStr}" onclick="showReasonTooltip(event, this, 'click')" onmouseenter="showReasonTooltip(event, this, 'hover')" onmouseleave="hideTooltip(false)">${safePart}</span>`;
                             safeText = safeText.replace(safePart, highlight);
                         }
                     });
@@ -4953,6 +4733,7 @@
         // Tooltip Logic
         let activeTooltipElement = null;
         let tooltipUpdateRaf = null;
+        let tooltipIsLocked = false;
 
         function updateTooltipPosition() {
             const tooltip = document.getElementById('customTooltip');
@@ -4984,11 +4765,22 @@
             tooltip.style.left = `${left}px`;
         }
 
-        function showReasonTooltip(event, element) {
-            event.stopPropagation();
+        function showReasonTooltip(event, element, mode = 'click') {
+            if (event) event.stopPropagation();
             
+            // If it's a hover and we are locked, only change if it's the SAME element (to update content if needed)
+            // or if we want hover to override lock? User said "保留原有鼠标点击逻辑".
+            // Original logic hides previous when showing new.
+            if (mode === 'hover' && tooltipIsLocked && activeTooltipElement !== element) {
+                return;
+            }
+
+            if (mode === 'click') {
+                tooltipIsLocked = true;
+            }
+
             // Remove active class from previous highlight
-            if (activeTooltipElement) {
+            if (activeTooltipElement && activeTooltipElement !== element) {
                 activeTooltipElement.classList.remove('active');
             }
 
@@ -5013,7 +4805,14 @@
             updateTooltipPosition();
         }
 
-        function hideTooltip() {
+        function hideTooltip(force = true) {
+            // If not force, and locked, don't hide
+            if (!force && tooltipIsLocked) return;
+
+            if (force) {
+                tooltipIsLocked = false;
+            }
+
             const tooltip = document.getElementById('customTooltip');
             if (tooltip) {
                 tooltip.classList.remove('active');

@@ -2118,19 +2118,21 @@
             right: 24px;
             width: 48px;
             height: 48px;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: 50%;
-            color: white;
+            color: var(--text-primary);
             font-size: 28px;
             cursor: pointer;
             transition: var(--transition);
             display: flex;
             align-items: center;
             justify-content: center;
+            backdrop-filter: blur(8px);
         }
         .modal-close:hover {
-            background: rgba(255, 255, 255, 0.25);
+            background: var(--accent-light);
+            color: var(--accent-color);
             transform: rotate(90deg);
         }
 
@@ -2234,8 +2236,8 @@
 
         
         [data-theme="dark"] .custom-modal-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255,255,255,0.1);
+            background: var(--bg-secondary);
+            border-color: var(--border-color);
         }
 
         .custom-modal-btn:hover {
@@ -2660,8 +2662,8 @@
         .more-menu .dropdown-menu {
             background: var(--bg-menu);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(0,0,0,0.08);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-lg);
             padding: 6px;
             min-width: 200px;
             border-radius: 12px;
@@ -2670,7 +2672,7 @@
         
         [data-theme="dark"] .more-menu .dropdown-menu {
             background: var(--bg-menu);
-            border-color: rgba(255,255,255,0.1);
+            border-color: var(--border-color);
         }
 
         .more-menu .dropdown-item {
@@ -2725,14 +2727,14 @@
             border-radius: 2px;
         }
 
-        /* 自定义 Tooltip 样式 */
+                /* 自定义 Tooltip 样式 */
         .custom-tooltip {
             position: fixed;
-            background: rgba(0, 0, 0, 0.85);
-            color: white;
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 14px;
+            background: var(--bg-card);
+            color: var(--warning-color);
+            padding: 10px 14px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
             line-height: 1.5;
             max-width: 300px;
             z-index: 3000;
@@ -2740,8 +2742,10 @@
             opacity: 0;
             transform: translateY(10px);
             transition: opacity 0.2s, transform 0.2s;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            backdrop-filter: blur(8px);
+            box-shadow: var(--shadow-lg);
+            border: 2px solid var(--warning-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
         .custom-tooltip.active {
             opacity: 1;
@@ -2779,21 +2783,21 @@
             transform: translateX(-50%) translateY(0);
         }
 
-        /* Toast Variants - Transparent Background */
+        /* Toast Variants - Use dynamic light backgrounds */
         .toast.success { 
-            background: rgba(46, 196, 182, 0.15); 
+            background: var(--success-light); 
             color: var(--success-color);
-            border-color: rgba(46, 196, 182, 0.2);
+            border-color: var(--success-light);
         }
         .toast.error { 
-            background: rgba(231, 29, 54, 0.15); 
+            background: var(--danger-light); 
             color: var(--danger-color);
-            border-color: rgba(231, 29, 54, 0.2);
+            border-color: var(--danger-light);
         }
         .toast.warning { 
-            background: rgba(255, 159, 28, 0.15); 
+            background: var(--warning-light); 
             color: var(--warning-color);
-            border-color: rgba(255, 159, 28, 0.2);
+            border-color: var(--warning-light);
         }
         .toast.info { 
             background: var(--accent-light); 
@@ -3109,24 +3113,6 @@
         }
         
         /* Tooltip styles */
-        .custom-tooltip {
-            position: absolute !important;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 14px;
-            max-width: 300px;
-            z-index: 10001;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.2s;
-            display: none;
-        }
-        .custom-tooltip.active {
-            opacity: 1;
-            display: block;
-        }
         .fake-highlight {
             cursor: pointer;
             position: relative;

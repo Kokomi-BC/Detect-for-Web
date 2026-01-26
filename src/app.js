@@ -99,6 +99,10 @@ app.get('/user-editor.js', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/user-editor.js'));
 });
 
+app.get('/export-manager.js', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/export-manager.js'));
+});
+
 app.use('/css', express.static(path.join(__dirname, '../public/css'), {
     maxAge: '1h'
 }));

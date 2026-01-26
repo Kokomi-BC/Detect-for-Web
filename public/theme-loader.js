@@ -58,7 +58,7 @@
                     const rgb = hexToRgb(background);
                     if (rgb) {
                         document.documentElement.style.setProperty('--bg-glass', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${isDark ? 0.6 : 0.45})`);
-                        document.documentElement.style.setProperty('--bg-overlay', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${isDark ? 0.85 : 0.75})`);
+                        // Removed dynamic --bg-overlay to keep it neutral grey and respect CSS defaults
                     }
                 }
 
