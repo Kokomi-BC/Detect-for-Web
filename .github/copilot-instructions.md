@@ -32,6 +32,11 @@ The application runs as an Express server.
     - `variables.css`: Global theme variables and color palette.
     - `common.css`: Shared resets and global components.
     - `admin.css`, `login.css`, `main.css`, `welcome.css`: Page-specific modular styles.
+- **`public/js/`**: Client-side logic.
+    - `theme-loader.js`: Dynamic theme application.
+    - `user-editor.js`: User profile editing logic.
+    - `export-manager.js`: Detection history export management.
+- **`public/assets/`**: Static assets like icons and images.
 - **`window.electronAPI` Mock**: A bridge in the frontend that converts old Electron `ipcRenderer.invoke` calls into REST API `fetch` requests to `/api/invoke`.
 
 ## Deployment & Development
@@ -119,6 +124,12 @@ public/
     variables.css     # Global Colors & Variables
     common.css        # Shared Styles
     admin.css         # Admin Dashboard specific
+  js/                 # Client-side JS logic
+    theme-loader.js
+    user-editor.js
+    export-manager.js
+  assets/
+    ico/              # Application Icons
   Login.html          # Auth UI
   Welcome.html        # Welcome UI
   Main.html           # Main UI

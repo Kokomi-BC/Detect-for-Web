@@ -135,25 +135,17 @@ const checkAdminAuth = async (req, res, next) => {
 
 app.get('/favicon.ico', (req, res) => {
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    res.sendFile(path.join(__dirname, '../ico/Detect.ico'));
+    res.sendFile(path.join(__dirname, '../public/assets/ico/Detect.ico'));
 });
 
-app.use('/ico', express.static(path.join(__dirname, '../ico'), {
+app.use('/ico', express.static(path.join(__dirname, '../public/assets/ico'), {
     maxAge: '31536000',
     immutable: true
 }));
 
-app.get('/theme-loader.js', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/theme-loader.js'));
-});
-
-app.get('/user-editor.js', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/user-editor.js'));
-});
-
-app.get('/export-manager.js', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/export-manager.js'));
-});
+app.use('/js', express.static(path.join(__dirname, '../public/js'), {
+    maxAge: '1h'
+}));
 
 app.use('/css', express.static(path.join(__dirname, '../public/css'), {
     maxAge: '1h'

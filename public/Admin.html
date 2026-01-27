@@ -8,8 +8,8 @@
     <link rel="stylesheet" href="/css/variables.css">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/admin.css">
-    <script src="/theme-loader.js"></script>
-    <script src="/user-editor.js"></script>
+    <script src="/js/theme-loader.js"></script>
+    <script src="/js/user-editor.js"></script>
 </head>
 <body>
     <div class="admin-layout">
@@ -213,7 +213,7 @@
                             </div>
                             <div class="stat-value" id="stat-blocked-count">0</div>
                             <div class="stat-footer">
-                                <span class="stat-trend" id="stat-blocked-trend">拦截恶意扫描爬虫</span>
+                                <span class="stat-trend" id="stat-blocked-trend">恶意扫描爬虫</span>
                                 <span class="stat-desc">次数</span>
                             </div>
                         </div>
@@ -811,12 +811,7 @@
 
                 <div style="margin-top:40px; display:flex; gap:15px; justify-content: flex-end;">
                     <button class="filled-btn secondary" onclick="resetTheme()">恢复默认</button>
-                    <button class="icon-btn" onclick="previewTheme()" title="预览当前设置 (不保存)" style="width: 40px; height: 40px; color: var(--primary-color);">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                    </button>
-                    <button class="icon-btn primary" onclick="saveTheme()" style="width: 40px; height: 40px;" title="应用并保存">
-                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 5.75A2.75 2.75 0 0 1 5.75 3h9.964a3.25 3.25 0 0 1 2.299.952l2.035 2.035c.61.61.952 1.437.952 2.299v9.964A2.75 2.75 0 0 1 18.25 21H5.75A2.75 2.75 0 0 1 3 18.25V5.75ZM5.75 4.5c-.69 0-1.25.56-1.25 1.25v12.5c0 .69.56 1.25 1.25 1.25H6v-5.25A2.25 2.25 0 0 1 8.25 12h7.5A2.25 2.25 0 0 1 18 14.25v5.25h.25c.69 0 1.25-.56 1.25-1.25V8.286c0-.465-.184-.91-.513-1.238l-2.035-2.035a1.75 1.75 0 0 0-.952-.49V7.25a2.25 2.25 0 0 1-2.25 2.25h-4.5A2.25 2.25 0 0 1 7 7.25V4.5H5.75Zm10.75 15v-5.25a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0-.75.75v5.25h9Zm-8-15v2.75c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75V4.5h-6Z" fill="currentColor"/></svg>
-                    </button>
+                    <button class="filled-btn" onclick="saveTheme()" style="height: 40px; padding: 0 20px;">应用并保存</button>
                 </div>
             </div>
             </div> <!-- end content-wrapper -->
@@ -902,9 +897,7 @@
                 applyDynamicTheme();
             }
             // 额外触发管理页面的预览刷新
-            if (typeof previewTheme === 'function') {
-                previewTheme();
-            }
+            previewTheme();
         }
 
         function toggleTheme() {
@@ -1611,8 +1604,6 @@
                     theme.lightBgMenu || 'rgba(255, 255, 255, 0.95)',
                     theme.darkBgMenu || 'rgba(25, 25, 26, 0.95)'
                 );
-                // 立即刷新预览显示
-                previewTheme();
             }
         }
 
@@ -1661,8 +1652,6 @@
             const p = allPresets.find(x => x.id === id);
             if (p) {
                 applyFullPreset(...p.colors);
-                // 自动刷新预览
-                previewTheme();
             }
         }
 
@@ -1774,6 +1763,11 @@
             document.getElementById('light-bg-menu-text').value = lbm;
             document.getElementById('dark-bg-menu').value = dbm;
             document.getElementById('dark-bg-menu-text').value = dbm;
+
+            // 自动触发表格/背景的预览更新
+            if (typeof previewTheme === 'function') {
+                previewTheme();
+            }
         }
 
         function previewTheme() {
@@ -1842,8 +1836,6 @@
                 root.style.setProperty('--bg-card-solid', card);
                 root.style.setProperty('--bg-primary', card);
             }
-            
-            console.log('Theme preview updated (Sync Technical Colors).');
         }
 
         async function saveTheme() {

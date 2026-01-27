@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/css/variables.css">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/main.css">
-    <script src="/theme-loader.js"></script>
+    <script src="/js/theme-loader.js"></script>
 </head>
 <body>
     <div id="title-bar">
@@ -531,7 +531,7 @@
             <div class="squeeze-mask" id="rightMask"></div>
             <button class="exit-detection-btn" id="exitDetectionBtn" title="退出">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                 </svg>
             </button>
             <div class="result-content">
@@ -685,7 +685,12 @@
 
     <!-- 图片预览模态框 -->
     <div class="image-modal" id="imageModal">
-        <button class="modal-close" id="modalClose">×</button>
+        <button class="modal-close" id="modalClose">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
         <img class="modal-image" id="modalImage" src="" alt="预览图片">
         <div id="modalReason" class="modal-reason"></div>
     </div>
@@ -722,8 +727,8 @@
         </div>
     </div>
 
-    <script src="/user-editor.js"></script>
-    <script src="/export-manager.js"></script>
+    <script src="/js/user-editor.js"></script>
+    <script src="/js/export-manager.js"></script>
     <script>
         // API Bridge for Web compatibility (Migration)
         window.api = {
@@ -2394,12 +2399,17 @@
 
                 item.innerHTML = `
                     <img src="${image.url}" alt="${image.name}">
-                    <button class="image-delete-btn" data-id="${image.id}">×</button>
+                    <button class="image-delete-btn" data-id="${image.id}">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
                 `;
                 
                 // Click to select
                 item.addEventListener('click', function(e) {
-                    if (e.target.classList.contains('image-delete-btn')) return;
+                    if (e.target.closest('.image-delete-btn')) return;
                     
                     // Hide tooltip if active
                     hideTooltip();
@@ -2651,6 +2661,16 @@
             // 拖拽上传 - 绑定到左侧面板
             const dragOverlay = document.getElementById('dragOverlay');
             leftPanel.addEventListener('dragover', function(e) {
+                // 如果正在内容区域拖拽纯文本，允许浏览器默认行为（以便文字能落入编辑框）
+                const isContentArea = !!e.target.closest('.content-area');
+                const hasFiles = e.dataTransfer.types && e.dataTransfer.types.includes('Files');
+                const hasUriList = e.dataTransfer.types && e.dataTransfer.types.includes('text/uri-list');
+
+                if (isContentArea && !hasFiles && !hasUriList) {
+                    dragOverlay.classList.remove('active');
+                    return;
+                }
+
                 e.preventDefault();
                 // If dragging an internal item, don't show overlay
                 if (draggedItem) return;
@@ -2708,6 +2728,16 @@
                 dragOverlay.textContent = '拖入图片以添加';
             });
             leftPanel.addEventListener('drop', function(e) {
+                // 如果目标在内容区域且拖拽的不是文件或图片链接（即普通文本），允许默认行为
+                const isContentArea = !!e.target.closest('.content-area');
+                const hasFiles = e.dataTransfer.types && e.dataTransfer.types.includes('Files');
+                const hasUriList = e.dataTransfer.types && e.dataTransfer.types.includes('text/uri-list');
+
+                if (isContentArea && !hasFiles && !hasUriList) {
+                    dragOverlay.classList.remove('active', 'error', 'success', 'full');
+                    return;
+                }
+
                 e.preventDefault();
                 // If dragging internal item, handle reorder
                 if (draggedItem) {

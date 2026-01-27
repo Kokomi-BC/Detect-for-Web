@@ -804,10 +804,10 @@
         /* 拖拽遮罩层 */
         .drag-overlay {
             position: absolute;
-            top: 16px;
-            left: 16px;
-            right: 16px;
-            bottom: 16px;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: var(--accent-light);
             border: 2px dashed var(--accent-color);
             border-radius: var(--radius-lg);
@@ -1724,6 +1724,8 @@
             opacity: 0;
             transition: var(--transition-fast);
             backdrop-filter: blur(8px);
+            z-index: 10;
+            transform-origin: center;
         }
 
         .image-preview-item:hover .image-delete-btn {
@@ -1733,6 +1735,11 @@
             background: var(--danger-color);
             transform: scale(1.1);
             box-shadow: 0 0 0 1px var(--danger-color);
+        }
+
+        .image-delete-btn svg {
+            pointer-events: none;
+            display: block;
         }
 
         /* Bottom Area - Floating Action Button Container */
@@ -2127,24 +2134,29 @@
             position: absolute;
             top: 24px;
             right: 24px;
-            width: 48px;
-            height: 48px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
+            width: 44px;
+            height: 44px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 50%;
-            color: var(--text-primary);
-            font-size: 28px;
+            color: white;
             cursor: pointer;
-            transition: var(--transition);
+            transition: var(--transition-fast);
             display: flex;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 10001;
         }
         .modal-close:hover {
-            background: var(--accent-light);
-            color: var(--accent-color);
-            transform: rotate(90deg);
+            background: rgba(231, 29, 54, 0.8);
+            border-color: #e71d36;
+            transform: scale(1.05);
+        }
+        .modal-close svg {
+            pointer-events: none;
+            display: block;
         }
 
         .modal-reason {
@@ -2893,28 +2905,39 @@
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             border: 1px solid var(--accent-hover);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: grid;
+            place-items: center;
+            padding: 0;
+            margin: 0;
             cursor: pointer;
             z-index: 100;
             opacity: 0;
             pointer-events: none;
-            transform: translateX(-10px);
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: translateX(-10px) scale(0.9) rotate(-90deg);
+            transform-origin: center center;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             color: var(--accent-color);
             box-shadow: var(--shadow-sm);
+            box-sizing: border-box;
+        }
+
+        .exit-detection-btn svg {
+            display: block;
+            width: 24px;
+            height: 24px;
+            margin: 0;
+            padding: 0;
         }
 
         body.detection-fullscreen .exit-detection-btn {
             opacity: 1;
             pointer-events: auto;
-            transform: translateX(0);
+            transform: translateX(0) scale(1) rotate(0deg);
         }
 
         .exit-detection-btn:hover {
             background: var(--accent-hover);
-            transform: translateY(-2px);
+            transform: scale(1.1) rotate(180deg);
             box-shadow: 0 4px 12px var(--accent-hover);
             border-color: var(--accent-color);
             color: var(--accent-color);
@@ -2946,6 +2969,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            border-radius: var(--radius-lg);
         }
 
         /* Prevent icon compression */
@@ -3126,18 +3150,7 @@
             max-height: 90%;
             object-fit: contain;
         }
-        .modal-close {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            color: white;
-            font-size: 30px;
-            cursor: pointer;
-            background: none;
-            border: none;
-            z-index: 10002;
-        }
-        
+
         /* Tooltip styles */
         .fake-highlight {
             cursor: pointer;
