@@ -373,14 +373,31 @@ module.exports = function(services, state) {
 
     router.post('/admin/user/update', authenticate, authenticateAdmin, async (req, res) => {
         const { userId, username, password, role } = req.body;
+        if (!userId) return res.status(400).json({ success: false, error: 'User ID is required' });
+
         try {
-            let q = 'UPDATE users SET username = ?';
-            let params = [username];
+            // Check if username already exists for other users
+            if (username) {
+                const [existing] = await pool.query('SELECT id FROM users WHERE username = ? AND id != ?', [username, userId]);
+                if (existing.length > 0) return res.status(400).json({ success: false, error: '用户名已存在' });
+            }
+
+            // Security: Prevent self-demotion to avoid accidental loss of access
+            if (userId == req.userId && role && role !== 'admin') {
+                return res.status(400).json({ success: false, error: '管理员不能撤销自己的管理员权限' });
+            }
+
+            let q = 'UPDATE users SET id = id';
+            let params = [];
+            if (username) { q += ', username = ?'; params.push(username); }
             if (role) { q += ', role = ?'; params.push(role); }
             if (password) { q += ', password = ?'; params.push(password); }
             q += ' WHERE id = ?';
             params.push(userId);
-            await pool.query(q, params);
+            
+            const [result] = await pool.query(q, params);
+            if (result.affectedRows === 0) return res.status(404).json({ success: false, error: '用户不存在' });
+
             res.json({ success: true });
         } catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });
@@ -635,10 +652,22 @@ module.exports = function(services, state) {
         const configPath = path.join(__dirname, '../../data/config.json');
         try {
             if (!fs.existsSync(configPath)) {
-                return res.json({ success: true, data: { llm: { apiKey: '', baseURL: '', model: '' }, search: { apiKey: '' } } });
+                return res.json({ success: true, data: { llm: { apiKey: '', baseURL: '', model: '' }, search: { apiKey: '', baseURL: '' } } });
             }
             const data = await fsPromises.readFile(configPath, 'utf8');
-            res.json({ success: true, data: JSON.parse(data) });
+            const config = JSON.parse(data);
+
+            // Mask keys before sending to client (preserve length)
+            const maskKey = (key) => {
+                if (!key) return '';
+                if (key.length <= 10) return '*'.repeat(key.length);
+                return key.slice(0, 4) + '*'.repeat(key.length - 8) + key.slice(-4);
+            };
+
+            if (config.llm && config.llm.apiKey) config.llm.apiKey = maskKey(config.llm.apiKey);
+            if (config.search && config.search.apiKey) config.search.apiKey = maskKey(config.search.apiKey);
+
+            res.json({ success: true, data: config });
         } catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });
 
@@ -646,6 +675,20 @@ module.exports = function(services, state) {
         const configPath = path.join(__dirname, '../../data/config.json');
         try {
             const newConfig = req.body;
+            
+            // Handle masked keys: if a key contains '*', it means it wasn't modified
+            if (fs.existsSync(configPath)) {
+                const oldData = await fsPromises.readFile(configPath, 'utf8');
+                const oldConfig = JSON.parse(oldData);
+                
+                if (newConfig.llm && newConfig.llm.apiKey && newConfig.llm.apiKey.includes('*')) {
+                    newConfig.llm.apiKey = oldConfig.llm ? oldConfig.llm.apiKey : newConfig.llm.apiKey;
+                }
+                if (newConfig.search && newConfig.search.apiKey && newConfig.search.apiKey.includes('*')) {
+                    newConfig.search.apiKey = oldConfig.search ? oldConfig.search.apiKey : newConfig.search.apiKey;
+                }
+            }
+
             await fsPromises.writeFile(configPath, JSON.stringify(newConfig, null, 2));
             
             // Reload config in service
@@ -805,13 +848,14 @@ module.exports = function(services, state) {
     });
 
     router.post('/user/update', authenticate, async (req, res) => {
-        const { username, password, role } = req.body; // Explicitly pull role for validation
+        const { username, password } = req.body; 
         try {
             const userId = req.userId;
             
-            // Security: Prevent regular users from setting their own role to admin
-            if (role && role !== 'user') {
-                return res.status(403).json({ success: false, error: '无权修改角色' });
+            // Security Trace: If someone attempts to escalate via body manipulation
+            if (req.body.role && req.body.role !== 'user') {
+                console.warn(`[Security Alert] User ${userId} attempted to modify role to ${req.body.role}`);
+                return res.status(403).json({ success: false, error: '不允许修改角色' });
             }
 
             // Validate username uniqueness (excluding current user)
@@ -820,14 +864,19 @@ module.exports = function(services, state) {
                 if (existing.length > 0) return res.status(400).json({ success: false, error: '用户名已存在' });
             }
 
-            let q = 'UPDATE users SET id=id'; // No-op start
+            let q = 'UPDATE users SET id = id'; // Base query
             let params = [];
+            
+            // Only update allowed fields. role and id are strictly off-limits here.
             if (username) { q += ', username = ?'; params.push(username); }
             if (password) { q += ', password = ?'; params.push(password); }
+            
             q += ' WHERE id = ?';
             params.push(userId);
             
-            await pool.query(q, params);
+            const [result] = await pool.query(q, params);
+            if (result.affectedRows === 0) return res.status(404).json({ success: false, error: '用户不存在' });
+
             res.json({ success: true });
         } catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });

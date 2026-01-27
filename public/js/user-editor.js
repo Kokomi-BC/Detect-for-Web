@@ -1,7 +1,3 @@
-/**
- * UserEditor Component
- * Encapsulates user information editing (Avatar, Username, Password)
- */
 class UserEditor {
     constructor() {
         this.userId = null;
@@ -139,6 +135,7 @@ class UserEditor {
     async save() {
         const username = document.getElementById('user-edit-username').value;
         const password = document.getElementById('user-edit-password').value;
+        // Strict Role Logic: Only fetch role value if it's actually visible/admin context
         const role = this.isAdmin ? document.getElementById('user-edit-role').value : null;
 
         if (username.length < 3 || username.length > 20) return alert('用户名长度需在3-20之间');
@@ -163,8 +160,12 @@ class UserEditor {
             // 2. Handle Info
             const infoEndpoint = this.isAdmin ? `/api/admin/user/update` : `/api/user/update`;
             const payload = { username };
-            if (this.isAdmin) payload.userId = this.userId;
-            if (role) payload.role = role;
+            if (this.isAdmin) {
+                payload.userId = this.userId;
+                if (role) payload.role = role;
+            }
+          
+            
             if (password) payload.password = await this.sha256(password);
 
             const res = await fetch(infoEndpoint, {
@@ -183,7 +184,7 @@ class UserEditor {
             
             this.close();
             if(!this.isAdmin) {
-                // For regular user editing themselves, might need a refresh or just rely on onSuccess
+
                 // If it's the main page, onSuccess will handle it.
             }
         } catch (e) {

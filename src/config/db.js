@@ -22,16 +22,16 @@ async function initDB() {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 username VARCHAR(255) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL,
-                role VARCHAR(20) DEFAULT 'user',
-                status VARCHAR(20) DEFAULT 'pending',
+                role ENUM('admin', 'user') DEFAULT 'user',
+                status ENUM('active', 'pending') DEFAULT 'pending',
                 last_login_at DATETIME,
                 last_login_ip VARCHAR(45)
             )
         `);
 
         // Migration for existing tables
-        try { await connection.query("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user'"); } catch (e) {}
-        try { await connection.query("ALTER TABLE users ADD COLUMN status VARCHAR(20) DEFAULT 'active'"); } catch (e) {}
+        try { await connection.query("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'user') DEFAULT 'user'"); } catch (e) {}
+        try { await connection.query("ALTER TABLE users MODIFY COLUMN status ENUM('active', 'pending') DEFAULT 'pending'"); } catch (e) {}
         try { await connection.query("ALTER TABLE users ADD COLUMN last_login_at DATETIME"); } catch (e) {}
         try { await connection.query("ALTER TABLE users ADD COLUMN last_login_ip VARCHAR(45)"); } catch (e) {}
         try { await connection.query("ALTER TABLE users ADD COLUMN token_version INT DEFAULT 0"); } catch (e) {}

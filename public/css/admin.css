@@ -141,6 +141,13 @@ body {
     z-index: 90;
 }
 
+.top-header .icon-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 6px;
+}
+
 .breadcrumb {
     font-size: 14px;
     color: var(--text-muted);
@@ -593,7 +600,7 @@ button.filled-btn.danger:hover {
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: var(--transition-fast);
 }
 
 .pagination-btn:hover:not(:disabled) {
@@ -675,7 +682,7 @@ button.filled-btn.danger:hover {
     height: 100%;
     background: var(--success-color);
     width: 0%;
-    transition: width 0.3s ease, background-color 0.3s ease;
+    transition: width 0.3s ease, background-color var(--transition-fast);
 }
 
 /* --- Search Box & Clear Button --- */
@@ -711,7 +718,7 @@ button.filled-btn.danger:hover {
     font-size: 18px;
     line-height: 1; 
     border-radius: 50%;
-    transition: all 0.2s;
+    transition: var(--transition-fast);
     user-select: none;
     z-index: 5;
 }

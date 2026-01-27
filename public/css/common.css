@@ -24,7 +24,7 @@ button {
 
 /* Global Transition for Theme Switch */
 * {
-    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.15s ease;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 /* --- Avatar Components --- */
@@ -58,7 +58,7 @@ button {
 .admin-layout input[type="text"], .admin-layout input[type="password"], .admin-layout input[type="number"] { 
     width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; 
     box-sizing: border-box; font-size: 14px; background: var(--bg-card); color: var(--text-main);
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
     font-family: inherit;
 }
 .modal .form-group input:focus, .admin-layout .form-group input:focus, 
@@ -75,7 +75,7 @@ button {
     border-radius: 10px;
     font-weight: 600;
     font-size: 14px;
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
     background: var(--primary-color);
     color: white;
 }
@@ -126,7 +126,7 @@ button.icon-btn {
     color: var(--text-muted);
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
     cursor: pointer;
 }
 button.icon-btn:hover {

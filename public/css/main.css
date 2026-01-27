@@ -38,7 +38,7 @@
 
         /* 自定义标题栏 */
         #title-bar {
-            height: 34px;
+            height: 38px;
             background: var(--bg-primary);
             display: flex;
             align-items: center;
@@ -47,14 +47,14 @@
             position: relative;
             z-index: 1000; /* Higher than search results (999) */
             transition: background-color var(--transition-fast);
-            font-size: 12px;
+            font-size: 13px;
             color: var(--text-secondary);
         }
 
         #title-bar .app-icon {
-            width: 16px;
-            height: 16px;
-            margin-right: 8px;
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
             background-image: url('/ico/Detect.ico'); 
             background-size: contain;
             background-repeat: no-repeat;
@@ -67,7 +67,7 @@
             margin-left: 8px;
             gap: 6px;
             -webkit-app-region: no-drag;
-            transition: opacity 0.3s;
+            transition: opacity var(--transition-fast);
         }
 
         .batch-mode-toggle.disabled {
@@ -81,7 +81,7 @@
             height: 16px;
             color: var(--text-secondary);
             opacity: 0.7;
-            transition: all 0.3s;
+            transition: all var(--transition-fast);
         }
         
         .batch-mode-active .batch-icon {
@@ -96,7 +96,7 @@
             background: var(--border-color);
             border-radius: 11px;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all var(--transition-fast);
             display: inline-flex;
             align-items: center;
             flex-shrink: 0;
@@ -112,7 +112,7 @@
             height: 16px;
             background: white;
             border-radius: 50%;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all var(--transition-fast);
             box-shadow: 0 2px 5px rgba(0,0,0,0.15);
         }
         
@@ -164,23 +164,41 @@
             -webkit-app-region: no-drag;
         }
 
-        #title-bar .toolbar-btn {
+        #title-bar .toolbar-btn,
+        #title-bar .sidebar-toggle-btn {
             width: 32px;
-            height: 28px;
-            border-radius: 4px;
+            height: 32px;
+            border-radius: 6px;
             display: flex; /* Ensure centering works */
             align-items: center;
             justify-content: center;
-            padding-left: 0;
+            padding: 0;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition-fast);
+            -webkit-app-region: no-drag;
+        }
+
+        #title-bar .toolbar-btn:hover,
+        #title-bar .sidebar-toggle-btn:hover {
+            background: var(--accent-light);
+            color: var(--accent-color);
         }
 
         #topBarAvatar {
             border: 1.5px solid var(--border-color);
-            transition: border-color 0.2s;
+            transition: all var(--transition-fast);
+            width: 26px;
+            height: 26px;
+            object-fit: cover;
+            border-radius: 50%;
         }
 
         .toolbar-btn:hover #topBarAvatar {
             border-color: var(--accent-color);
+            transform: scale(1.05);
         }
 
         /* 全屏模式样式 */
@@ -219,15 +237,15 @@
         /* Search Results Overlay */
         .search-results-overlay {
             position: fixed;
-            top: 34px; /* Title bar height */
+            top: 38px; /* Title bar height */
             right: 0;
             width: 400px;
-            height: calc(100vh - 34px);
+            height: calc(100vh - 38px);
             background: var(--bg-primary);
             border-left: 1px solid var(--border-color);
             z-index: 400; 
             transform: translateX(100%);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color var(--transition-fast), border-color var(--transition-fast);
             display: flex;
             flex-direction: column;
         }
@@ -240,12 +258,12 @@
         body.search-results-active .container {
             margin-right: 400px; /* Squeeze content */
             width: auto; /* Allow shrink */
-            transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         /* Ensure container transitions smoothly */
         .container {
-            transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .search-results-header {
@@ -277,7 +295,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
+            transition: all var(--transition-fast) ease;
         }
 
         .search-results-close:hover {
@@ -299,7 +317,7 @@
             padding: 16px;
             margin-bottom: 12px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all var(--transition-fast) ease;
             position: relative;
             border: 1px solid var(--border-color);
         }
@@ -405,7 +423,7 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all var(--transition-fast);
             
             /* Frosted Glass Style (Same as detect-btn) */
             background: var(--accent-light);
@@ -471,7 +489,7 @@
             align-items: center;
             gap: 16px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all var(--transition-fast);
             position: relative;
             user-select: none;
             box-shadow: var(--shadow-sm);
@@ -613,7 +631,7 @@
             font-size: 12px;
             cursor: pointer;
             margin-left: auto; /* Push to right in title bar or toolbar */
-            transition: all 0.2s;
+            transition: all var(--transition-fast);
         }
         
         .batch-exit-btn:hover {
@@ -646,7 +664,7 @@
             justify-content: center;
             cursor: pointer;
             margin: 16px auto 0; /* Center horizontally, margin top */
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all var(--transition-fast);
             box-shadow: var(--shadow-md);
             flex-shrink: 0;
         }
@@ -678,7 +696,7 @@
         ::-webkit-scrollbar-thumb {
             background: var(--border-color);
             border-radius: 3px;
-            transition: background 0.3s;
+            transition: background var(--transition-fast);
         }
         ::-webkit-scrollbar-thumb:hover {
             background: var(--text-secondary);
@@ -689,7 +707,7 @@
 
         .container {
             display: flex;
-            height: calc(100vh - 34px); /* 减去标题栏高度 (34px) */
+            height: calc(100vh - 38px); /* 减去标题栏高度 (38px) */
             position: relative;
         }
 
@@ -700,7 +718,7 @@
             min-width: 0;
             height: 100%;
             position: relative;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), border-color var(--transition-fast);
         }
 
         /* 左侧面板 */
@@ -711,7 +729,7 @@
             background: var(--bg-primary);
             min-width: 0 !important; /* Force min-width 0 to allow full collapse */
             max-width: none; /* Removed max-width limit */
-            transition: background-color 0.3s, flex 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), flex 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden; /* Ensure content doesn't force width */
         }
@@ -734,7 +752,7 @@
             align-items: stretch; /* Keep stretch for both states to avoid jumps */
             padding: 16px 4px 0 4px; /* Default sidebar width is 48px, so content area is 40px */
             flex-shrink: 0;
-            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s, margin 0.4s;
+            transition: background-color var(--transition-fast), width 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s, margin 0.4s;
             box-shadow: none;
             overflow: hidden; /* Clip content when collapsed */
         }
@@ -783,7 +801,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s;
+            transition: all var(--transition-fast);
         }
 
         .icon-btn:hover {
@@ -820,7 +838,7 @@
             font-weight: 600;
             color: var(--accent-color);
             backdrop-filter: blur(8px);
-            transition: all 0.2s ease;
+            transition: all var(--transition-fast) ease;
         }
         .drag-overlay.active { display: flex; animation: fadeIn 0.2s; }
         .drag-overlay.error {
@@ -868,7 +886,7 @@
             color: var(--text-secondary);
             border-radius: var(--radius-sm);
             cursor: pointer;
-            transition: background-color 0.2s, color 0.2s, padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s, box-shadow 0.2s, width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), color var(--transition-fast), padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s, box-shadow 0.2s, width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
             flex-shrink: 0;
@@ -998,7 +1016,7 @@
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all var(--transition-fast) ease;
             display: flex;
             flex-direction: column;
             gap: 4px;
@@ -1076,7 +1094,7 @@
             cursor: pointer;
             color: var(--text-primary);
             font-size: 14px;
-            transition: all 0.2s ease;
+            transition: all var(--transition-fast) ease;
             display: flex;
             align-items: center;
             gap: 12px;
@@ -1110,7 +1128,7 @@
             display: flex;
             align-items: center;
             will-change: transform, opacity;
-            transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), background-color var(--transition-fast), border-color var(--transition-fast);
         }
 
         body.edit-mode .edit-options {
@@ -1288,7 +1306,7 @@
             align-items: center;
             justify-content: flex-start; /* Changed from space-between */
             gap: 8px; /* Added gap */
-            transition: background 0.2s;
+            transition: background var(--transition-fast);
             position: relative;
         }
         .context-menu-item .shortcut-hint {
@@ -1348,7 +1366,7 @@
             align-items: center;
             justify-content: flex-start;
             gap: 8px;
-            transition: background 0.2s;
+            transition: background var(--transition-fast);
         }
         
         .floating-submenu .context-menu-item:hover {
@@ -1514,7 +1532,7 @@
             gap: 12px;
             min-width: 320px; 
             width: 100%;
-            transition: padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), color var(--transition-fast), padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .editor-status-bar {
@@ -1548,7 +1566,7 @@
             box-shadow: var(--shadow-sm);
             overflow: hidden; /* Clip children */
             position: relative;
-            transition: border-color 0.3s, box-shadow 0.3s, background-color 0.3s;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
         }
 
         [data-theme="dark"] .text-container {
@@ -1610,7 +1628,7 @@
             /* Add mask to fade out text at the very top */
             mask-image: linear-gradient(to bottom, transparent 0px, black 80px, black 100%);
             -webkit-mask-image: linear-gradient(to bottom, transparent 0px, black 80px, black 100%);
-            transition: padding 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), color var(--transition-fast), padding 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         body.edit-mode .text-container {
@@ -1767,7 +1785,7 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: var(--transition);
+            transition: var(--transition-fast);
             box-shadow: var(--shadow-lg);
             display: flex;
             align-items: center;
@@ -1796,7 +1814,7 @@
             cursor: col-resize;
             position: relative;
             z-index: 10;
-            transition: all 0.3s;
+            transition: all var(--transition-fast);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1808,7 +1826,7 @@
             background: var(--primary-color);
             border-radius: 2px;
             opacity: 0.4;
-            transition: all 0.3s;
+            transition: all var(--transition-fast);
         }
         .resizer:hover {
             background: var(--accent-hover);
@@ -1832,6 +1850,7 @@
             flex-direction: column;
             background: var(--bg-primary);
             min-width: 300px;
+            transition: background-color var(--transition-fast);
         }
 
         .result-header {
@@ -2199,7 +2218,7 @@
             z-index: 9999;
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            transition: all 0.3s ease;
+            transition: all var(--transition-fast);
         }
         .custom-modal.active { display: flex; }
         
@@ -2251,7 +2270,7 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all var(--transition-fast) ease;
             
             background: var(--bg-secondary);
             color: var(--text-primary);
@@ -2502,7 +2521,7 @@
             cursor: pointer;
             border-radius: 4px;
             padding: 0 2px;
-            transition: background-color 0.2s;
+            transition: background-color var(--transition-fast);
         }
         .fake-highlight:hover {
             background-color: rgba(255, 159, 28, 0.4);
@@ -2582,7 +2601,7 @@
             cursor: pointer;
             border-radius: 4px;
             padding: 0 2px;
-            transition: background-color 0.2s;
+            transition: background-color var(--transition-fast);
         }
         
         .fake-highlight:hover {
@@ -2737,7 +2756,7 @@
             cursor: pointer;
             font-size: 14px;
             font-weight: 600;
-            transition: all 0.3s ease;
+            transition: all var(--transition-fast);
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -2768,7 +2787,7 @@
                 /* 自定义 Tooltip 样式 */
         .custom-tooltip {
             position: fixed;
-            background: var(--bg-card);
+            background: var(--bg-menu);
             color: var(--warning-color);
             padding: 10px 14px;
             border-radius: var(--radius-md);
@@ -2804,7 +2823,7 @@
             font-weight: 600;
             z-index: 10000;
             opacity: 0;
-            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
             pointer-events: none;
             box-shadow: var(--shadow-lg);
             border: 1px solid transparent;
@@ -2867,7 +2886,7 @@
             opacity: 0;
             overflow: hidden;
             /* transform: translateX(-20px);  Removed - handled by content push */
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), color var(--transition-fast), opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), flex 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         /* 
@@ -2915,7 +2934,7 @@
             pointer-events: none;
             transform: translateX(-10px) scale(0.9) rotate(-90deg);
             transform-origin: center center;
-            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: background-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), opacity 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             color: var(--accent-color);
             box-shadow: var(--shadow-sm);
             box-sizing: border-box;
@@ -3012,27 +3031,7 @@
             display: block;
         }
 
-        .sidebar-toggle-btn {
-            width: 32px;
-            height: 28px;
-            border: none;
-            background: transparent;
-            color: var(--text-secondary);
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: var(--transition-fast);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            -webkit-app-region: no-drag;
-            margin-left: 8px;
-        }
-
-        .sidebar-toggle-btn:hover {
-            background: var(--accent-light);
-            color: var(--accent-color);
-            box-shadow: 0 0 0 1px var(--accent-color);
-        }
+        /* Sidebar toggle buttons in title bar are unified in the title bar section */
 
         /* 侧边栏展开时隐藏历史记录图标 */
         body.sidebar-expanded #historyBtn {
@@ -3062,7 +3061,7 @@
         .left-sidebar.expanded .toolbar-btn {
             padding-left: 12px; /* Content area is wider, so we give more breathing room */
             border-radius: var(--radius-md);
-            transition: background-color 0.2s, color 0.2s, padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s, box-shadow 0.2s, width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), color var(--transition-fast), padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s, box-shadow 0.2s, width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             transition-delay: 0s;
         }
 
@@ -3167,7 +3166,7 @@
     border-radius: 50%;
     border: 1px solid var(--border-color);
     cursor: pointer;
-    transition: transform 0.2s, border-color 0.2s;
+    transition: transform 0.2s, border-color var(--transition-fast);
     position: relative;
     box-sizing: border-box;
 }

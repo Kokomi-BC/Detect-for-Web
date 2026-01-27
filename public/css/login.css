@@ -26,7 +26,7 @@ body::after {
     top: 0; left: 0; right: 0; bottom: 0;
     background: var(--bg-overlay);
     z-index: -1;
-    transition: opacity 0.4s ease;
+    transition: opacity var(--transition-fast);
 }
 
 [data-theme="light"] body::after {
@@ -116,7 +116,7 @@ input {
     font-size: 15px;
     font-weight: 600;
     outline: none;
-    transition: all 0.2s ease;
+    transition: var(--transition-fast);
     user-select: text;
 }
 
@@ -175,7 +175,7 @@ input:focus + .input-icon {
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: background var(--transition-fast);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -290,7 +290,7 @@ input:focus + .input-icon {
     color: var(--text-muted);
     padding: 10px;
     border-radius: 50%;
-    transition: background 0.3s;
+    transition: var(--transition-fast);
 }
 
 .theme-toggle:hover {
