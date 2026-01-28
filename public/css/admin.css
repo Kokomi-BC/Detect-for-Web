@@ -145,12 +145,35 @@ body {
     width: 32px;
     height: 32px;
     padding: 0;
-    border-radius: 6px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    color: var(--text-main);
+}
+
+.top-header .icon-btn:hover {
+    background: var(--bg-hover);
+    color: var(--primary-color);
+    transform: none;
+    animation: none;
+    box-shadow: none;
 }
 
 .breadcrumb {
     font-size: 14px;
     color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#breadcrumb-parent {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-main);
 }
 
 .breadcrumb span {
