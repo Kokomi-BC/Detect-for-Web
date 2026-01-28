@@ -81,7 +81,6 @@ button {
 }
 .filled-btn:hover {
     filter: brightness(1.1);
-    transform: translateY(-1px);
 }
 .filled-btn.secondary {
     background: var(--bg-secondary);
@@ -102,6 +101,8 @@ button {
     width: 120px;
     height: 120px;
     border: 3px solid var(--border-color);
+    border-radius: 50%;
+    object-fit: cover;
 }
 #user-edit-modal .avatar-wrapper {
     display: flex;
@@ -114,6 +115,26 @@ button {
     display: flex;
     gap: 16px;
 }
+#user-edit-modal .avatar-edit-actions .icon-btn {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: all var(--transition-fast);
+}
+
+/* Hover: remove shadow */
+#user-edit-modal .avatar-edit-actions .icon-btn:hover {
+    filter: none;
+}
+
+#user-edit-modal #user-edit-avatar-upload-btn {
+    background: var(--bg-glass);
+    color: var(--text-main);
+}
+
+#user-edit-modal #user-edit-avatar-delete-btn {
+    background: var(--danger-light);
+    color: var(--danger-color);
+}
 
 /* --- Icon Buttons (Shared) --- */
 button.icon-btn {
@@ -124,33 +145,56 @@ button.icon-btn {
     align-items: center;
     justify-content: center;
     color: var(--text-muted);
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    transition: all var(--transition-fast);
+    background: var(--bg-glass);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: var(--transition-fast);
     cursor: pointer;
+    /* Inner shadow for depth and dark-mode visibility */
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1), inset 0 -1px 2px rgba(0, 0, 0, 0.1);
 }
+
 button.icon-btn:hover {
     background: var(--bg-hover);
     color: var(--primary-color);
-    transform: translateY(-1px);
+    border-color: var(--primary-color);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
 }
-button.icon-btn.primary {
-    background: var(--primary-color);
-    color: white;
-    border: none;
+
+button.icon-btn.primary, button.icon-btn.success {
+    background: var(--accent-light);
+    color: var(--primary-color);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.2);
 }
+
+button.icon-btn.primary:hover, button.icon-btn.success:hover {
+    background: var(--accent-hover);
+    color: var(--primary-hover);
+}
+
 button.icon-btn.secondary {
     background: var(--bg-secondary);
     color: var(--text-main);
     border: 1px solid var(--border-color);
 }
-button.icon-btn.danger {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.2);
+
+button.icon-btn.secondary:hover {
+    background: var(--bg-hover);
+    color: var(--primary-color);
+    border-color: var(--primary-color);
 }
+
+button.icon-btn.danger {
+    background: var(--danger-light);
+    color: var(--danger-color);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.15);
+}
+
 button.icon-btn.danger:hover {
-    background: #ef4444;
-    color: white;
-    border-color: #ef4444;
+    background: rgba(231, 29, 54, 0.25);
+    color: var(--error-color);
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.15);
 }
