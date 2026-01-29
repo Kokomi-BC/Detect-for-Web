@@ -1195,6 +1195,7 @@
         }
 
         // 可调整大小的分隔线
+        let currentPercentage = 50;
         function initResizable() {
             const resizer = document.getElementById('resizer');
             const leftPanel = document.getElementById('leftPanel');
@@ -1205,7 +1206,6 @@
             const exitDetectionBtn = document.getElementById('exitDetectionBtn');
             let isResizing = false;
             let lastClientX = 0;
-            let currentPercentage = 50;
 
             // Exit Detection Fullscreen
             if (exitDetectionBtn) {
@@ -1345,15 +1345,18 @@
                     delete leftPanel.dataset.frozen;
                     delete rightPanel.dataset.frozen;
                     
-                    const minPercent = 30;
-                    const maxPercent = 65;
+                    // 两侧页面实际大小判断：进入全屏编辑或结果页面
+                    const leftWidth = leftPanel.offsetWidth;
+                    const rightWidth = rightPanel.offsetWidth;
+                    const threshold = 450; // 阈值设定为 450px
 
-                    // Trigger Logic on Release
-                    if (currentPercentage <= minPercent) {
-                        // Trigger Detection Fullscreen
+                    if (leftWidth < threshold) {
+                        // 左侧编辑器太窄，自动进入结果全屏
+                        document.body.classList.remove('edit-mode'); // 互斥处理
                         document.body.classList.add('detection-fullscreen');
-                    } else if (currentPercentage >= maxPercent) {
-                        // Trigger Edit Mode
+                    } else if (rightWidth < threshold) {
+                        // 右侧结果栏太窄，自动进入编辑全屏
+                        document.body.classList.remove('detection-fullscreen'); // 互斥处理
                         const editBtn = document.getElementById('editBtn');
                         if (editBtn && !document.body.classList.contains('edit-mode')) {
                             editBtn.click();
@@ -1404,12 +1407,16 @@
                     delete leftPanel.dataset.frozen;
                     delete rightPanel.dataset.frozen;
 
-                    const minPercent = 30;
-                    const maxPercent = 65;
+                    // 两侧页面实际大小判断：进入全屏编辑或结果页面
+                    const leftWidth = leftPanel.offsetWidth;
+                    const rightWidth = rightPanel.offsetWidth;
+                    const threshold = 280; 
 
-                    if (currentPercentage <= minPercent) {
+                    if (leftWidth < threshold) {
+                        document.body.classList.remove('edit-mode'); 
                         document.body.classList.add('detection-fullscreen');
-                    } else if (currentPercentage >= maxPercent) {
+                    } else if (rightWidth < threshold) {
+                        document.body.classList.remove('detection-fullscreen');
                         const editBtn = document.getElementById('editBtn');
                         if (editBtn && !document.body.classList.contains('edit-mode')) {
                             editBtn.click();
@@ -1619,7 +1626,6 @@
                         leftPanel.style.flex = '0 0 50%';
                         rightPanel.style.flex = '0 0 50%';
                         // Reset internal state if accessible, or just rely on UI update
-                        // We need to update the toolbar gap and visibility too
                         if (toolbar) {
                             toolbar.classList.remove('hidden');
                             toolbar.style.setProperty('--toolbar-gap', '12px'); // Reset gap
@@ -1807,8 +1813,6 @@
                 group.addEventListener('mouseenter', () => {
                     // Close all other open dropdowns in the toolbar
                     document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-                        // Don't close if it's the one we are hovering (though hover handles display)
-                        // Also don't close the More Menu (id="moreDropdown") as it's not an edit group
                         if (!group.contains(menu) && menu.id !== 'moreDropdown') {
                             menu.classList.remove('show');
                         }
@@ -3871,6 +3875,17 @@
                 // backdrop.classList.add('active'); // Removed backdrop
                 document.body.classList.add('search-results-active'); // Add squeeze class
                 
+                // 如果页面宽度支持同时显示三个页面，在开启搜索时将分隔线置为50%以防结果过小
+                if (window.innerWidth >= 1200) {
+                    const leftPanel = document.getElementById('leftPanel');
+                    const rightPanel = document.getElementById('rightPanel');
+                    if (leftPanel) {
+                        leftPanel.style.flex = '1';
+                        currentPercentage = 50; 
+                    }
+                    if (rightPanel) rightPanel.style.flex = '1';
+                }
+
                 // Trigger resize logic immediately to check if we need to hide left panel
                 window.dispatchEvent(new Event('resize'));
             } else {
@@ -3956,7 +3971,10 @@
                     document.body.classList.remove('detection-fullscreen');
                     const leftPanel = document.getElementById('leftPanel');
                     const rightPanel = document.getElementById('rightPanel');
-                    if (leftPanel) leftPanel.style.flex = '1';
+                    if (leftPanel) {
+                        leftPanel.style.flex = '1';
+                        currentPercentage = 50; 
+                    }
                     if (rightPanel) rightPanel.style.flex = '1';
                 }
              }
