@@ -35,6 +35,9 @@
     --bg-glass: rgba(255, 255, 255, 0.45);
     --bg-menu: rgba(255, 255, 255, 0.95);
     
+    /* New Soft Layer for Analysis Items */
+    --bg-soft-layer: rgba(0, 0, 0, 0.025);
+    
     --text-main: #111827;
     --text-primary: #1a1d20;
     --text-secondary: #6c757d;
@@ -81,6 +84,9 @@
     --bg-card: rgba(30, 41, 59, 0.7); /* Slightly more opaque for glass stability */
     --bg-glass: rgba(15, 23, 42, 0.55);
     --bg-menu: rgba(25, 25, 26, 0.95);
+    
+    /* New Soft Layer for Analysis Items (Whitish) */
+    --bg-soft-layer: rgba(255, 255, 255, 0.04);
     
     --text-main: #f8fafc;
     --text-primary: #e9ecef;

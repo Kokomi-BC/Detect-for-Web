@@ -570,9 +570,19 @@
         <!-- API 配置区块 -->
         <div id="config-section" style="display:none;">
             <h2>API 接口配置</h2>
-            <div style="background:var(--bg-card); padding:25px; border-radius:12px; border:1px solid var(--border-color); margin-top:20px;">
-                <h3 style="margin-top:0; border-left: 4px solid var(--primary-color); padding-left: 10px;">模型 API (Doubao/OpenAI 兼容)</h3>
-                <div style="display:grid; grid-template-columns: 1fr; gap:20px; margin-top:20px;">
+            <div class="config-panel">
+                <h3 class="config-section-title">模型 API (OpenAI/cURL)</h3>
+                
+                <div class="method-tabs-container">
+                    <div class="method-tabs">
+                        <div class="method-slider" id="method-slider"></div>
+                        <button type="button" class="method-tab active" id="tab-sdk" onclick="setLlmMethod('sdk')">OpenAI SDK</button>
+                        <button type="button" class="method-tab" id="tab-curl" onclick="setLlmMethod('curl')">cURL / REST API</button>
+                    </div>
+                    <input type="hidden" id="config-llm-method" value="sdk">
+                </div>
+
+                <div class="config-form-grid">
                     <div class="form-group">
                         <label>API Key</label>
                         <input type="password" id="config-llm-key" placeholder="输入 API Key" style="width:100%;">
@@ -585,10 +595,22 @@
                         <label>模型名称 (Model Endpoint)</label>
                         <input type="text" id="config-llm-model" placeholder="ep-xxxxxxxxxxxx" style="width:100%;">
                     </div>
+                    
+                    <!-- 深度思考 Switch -->
+                    <div class="switch-group">
+                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                            <label style="margin-bottom: 0; cursor: pointer; font-weight: 600; color: var(--text-main);">开启深度思考 (Thinking Mode)</label>
+                            <span style="font-size: 11px; color: var(--text-muted);">启用后将向模型发送 thinking 参数以支持推理链</span>
+                        </div>
+                        <label class="ui-switch">
+                            <input type="checkbox" id="config-llm-thinking">
+                            <span class="ui-slider"></span>
+                        </label>
+                    </div>
                 </div>
 
-                <h3 style="margin-top:35px; border-left: 4px solid var(--success-color); padding-left: 10px;">联网搜索 API (Bocha)</h3>
-                <div style="display:grid; grid-template-columns: 1fr; gap:20px; margin-top:20px;">
+                <h3 class="config-section-title success" style="margin-top:35px;">联网搜索 API (Bocha)</h3>
+                <div class="config-form-grid" style="margin-top:20px;">
                     <div class="form-group">
                         <label>Bocha API Key</label>
                         <input type="password" id="config-search-key" placeholder="输入 Bocha API Key" style="width:100%;">
@@ -599,10 +621,10 @@
                     </div>
                 </div>
 
-                <div style="margin-top:40px; display:flex; gap:15px; justify-content: flex-end;">
-                    <span id="save-status" style="display:none; color:var(--success-color); align-self: center; font-size: 14px; font-weight: bold;">已保存生效 ✓</span>
-                    <button class="icon-btn primary" onclick="saveConfig()" id="save-config-btn" style="width: 40px; height: 40px;" title="保存配置">
-                        <svg width="22" height="22" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 5.75A2.75 2.75 0 0 1 5.75 3h9.964a3.25 3.25 0 0 1 2.299.952l2.035 2.035c.61.61.952 1.437.952 2.299v9.964A2.75 2.75 0 0 1 18.25 21H5.75A2.75 2.75 0 0 1 3 18.25V5.75ZM5.75 4.5c-.69 0-1.25.56-1.25 1.25v12.5c0 .69.56 1.25 1.25 1.25H6v-5.25A2.25 2.25 0 0 1 8.25 12h7.5A2.25 2.25 0 0 1 18 14.25v5.25h.25c.69 0 1.25-.56 1.25-1.25V8.286c0-.465-.184-.91-.513-1.238l-2.035-2.035a1.75 1.75 0 0 0-.952-.49V7.25a2.25 2.25 0 0 1-2.25 2.25h-4.5A2.25 2.25 0 0 1 7 7.25V4.5H5.75Zm10.75 15v-5.25a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0-.75.75v5.25h9Zm-8-15v2.75c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75V4.5h-6Z" fill="currentColor"/></svg>
+                <div class="form-actions">
+                    <span id="save-status" class="save-status-text">已保存生效 ✓</span>
+                    <button class="filled-btn btn-config-save" onclick="saveConfig()" id="save-config-btn">
+                        保存配置
                     </button>
                 </div>
             </div>
@@ -1969,6 +1991,22 @@
         syncColor('dark-bg-tertiary', 'dark-bg-tertiary-text');
         syncColor('dark-bg-menu', 'dark-bg-menu-text');
 
+        function setLlmMethod(method) {
+            document.getElementById('config-llm-method').value = method;
+            document.getElementById('tab-sdk').classList.toggle('active', method === 'sdk');
+            document.getElementById('tab-curl').classList.toggle('active', method === 'curl');
+
+            const slider = document.getElementById('method-slider');
+            const target = document.getElementById(method === 'sdk' ? 'tab-sdk' : 'tab-curl');
+            if (slider && target) {
+                // 延迟执行以确保元素渲染完成计算宽度
+                setTimeout(() => {
+                    slider.style.width = target.offsetWidth + 'px';
+                    slider.style.left = target.offsetLeft + 'px';
+                }, 20);
+            }
+        }
+
         async function fetchConfig() {
             const data = await safeFetch('/api/admin/config');
             if (data && data.success) {
@@ -1976,6 +2014,12 @@
                 document.getElementById('config-llm-key').value = c.llm?.apiKey || '';
                 document.getElementById('config-llm-url').value = c.llm?.baseURL || '';
                 document.getElementById('config-llm-model').value = c.llm?.model || '';
+                
+                const method = c.llm?.method || 'sdk';
+                setLlmMethod(method);
+                
+                document.getElementById('config-llm-thinking').checked = !!c.llm?.thinking;
+
                 document.getElementById('config-search-key').value = c.search?.apiKey || '';
                 document.getElementById('config-search-url').value = c.search?.baseURL || '';
             }
@@ -1991,7 +2035,9 @@
                 llm: {
                     apiKey: document.getElementById('config-llm-key').value.trim(),
                     baseURL: document.getElementById('config-llm-url').value.trim(),
-                    model: document.getElementById('config-llm-model').value.trim()
+                    model: document.getElementById('config-llm-model').value.trim(),
+                    method: document.getElementById('config-llm-method').value,
+                    thinking: document.getElementById('config-llm-thinking').checked
                 },
                 search: {
                     apiKey: document.getElementById('config-search-key').value.trim(),

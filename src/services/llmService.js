@@ -17,12 +17,16 @@ class LLMService {
         if (configData.llm && configData.llm.apiKey) {
           this.client = new OpenAI({
             apiKey: configData.llm.apiKey,
-            baseURL: configData.llm.baseURL || 'https://ark.cn-beijing.volces.com/api/v3',
+            baseURL: configData.llm.baseURL,
           });
           this.model = configData.llm.model;
+          this.method = configData.llm.method || 'sdk';
+          this.isThinking = !!configData.llm.thinking;
         } else {
           this.client = null;
           this.model = null;
+          this.method = 'sdk';
+          this.isThinking = false;
         }
 
         this.bochaApiKey = (configData.search && configData.search.apiKey) || null;
@@ -31,9 +35,11 @@ class LLMService {
         this.client = null;
         this.model = null;
         this.bochaApiKey = null;
+        this.method = 'sdk';
+        this.isThinking = false;
         // Create empty config file if not exists
         const emptyConfig = {
-          llm: { apiKey: '', baseURL: '', model: '' },
+          llm: { apiKey: '', baseURL: '', model: '', method: 'sdk', thinking: false },
           search: { apiKey: '', baseURL: '' }
         };
         fs.mkdirSync(path.dirname(this.configPath), { recursive: true });
@@ -248,12 +254,37 @@ Summary: Use concise Chinese keywords for search; output strictly valid JSON; al
     ];
 
     try {
-      // 第一次调用
-      console.log('第一次调用...');
-      let response = await this.client.chat.completions.create({
+      const callArgs = {
         model: this.model,
         messages: messages,
-      });
+        temperature: 0.1
+      };
+      if (this.isThinking) callArgs.thinking = { type: 'enabled' };
+
+      // 第一次调用
+      console.log('第一次调用...');
+      let response;
+      if (this.method === 'curl') {
+        let fullUrl = (this.config.llm.baseURL || '').replace(/\/$/, '');
+        if (!fullUrl.endsWith('/chat/completions')) {
+          fullUrl += '/chat/completions';
+        }
+        const res = await fetch(fullUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.config.llm.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(callArgs)
+        });
+        if (!res.ok) {
+          const err = await res.text();
+          throw new Error(`LLM API Error (cURL): ${res.status} - ${err}`);
+        }
+        response = await res.json();
+      } else {
+        response = await this.client.chat.completions.create(callArgs);
+      }
 
       let content = response.choices[0].message.content;
       let result = this.parseResponse(content);
@@ -290,10 +321,34 @@ Summary: Use concise Chinese keywords for search; output strictly valid JSON; al
         });
 
         console.log('第二次调用...');
-        response = await this.client.chat.completions.create({
+        const secondCallArgs = {
           model: this.model,
           messages: messages,
-        });
+          temperature: 0.1
+        };
+        if (this.isThinking) secondCallArgs.thinking = { type: 'enabled' };
+
+        if (this.method === 'curl') {
+          let fullUrl = (this.config.llm.baseURL || '').replace(/\/$/, '');
+          if (!fullUrl.endsWith('/chat/completions')) {
+            fullUrl += '/chat/completions';
+          }
+          const res = await fetch(fullUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${this.config.llm.apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(secondCallArgs)
+          });
+          if (!res.ok) {
+            const err = await res.text();
+            throw new Error(`LLM API Error (cURL): ${res.status} - ${err}`);
+          }
+          response = await res.json();
+        } else {
+          response = await this.client.chat.completions.create(secondCallArgs);
+        }
 
         content = response.choices[0].message.content;
         const secondResult = this.parseResponse(content);
