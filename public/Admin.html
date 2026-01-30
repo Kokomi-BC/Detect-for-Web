@@ -156,8 +156,8 @@
                             </div>
                             <div class="stat-value" id="stat-total-users">-</div>
                             <div class="stat-footer">
-                                <span class="stat-trend positive">全量用户</span>
-                                <span class="stat-desc">系统数据</span>
+                                <span class="stat-trend" id="stat-total-users-trend">全量用户</span>
+                                <span class="stat-desc">用户数</span>
                             </div>
                         </div>
 
@@ -170,7 +170,7 @@
                             </div>
                             <div class="stat-value" id="stat-login-users-count">0</div>
                             <div class="stat-footer">
-                                <span class="stat-trend positive">今日通过身份验证</span>
+                                <span class="stat-trend" id="stat-login-trend">今日通过身份验证</span>
                                 <span class="stat-desc">次数</span>
                             </div>
                         </div>
@@ -184,8 +184,8 @@
                             </div>
                             <div class="stat-value" id="stat-today-visitors">-</div>
                             <div class="stat-footer">
-                                <span class="stat-trend positive">已去重 (未拦截)</span>
-                                <span class="stat-desc">访客</span>
+                                <span class="stat-trend" id="stat-visitor-trend">已去重 (未拦截)</span>
+                                <span class="stat-desc">访问网站的设备数</span>
                             </div>
                         </div>
 
@@ -213,7 +213,7 @@
                             </div>
                             <div class="stat-value" id="stat-blocked-count">0</div>
                             <div class="stat-footer">
-                                <span class="stat-trend" id="stat-blocked-trend">恶意扫描爬虫</span>
+                                <span class="stat-trend" id="stat-blocked-trend">拦截恶意爬虫</span>
                                 <span class="stat-desc">次数</span>
                             </div>
                         </div>
@@ -227,7 +227,7 @@
                             </div>
                             <div class="stat-value" id="stat-login-fail-count">0</div>
                             <div class="stat-footer">
-                                <span class="stat-trend negative">登录尝试失败</span>
+                                <span class="stat-trend" id="stat-login-fail-trend">登录尝试失败</span>
                                 <span class="stat-desc">今日累计</span>
                             </div>
                         </div>
@@ -1399,9 +1399,11 @@
             tbody.innerHTML = '';
             data.forEach(item => {
                 const tr = document.createElement('tr');
+                const displayInput = (item.originalInput || '-');
+                const truncatedInput = displayInput.length > 100 ? displayInput.substring(0, 100) + '...' : displayInput;
                 const link = item.url ? 
                     `<a href="${item.url}" target="_blank" style="color:var(--primary-color); text-decoration:none; font-size:11px;">${item.url}</a>` : 
-                    `<span style="color:var(--text-muted); font-size:12px;">${item.originalInput || '-'}</span>`;
+                    `<span style="color:var(--text-muted); font-size:12px; line-height: 1.4; display: block; max-height: 50px; overflow: hidden;">${truncatedInput}</span>`;
                 tr.innerHTML = `
                     <td>
                         <div style="display:flex; flex-direction:column;">
@@ -1410,7 +1412,7 @@
                         </div>
                     </td>
                     <td style="max-width:250px; overflow:hidden; text-overflow:ellipsis; font-size:13px; font-weight:500;">${item.title}</td>
-                    <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${link}</td>
+                    <td style="max-width:300px; overflow:hidden;">${link}</td>
                     <td><div style="font-weight:700; color:var(--primary-color)">${item.score}</div></td>
                     <td style="font-size:11px; color:var(--text-muted)">${new Date(item.timestamp).toLocaleString()}</td>
                     <td>
@@ -1438,17 +1440,49 @@
             const json = await safeFetch('/api/admin/stats/today');
             if (json && json.success) {
                 const stats = json.data;
+                const yesterday = json.yesterday || {};
                 const blockedEl = document.getElementById('stat-blocked-count');
                 const visitorEl = document.getElementById('stat-today-visitors');
                 const loginEl = document.getElementById('stat-login-users-count');
                 const loginFailEl = document.getElementById('stat-login-fail-count');
                 const anomalyEl = document.getElementById('stat-anomaly-count');
+                const totalUsersEl = document.getElementById('stat-total-users');
 
+                if (totalUsersEl) totalUsersEl.innerText = json.totalUsers || 0;
                 if (blockedEl) blockedEl.innerText = stats.blocked_count || 0;
                 if (visitorEl) visitorEl.innerText = stats.unique_visitor_count || 0;
                 if (loginEl) loginEl.innerText = stats.login_user_count || 0;
                 if (loginFailEl) loginFailEl.innerText = stats.login_fail_count || 0;
-                if (anomalyEl) anomalyEl.innerText = stats.anomaly_count || 0;
+                // 解决采集异常显示为0的问题：改用累计异常数
+                if (anomalyEl) anomalyEl.innerText = json.totalAnomalies || 0;
+
+                // 更新较昨日趋势
+                const updateTrend = (trendId, today, yesterday, isBetterLower = false) => {
+                    const el = document.getElementById(trendId);
+                    if (!el) return;
+                    const diff = (today || 0) - (yesterday || 0);
+                    let trendHtml = '';
+                    if (diff > 0) {
+                        const color = isBetterLower ? 'var(--danger-color)' : 'var(--success-color)';
+                        trendHtml = `<span style="color:${color}; font-weight: 700;">↑ ${diff}</span>`;
+                    } else if (diff < 0) {
+                        const color = isBetterLower ? 'var(--success-color)' : 'var(--danger-color)';
+                        trendHtml = `<span style="color:${color}; font-weight: 700;">↓ ${Math.abs(diff)}</span>`;
+                    } else {
+                        trendHtml = `<span style="color:var(--text-muted); font-weight: 600;">持平</span>`;
+                    }
+                    el.innerHTML = `<span style="color:var(--text-muted); font-size: 11px; margin-right: 2px;">较昨日</span>${trendHtml}`;
+                };
+
+                updateTrend('stat-login-trend', stats.login_user_count, yesterday.login_user_count);
+                updateTrend('stat-visitor-trend', stats.unique_visitor_count, yesterday.unique_visitor_count);
+                updateTrend('stat-blocked-trend', stats.blocked_count, yesterday.blocked_count);
+                updateTrend('stat-login-fail-trend', stats.login_fail_count, yesterday.login_fail_count, true);
+                updateTrend('stat-total-users-trend', stats.new_user_count, yesterday.new_user_count);
+                
+                // 采集异常恢复默认显示，不显示较昨日趋势
+                const anomalyTrendEl = document.getElementById('stat-anomaly-trend');
+                if (anomalyTrendEl) anomalyTrendEl.innerHTML = '<span style="color:var(--text-muted)">采集过程触发异常</span>';
 
                 // Update system real-time stats
                 if (json.system) {
@@ -1926,6 +1960,8 @@
                 
                 const res = await post('/api/admin/config', config);
                 if (res && res.success) {
+                    // 同步将当前管理员的主题设置为 0 
+                    await post('/api/user/preferences', { themeId: 0 });
                     alert('全站主题配置已保存并应用。');
                     location.reload();
                 } else {

@@ -171,8 +171,12 @@ class LLMService {
     // Rule 2: If images exist, add a 4th point: "图文一致性分析" (Image-Text Consistency) to evaluate if labels/captions/context match the image content.
     { "description": "Analysis detail", "status": "positive"|"warning"|"negative" }
   ],
-  "fake_parts": [          // Only if type is 2 or 3. List specific fake segments and reasons (Simplified Chinese). Include image-text mismatches clearly, e.g., reason starts with "图文不一致:".
-    { "text": "Exact quote", "reason": "Why it is fake" }
+  "fake_parts": [          // Only if type is 2 or 3. List specific problematic segments (Simplified Chinese).
+    { 
+      "text": "Exact quote from the content", 
+      "risk_type": "Concise risk category (e.g.内容存疑, 绝对化表述, 煽动性营销, 逻辑谬误)", 
+      "reason": "Detailed AI analysis reason (Simplified Chinese). Explain WHY it is a risk." 
+    }
   ],
   "fake_images": [         // List any images that are manipulated, AI-generated, or used out of context.
     { "url": "The exact URL provided in userContent", "reason": "Detailed explanation of why this image is fake/misleading" }

@@ -160,6 +160,15 @@ router.post('/register', async (req, res) => {
         const nextId = await getNextAvailableUserId();
         await pool.query('INSERT INTO users (id, username, password, status, role, last_login_at) VALUES (?, ?, ?, ?, ?, NOW())', 
             [nextId, username, password, 'pending', 'user']);
+
+        // Update new user stats
+        try {
+            await pool.query(`
+                INSERT INTO system_stats (stat_date, new_user_count)
+                VALUES (CURDATE(), 1)
+                ON DUPLICATE KEY UPDATE new_user_count = new_user_count + 1
+            `);
+        } catch(e) {}
             
         res.json({ success: true, message: '注册成功，请等待管理员审核' });
     } catch (err) {

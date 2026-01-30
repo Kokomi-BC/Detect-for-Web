@@ -313,14 +313,44 @@ class ExportManager {
                 activeTooltipElement.classList.remove('active');
             }
 
-            const reason = element.getAttribute('data-reason');
-            if (!reason) return;
+            const reasonAttr = element.getAttribute('data-reason');
+            if (!reasonAttr) return;
 
             activeTooltipElement = element;
             activeTooltipElement.classList.add('active');
 
             const tooltip = document.getElementById('customTooltip');
-            tooltip.textContent = reason;
+            
+            // Handle both legacy (string) and new (JSON) formats
+            let riskType = '内容存疑';
+            let description = reasonAttr;
+            let originalText = element.textContent;
+
+            try {
+                if (reasonAttr.startsWith('{')) {
+                    const data = JSON.parse(reasonAttr);
+                    riskType = data.r || riskType;
+                    description = data.d || '';
+                }
+            } catch (e) {
+                console.warn('Failed to parse tooltip JSON', e);
+            }
+
+            tooltip.innerHTML = \`
+                <div class="tooltip-header">风险详情</div>
+                <div class="tooltip-section">
+                    <div class="tooltip-label">风险类型</div>
+                    <div class="tooltip-tag">\${riskType}</div>
+                </div>
+                <div class="tooltip-section">
+                    <div class="tooltip-label">检测原文</div>
+                    <div class="tooltip-quote">"\${originalText}"</div>
+                </div>
+                <div class="tooltip-section">
+                    <div class="tooltip-label">AI 分析理由</div>
+                    <div class="tooltip-reason">\${description}</div>
+                </div>
+            \`;
             tooltip.classList.add('active');
 
             updateTooltipPosition();
@@ -386,7 +416,11 @@ class ExportManager {
 
     <!-- Image Modal -->
     <div class="image-modal" id="imageModal">
-        <button class="modal-close" id="modalClose">×</button>
+        <button class="modal-close" id="modalClose">
+            <svg viewBox="0 0 24 24" width="24" height="24">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+            </svg>
+        </button>
         <img class="modal-image" id="modalImage" src="" alt="预览图片">
         <div id="modalReason" class="modal-reason"></div>
     </div>

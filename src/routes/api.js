@@ -344,6 +344,16 @@ module.exports = function(services, state) {
             const nextId = await getNextAvailableUserId();
             await pool.query('INSERT INTO users (id, username, password, role, status, last_login_at) VALUES (?, ?, ?, ?, ?, NOW())', 
                 [nextId, username, password, role || 'user', status || 'active']);
+
+            // Update new user stats
+            try {
+                await pool.query(`
+                    INSERT INTO system_stats (stat_date, new_user_count)
+                    VALUES (CURDATE(), 1)
+                    ON DUPLICATE KEY UPDATE new_user_count = new_user_count + 1
+                `);
+            } catch(e) {}
+
             res.json({ success: true });
         } catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });
@@ -951,6 +961,9 @@ module.exports = function(services, state) {
     router.get('/admin/stats/today', authenticate, authenticateAdmin, async (req, res) => {
         try {
             const [[stats]] = await pool.query('SELECT * FROM system_stats WHERE stat_date = CURDATE()');
+            const [[yesterdayStats]] = await pool.query('SELECT * FROM system_stats WHERE stat_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY)');
+            const [[{ totalUsers }]] = await pool.query('SELECT COUNT(*) as totalUsers FROM users');
+            
             const defaultStats = {
                 access_count: 0,
                 unique_visitor_count: 0,
@@ -959,6 +972,9 @@ module.exports = function(services, state) {
                 anomaly_count: 0,
                 blocked_count: 0
             };
+
+            const data = stats || { ...defaultStats };
+            const yesterdayData = yesterdayStats || { ...defaultStats };
 
             // Real-time system stats (Not in DB)
             const totalMem = os.totalmem();
@@ -981,7 +997,10 @@ module.exports = function(services, state) {
 
             res.json({ 
                 success: true, 
-                data: stats || defaultStats,
+                data,
+                yesterday: yesterdayData,
+                totalUsers,
+                totalAnomalies: extractionManager.getAnomalies().length,
                 system: systemData
             });
         } catch (err) { res.status(500).json({ success: false, error: err.message }); }

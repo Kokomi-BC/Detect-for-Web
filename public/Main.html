@@ -4809,8 +4809,14 @@
                     // Sort fake parts by length descending to avoid nested replacement issues
                     const sortedParts = [...result.fake_parts].sort((a, b) => (b.text || '').length - (a.text || '').length);
                     sortedParts.forEach(part => {
-                        if (part.text && displayText.includes(part.text)) {
-                            const reasonStr = (part.reason || '').replace(/"/g, '&quot;');
+                        if (part.text && safeText.includes(part.text)) {
+                            // Ensure we only replace once per call to avoid double highlights
+                            // and escape quotes for attribute
+                            const reasonObj = {
+                                r: part.risk_type || '内容存疑',
+                                d: part.reason || ''
+                            };
+                            const reasonStr = JSON.stringify(reasonObj).replace(/"/g, '&quot;');
                             const highlight = `<span class="fake-highlight" data-reason="${reasonStr}" onclick="showReasonTooltip(event, this, 'click')" onmouseenter="showReasonTooltip(event, this, 'hover')" onmouseleave="hideTooltip(false)">${part.text}</span>`;
                             safeText = safeText.replace(part.text, highlight);
                         }
@@ -4824,7 +4830,11 @@
                     sortedParts.forEach(part => {
                         if (part.text) {
                             const safePart = part.text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                            const reasonStr = (part.reason || '').replace(/"/g, '&quot;');
+                            const reasonObj = {
+                                r: part.risk_type || '内容存疑',
+                                d: part.reason || ''
+                            };
+                            const reasonStr = JSON.stringify(reasonObj).replace(/"/g, '&quot;');
                             const highlight = `<span class="fake-highlight" data-reason="${reasonStr}" onclick="showReasonTooltip(event, this, 'click')" onmouseenter="showReasonTooltip(event, this, 'hover')" onmouseleave="hideTooltip(false)">${safePart}</span>`;
                             safeText = safeText.replace(safePart, highlight);
                         }
@@ -4967,8 +4977,8 @@
                 activeTooltipElement.classList.remove('active');
             }
 
-            const reason = element.getAttribute('data-reason');
-            if (!reason) return;
+            const reasonAttr = element.getAttribute('data-reason');
+            if (!reasonAttr) return;
 
             activeTooltipElement = element;
             activeTooltipElement.classList.add('active');
@@ -4981,7 +4991,36 @@
                 document.body.appendChild(tooltip);
             }
 
-            tooltip.textContent = reason;
+            // Handle both legacy (string) and new (JSON) formats
+            let riskType = '内容存疑';
+            let description = reasonAttr;
+            let originalText = element.textContent;
+
+            try {
+                if (reasonAttr.startsWith('{')) {
+                    const data = JSON.parse(reasonAttr);
+                    riskType = data.r || riskType;
+                    description = data.d || '';
+                }
+            } catch (e) {
+                console.warn('Failed to parse tooltip JSON', e);
+            }
+
+            tooltip.innerHTML = `
+                <div class="tooltip-header">风险详情</div>
+                <div class="tooltip-section">
+                    <div class="tooltip-label">风险类型</div>
+                    <div class="tooltip-tag">${riskType}</div>
+                </div>
+                <div class="tooltip-section">
+                    <div class="tooltip-label">检测原文</div>
+                    <div class="tooltip-quote">"${originalText}"</div>
+                </div>
+                <div class="tooltip-section">
+                    <div class="tooltip-label">AI 分析理由</div>
+                    <div class="tooltip-reason">${description}</div>
+                </div>
+            `;
             tooltip.classList.add('active');
 
             // Initial position update

@@ -2777,26 +2777,79 @@
             border-radius: 2px;
         }
 
-                /* 自定义 Tooltip 样式 */
+        /* 自定义 Tooltip 样式 */
         .custom-tooltip {
             position: fixed;
             background: var(--bg-menu);
-            color: var(--warning-color);
-            padding: 10px 14px;
-            border-radius: var(--radius-md);
-            font-size: 13px;
-            line-height: 1.5;
-            max-width: 300px;
+            color: var(--text-main);
+            padding: 16px 20px;
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            line-height: 1.6;
+            max-width: 340px;
             z-index: 3000;
             pointer-events: none;
             opacity: 0;
             transform: translateY(10px);
             transition: opacity 0.2s, transform 0.2s;
-            box-shadow: var(--shadow-lg);
-            border: 2px solid var(--warning-color);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--border-color);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
+        
+        .tooltip-header {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .tooltip-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .tooltip-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.3px;
+        }
+
+        .tooltip-quote {
+            color: var(--primary-color);
+            font-weight: 700;
+            font-size: 18px;
+            line-height: 1.4;
+            padding: 4px 0;
+        }
+
+        .tooltip-tag {
+            background: var(--warning-light);
+            color: var(--warning-color);
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 800;
+            width: fit-content;
+            border: 1px solid var(--warning-light);
+        }
+
+        .tooltip-reason {
+            color: var(--text-main);
+            font-size: 15px;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+
         .custom-tooltip.active {
             opacity: 1;
             transform: translateY(0);
