@@ -1108,6 +1108,16 @@
             color: var(--accent-color);
         }
 
+        .dropdown-item-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: inherit;
+        }
+
         /* Edit Options - Refactored for Edit Mode */
         .edit-options {
             position: fixed;

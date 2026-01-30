@@ -571,13 +571,13 @@
         <div id="config-section" style="display:none;">
             <h2>API 接口配置</h2>
             <div class="config-panel">
-                <h3 class="config-section-title">模型 API (OpenAI/cURL)</h3>
+                <h3 class="config-section-title">模型 API (OpenAI/Curl)</h3>
                 
                 <div class="method-tabs-container">
                     <div class="method-tabs">
                         <div class="method-slider" id="method-slider"></div>
                         <button type="button" class="method-tab active" id="tab-sdk" onclick="setLlmMethod('sdk')">OpenAI SDK</button>
-                        <button type="button" class="method-tab" id="tab-curl" onclick="setLlmMethod('curl')">cURL / REST API</button>
+                        <button type="button" class="method-tab" id="tab-curl" onclick="setLlmMethod('curl')">Curl API</button>
                     </div>
                     <input type="hidden" id="config-llm-method" value="sdk">
                 </div>
@@ -2131,6 +2131,14 @@
         loadPresets();
         const lastTab = localStorage.getItem('admin_last_tab') || 'workbench';
         switchTab(lastTab);
+
+        // 自动刷新工作台核心负载 (3秒一次)
+        setInterval(() => {
+            const currentTab = localStorage.getItem('admin_last_tab') || 'workbench';
+            if (!document.hidden && currentTab === 'workbench') {
+                fetchTodayStats();
+            }
+        }, 3000);
     </script>
 </body>
 </html>

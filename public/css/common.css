@@ -164,37 +164,36 @@ button.icon-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* 默认跟随主题色，类似欢迎页面按钮 */
-    color: var(--primary-color);
-    background: var(--accent-light);
-    border: none; /* 去除描边 */
+    /* 基础颜色采用背景中性色 */
+    color: var(--text-main);
+    background: var(--bg-color);
+    border: none;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     transition: all var(--transition-fast);
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 button.icon-btn:hover {
-    background: var(--accent-hover);
-    color: var(--primary-hover);
+    background: var(--accent-light); /* 悬浮时显示主题色遮罩 */
+    color: var(--primary-color);
     transform: translateY(-1px);
     box-shadow: 0 6px 15px var(--accent-light);
-    animation: buttonBreathe 2s infinite ease-in-out;
 }
 
 button.icon-btn.primary, button.icon-btn.success {
+    background: var(--bg-color);
+    color: var(--text-main);
+}
+
+button.icon-btn.primary:hover, button.icon-btn.success:hover {
     background: var(--accent-light);
     color: var(--primary-color);
 }
 
-button.icon-btn.primary:hover, button.icon-btn.success:hover {
-    background: var(--accent-hover);
-    color: var(--primary-hover);
-}
-
 button.icon-btn.secondary {
-    background: var(--bg-secondary);
+    background: var(--bg-color);
     color: var(--text-main);
 }
 
@@ -212,5 +211,6 @@ button.icon-btn.danger {
 button.icon-btn.danger:hover {
     background: var(--danger-color);
     color: white;
+    transform: translateY(-1px);
     box-shadow: 0 6px 15px rgba(231, 29, 54, 0.2);
 }
