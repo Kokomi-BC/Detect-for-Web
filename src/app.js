@@ -150,6 +150,9 @@ app.use('/js', express.static(path.join(__dirname, '../public/js'), {
 app.use('/css', express.static(path.join(__dirname, '../public/css'), {
     maxAge: '1h'
 }));
+app.use('/js', express.static(path.join(__dirname, '../public/js'), {
+    maxAge: '1h'
+}));
 
 app.get('/Login', (req, res) => {
     const token = req.cookies.token;
@@ -176,6 +179,14 @@ app.get('/Main', checkCookieAuth, (req, res) => {
 app.get('/Welcome', checkCookieAuth, (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.sendFile(path.join(__dirname, '../dist/Welcome.html'));
+});
+
+app.get('/Mobile', checkCookieAuth, (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    // Serve from dist if built, or check public if needed. Assuming dist for consistency
+    // But since I won't run full build, I'll direct to public for now or ensure I copy it.
+    // Let's stick to dist pattern and I will copy it.
+    res.sendFile(path.join(__dirname, '../public/Mobile.html')); 
 });
 
 // Redirect .html requests

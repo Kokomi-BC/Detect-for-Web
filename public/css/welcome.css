@@ -193,3 +193,27 @@
     background: var(--bg-tertiary);
     color: var(--text-primary);
 }
+
+/* 竖屏优化 (Portrait Optimization) */
+@media screen and (max-aspect-ratio: 1/1) {
+    .welcome-wrapper {
+        gap: 30px;
+        padding: 20px;
+    }
+
+    .welcome-text {
+        font-size: clamp(2.5rem, 15vw, 4rem);
+        letter-spacing: 4px;
+        line-height: 1.2;
+    }
+
+    #welcomeAvatar {
+        width: 100px !important;
+        height: 100px !important;
+    }
+
+    .arrow-circle {
+        width: 80px;
+        height: 80px;
+    }
+}

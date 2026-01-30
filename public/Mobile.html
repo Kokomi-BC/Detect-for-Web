@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TruthGuard</title>
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/mobile.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <style>
+        .tooltip-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            background: var(--warning-light);
+            color: var(--warning-color);
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+        .tooltip-quote {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--border-color);
+            padding: 10px 14px;
+            font-style: italic;
+            margin: 10px 0;
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <header class="mobile-header">
+        <!-- 历史记录按钮 (初始页左上角) -->
+        <button id="historyBtn" class="icon-btn">
+             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+        </button>
+        
+        <div class="header-title" id="headerTitle" style="display: none;">TruthGuard</div>
+
+        <!-- 退出结果按钮 (结果页左上角) -->
+        <button id="exitResultBtn" class="exit-result-btn" style="display: none;">
+             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        </button>
+    </header>
+
+    <!-- Loading Toast Area -->
+    <div id="loadingToast" class="loading-toast">
+        <div class="toast-content">
+            <div class="toast-spinner"></div>
+            <span id="toastMessage">正在分析中...</span>
+        </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <div class="mobile-container">
+        
+        <!-- === VIEW 1: INPUT === -->
+        <div id="inputView" class="view-section active">
+            
+            <div style="flex: 1;" class="branding-spacer"></div> <!-- Spacer -->
+
+            <!-- Branding on start page -->
+            <div id="startBranding" class="start-branding">
+                <div class="brand-name">TruthGuard</div>
+                <div class="brand-sub">AI 虚假信息检测</div>
+            </div>
+
+            <!-- Input Card -->
+            <div class="input-card" id="inputCard">
+                <!-- 退出编辑按钮 (移动到卡片内部以统一布局) -->
+                <button id="exitEditBtnInside" class="exit-edit-btn" style="display: none;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    <span>退出编辑</span>
+                </button>
+                
+                <!-- 链接/文件提取组件容器 (顶部) -->
+                <div id="extractedContentArea" class="extracted-content-area" style="display: none; padding: 10px 10px 0 10px;"></div>
+
+                <!-- Image Previews (顶部) -->
+                <div id="previewImages" class="preview-images"></div>
+
+                <div style="position: relative; flex: 1; display: flex; flex-direction: column;">
+                    <textarea id="textInput" class="mobile-input" placeholder="输入新闻内容..."></textarea>
+                    
+                    <!-- New Split Toolbars -->
+                    <div class="toolbar-container">
+                        <div id="wordCountCapsule" class="word-count-capsule bg-glass">
+                            <div id="wordCountIndicator" class="word-indicator">0/10000</div>
+                            <div class="toolbar-divider"></div>
+                            <button class="toolbar-icon-btn" id="clearBtn" title="清空">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-3.5l-1-1zM18 7H6v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7z"/></svg>
+                            </button>
+                        </div>
+                        <button class="circle-btn-flat bg-glass" id="plusBtn" title="添加">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="progress-container" id="progressBarContainer">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+            
+            <!-- Large Detect Button at bottom -->
+            <div class="bottom-action-area">
+                <button class="large-detect-btn" id="detectBtn" disabled>
+                    开始检测
+                </button>
+            </div>
+
+        </div>
+
+        <!-- === VIEW 2: RESULT === -->
+        <div id="resultView" class="view-section">
+             <div id="resultItem" style="display:none; width: 100%;">
+                
+                <!-- Score Card -->
+                <div class="result-card">
+                     <div class="summary-header">
+                        <div class="score-circle-container" id="scoreCircleContainer">
+                            <svg class="score-circle-svg" viewBox="0 0 100 100">
+                                <circle class="score-circle-bg" cx="50" cy="50" r="45"></circle>
+                                <circle class="score-circle-progress" id="scoreProgress" cx="50" cy="50" r="45"></circle>
+                            </svg>
+                            <div class="score-inner">
+                                <div class="score-val" id="scoreValue">--%</div>
+                            </div>
+                        </div>
+                        <div class="summary-text-content">
+                             <div class="summary-val-text" id="summaryValText">--%</div>
+                             <div class="summary-title-text" id="summaryTitleText">检测结果</div>
+                             <div class="summary-desc-text" id="summaryDescText">AI正在分析中...</div>
+                        </div>
+                     </div>
+                     
+                     <div class="result-analysis" id="analysisContainer">
+                          <div class="analysis-title" style="font-weight:600; margin-bottom:10px; border-left: 4px solid var(--primary-color); padding-left: 8px;">详细分析</div>
+                     </div>
+                </div>
+
+                <!-- Content Card -->
+                <div id="parsedContent" class="result-card" style="display:none;">
+                     <h2 id="parsedTitle" style="font-size:18px; margin-bottom:10px;"></h2>
+                     <div id="parsedImages" style="margin-bottom: 12px;"></div>
+                     <div id="parsedText" class="parsed-text" style="font-size:16px; line-height:1.6;"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modals -->
+    <div id="actionSheetBackdrop" class="drawer-backdrop" onclick="closeActionSheet()"></div>
+    <div id="actionSheet" class="drawer-panel" style="height:auto; bottom:0; top:auto; width:100%; max-width:100%; transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 20px 20px 0 0; padding-bottom:30px; left:0;">
+         <div id="actionSheetContent">
+             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="triggerImageUpload()">添加图片</div>
+             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="triggerImageUpload()">打开文件</div> 
+         </div>
+         <div style="padding:20px; text-align:center; color:var(--text-secondary); font-size:16px;" onclick="closeActionSheet()">取消</div>
+    </div>
+
+    <div id="historyDrawerBackdrop" class="drawer-backdrop" onclick="toggleHistory(false)"></div>
+    <div id="historyDrawer" class="drawer-panel">
+         <div class="drawer-header">历史记录</div>
+         <div class="history-list" id="historyList"></div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="image-modal" id="imageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center; flex-direction: column;" onclick="this.style.display='none'">
+        <img id="modalImage" style="max-width: 95%; max-height: 85%; object-fit: contain;">
+        <div style="color: white; margin-top: 15px; font-size: 14px;">点击屏幕关闭</div>
+    </div>
+
+    <div id="customTooltip" class="custom-tooltip"></div>
+
+    <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+
+    <script src="/js/mobile.js"></script>
+</body>
+</html>

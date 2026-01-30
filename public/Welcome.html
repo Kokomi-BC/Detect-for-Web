@@ -125,7 +125,9 @@
             document.getElementById('wrapper').classList.add('fade-out');
             
             setTimeout(() => {
-                window.location.href = '/Main';
+                // Determine destination: Portrait mode (Height > Width) or Mobile device
+                const isPortrait = window.innerHeight > window.innerWidth;
+                window.location.href = isPortrait ? '/Mobile' : '/Main';
             }, 600);
         });
     </script>

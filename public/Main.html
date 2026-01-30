@@ -4724,9 +4724,9 @@
             if (result.type === 1) { // True
                 scoreDescription.innerHTML = `<strong>可信度高</strong><br>${result.explanation}`;
             } else if (result.type === 2) { // Partial
-                scoreDescription.innerHTML = `<strong>部分存疑</strong><br>${result.explanation}`;
+                scoreDescription.innerHTML = `<strong>真假参半</strong><br>${result.explanation}`;
             } else { // Fake
-                scoreDescription.innerHTML = `<strong>疑似虚假</strong><br>${result.explanation}`;
+                scoreDescription.innerHTML = `<strong>虚假消息</strong><br>${result.explanation}`;
             }
 
             // Update Analysis Points
