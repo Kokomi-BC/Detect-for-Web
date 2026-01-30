@@ -1445,6 +1445,11 @@
 
             document.addEventListener('mouseup', function () {
                 if (isResizing) {
+                    // 两侧页面实际大小判断：进入全屏编辑或结果页面
+                    const leftWidth = leftPanel.offsetWidth;
+                    const rightWidth = rightPanel.offsetWidth;
+                    const threshold = 380; // 阈值设定为 380px
+
                     isResizing = false;
                     document.body.classList.remove('resizing');
                     document.body.style.cursor = 'default';
@@ -1469,11 +1474,6 @@
                     rightPanel.style.overflow = '';
                     delete leftPanel.dataset.frozen;
                     delete rightPanel.dataset.frozen;
-
-                    // 两侧页面实际大小判断：进入全屏编辑或结果页面
-                    const leftWidth = leftPanel.offsetWidth;
-                    const rightWidth = rightPanel.offsetWidth;
-                    const threshold = 280; // 阈值设定为 280px
 
                     if (leftWidth < threshold) {
                         // 左侧编辑器太窄，自动进入结果全屏
@@ -1507,6 +1507,11 @@
 
             document.addEventListener('touchend', function () {
                 if (isResizing) {
+                    // 两侧页面实际大小判断：进入全屏编辑或结果页面
+                    const leftWidth = leftPanel.offsetWidth;
+                    const rightWidth = rightPanel.offsetWidth;
+                    const threshold = 280;
+
                     isResizing = false;
                     document.body.classList.remove('resizing');
                     document.body.style.cursor = 'default';
@@ -1531,11 +1536,6 @@
                     rightPanel.style.overflow = '';
                     delete leftPanel.dataset.frozen;
                     delete rightPanel.dataset.frozen;
-
-                    // 两侧页面实际大小判断：进入全屏编辑或结果页面
-                    const leftWidth = leftPanel.offsetWidth;
-                    const rightWidth = rightPanel.offsetWidth;
-                    const threshold = 280;
 
                     if (leftWidth < threshold) {
                         document.body.classList.remove('edit-mode');
@@ -4012,7 +4012,10 @@
                 }
 
                 // Trigger resize logic immediately to check if we need to hide left panel
-                window.dispatchEvent(new Event('resize'));
+                // Use requestAnimationFrame to ensure search-results-active transition starts first
+                requestAnimationFrame(() => {
+                    window.dispatchEvent(new Event('resize'));
+                });
             } else {
                 overlay.classList.remove('active');
                 // backdrop.classList.remove('active'); // Removed backdrop

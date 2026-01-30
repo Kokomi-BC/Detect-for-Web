@@ -687,24 +687,6 @@
             color: #fff;
         }
 
-        /* 沉浸式滚动条样式 */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-color);
-            border-radius: 3px;
-            transition: background var(--transition-fast);
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-secondary);
-        }
-        ::-webkit-scrollbar-corner {
-            background: transparent;
-        }
-
         .container {
             display: flex;
             height: calc(100vh - 38px); /* 减去标题栏高度 (38px) */
@@ -1851,6 +1833,7 @@
         body.resizing .left-panel,
         body.resizing .right-panel {
             transition: none !important;
+            min-width: 0 !important;
         }
 
         /* Right Panel */
@@ -1860,7 +1843,7 @@
             flex-direction: column;
             background: var(--bg-primary);
             min-width: 300px;
-            transition: background-color var(--transition-fast);
+            transition: background-color var(--transition-fast), flex 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .result-header {

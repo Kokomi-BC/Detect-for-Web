@@ -598,9 +598,9 @@
                     
                     <!-- 深度思考 Switch -->
                     <div class="switch-group">
-                        <div style="display: flex; flex-direction: column; gap: 2px;">
-                            <label style="margin-bottom: 0; cursor: pointer; font-weight: 600; color: var(--text-main);">开启深度思考 (Thinking Mode)</label>
-                            <span style="font-size: 11px; color: var(--text-muted);">启用后将向模型发送 thinking 参数以支持推理链</span>
+                        <div class="switch-info">
+                            <label>开启深度思考 (Beta)</label>
+                            <span>启用后将向模型发送 thinking 参数以支持推理链</span>
                         </div>
                         <label class="ui-switch">
                             <input type="checkbox" id="config-llm-thinking">
@@ -629,10 +629,17 @@
                 </div>
             </div>
             
-            <p style="margin-top:20px; font-size:12px; color:var(--text-muted); line-height: 1.6;">
-                提示: API 配置保存在服务器 <code>data/config.json</code> 中。保存后将立即应用于新发起的检测任务。
-                <br>注意: 联网搜索目前仅支持Bocha接口。
-            </p>
+            <div class="config-tips">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <div>
+                    提示: API 配置保存在服务器 <code>data/config.json</code> 中。保存后将立即应用于新发起的检测任务。<br>
+                    注意: 联网搜索目前仅支持 Bocha 接口。
+                </div>
+            </div>
         </div>
         <!-- 外观设置区块 -->
         <div id="appearance-section" style="display:none;">
@@ -1158,7 +1165,7 @@
                     </td>
                     <td>
                         <div style="display:flex; gap:6px;">
-                            <button class="icon-btn" onclick="viewSnapshot('${a.id}')" title="查看快照"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" ><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" ><path d="M21 6.25A3.25 3.25 0 0 0 17.75 3H6.25A3.25 3.25 0 0 0 3 6.25v11.5A3.25 3.25 0 0 0 6.25 21h5.772a6.471 6.471 0 0 1-.709-1.5H6.25a1.75 1.75 0 0 1-1.75-1.75V8.5h15v2.813a6.471 6.471 0 0 1 1.5.709V6.25ZM6.25 4.5h11.5c.966 0 1.75.784 1.75 1.75V7h-15v-.75c0-.966.784-1.75 1.75-1.75Z" fill="#212121"/><path d="M23 17.5a5.5 5.5 0 1 0-11 0 5.5 5.5 0 0 0 11 0Zm-5.5 0h2a.5.5 0 0 1 0 1H17a.5.5 0 0 1-.5-.491v-3.01a.5.5 0 0 1 1 0V17.5Z" /></svg></button>
+                            <button class="icon-btn" onclick="viewSnapshot('${a.id}')" title="查看快照"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21 6.25A3.25 3.25 0 0 0 17.75 3H6.25A3.25 3.25 0 0 0 3 6.25v11.5A3.25 3.25 0 0 0 6.25 21h5.772a6.471 6.471 0 0 1-.709-1.5H6.25a1.75 1.75 0 0 1-1.75-1.75V8.5h15v2.813a6.471 6.471 0 0 1 1.5.709V6.25ZM6.25 4.5h11.5c.966 0 1.75.784 1.75 1.75V7h-15v-.75c0-.966.784-1.75 1.75-1.75Z" /><path d="M23 17.5a5.5 5.5 0 1 0-11 0 5.5 5.5 0 0 0 11 0Zm-5.5 0h2a.5.5 0 0 1 0 1H17a.5.5 0 0 1-.5-.491v-3.01a.5.5 0 0 1 1 0V17.5Z" /></svg></button>
                             <button class="icon-btn" onclick="openProxy('${a.url}')" title="在线代理"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" ><path d="M12 2.001c5.524 0 10 4.477 10 10s-4.476 10-10 10c-5.522 0-10-4.477-10-10s4.478-10 10-10Zm0 1.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Zm-.352 4.053.072-.084a.75.75 0 0 1 .977-.073l.084.073 4 4a.75.75 0 0 1 .073.977l-.072.085-4.002 4a.75.75 0 0 1-1.133-.977l.073-.084 2.722-2.721H7.75a.75.75 0 0 1-.743-.648L7 12a.75.75 0 0 1 .648-.743l.102-.007h6.69l-2.72-2.72a.75.75 0 0 1-.072-.976l.072-.084-.072.084Z" /></svg></button>
                             <button class="icon-btn danger" onclick="deleteAnomaly('${a.id}')" title="删除"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" ><path d="M12 1.75a3.25 3.25 0 0 1 3.245 3.066L15.25 5h5.25a.75.75 0 0 1 .102 1.493L20.5 6.5h-.796l-1.28 13.02a2.75 2.75 0 0 1-2.561 2.474l-.176.006H8.313a2.75 2.75 0 0 1-2.714-2.307l-.023-.174L4.295 6.5H3.5a.75.75 0 0 1-.743-.648L2.75 5.75a.75.75 0 0 1 .648-.743L3.5 5h5.25A3.25 3.25 0 0 1 12 1.75Zm6.197 4.75H5.802l1.267 12.872a1.25 1.25 0 0 0 1.117 1.122l.127.006h7.374c.6 0 1.109-.425 1.225-1.002l.02-.126L18.196 6.5ZM13.75 9.25a.75.75 0 0 1 .743.648L14.5 10v7a.75.75 0 0 1-1.493.102L13 17v-7a.75.75 0 0 1 .75-.75Zm-3.5 0a.75.75 0 0 1 .743.648L11 10v7a.75.75 0 0 1-1.493.102L9.5 17v-7a.75.75 0 0 1 .75-.75Zm1.75-6a1.75 1.75 0 0 0-1.744 1.606L10.25 5h3.5A1.75 1.75 0 0 0 12 3.25Z" /></svg></button>
                         </div>
@@ -2049,8 +2056,8 @@
             btn.disabled = false;
 
             if (data && data.success) {
-                status.style.display = 'inline';
-                setTimeout(() => { status.style.display = 'none'; }, 3000);
+                status.classList.add('show');
+                setTimeout(() => { status.classList.remove('show'); }, 3000);
             } else {
                 alert('保存失败: ' + (data.error || '未知错误'));
             }
