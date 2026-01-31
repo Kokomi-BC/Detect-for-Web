@@ -3,6 +3,10 @@
     --input-card-padding: 20px;
 }
 
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -15,6 +19,7 @@ body {
     overflow: hidden;
     user-select: none; /* Prevent accidental selection */
     -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent; /* Remove the blue tap highlight mask */
 }
 
 /* Allow selection in specific areas */
@@ -94,7 +99,7 @@ body {
 /* Start Branding */
 .start-branding {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 30px; 
     animation: fadeInDown 0.6s ease-out;
 }
 .brand-name {
@@ -186,12 +191,12 @@ body {
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 10px; /* Reduced from 12px */
+    padding: 10px 18px; /* Added horizontal padding to increase outer margin */
     box-sizing: border-box;
 }
 
 .branding-spacer {
-    flex: 0.2 !important; /* Further reduce space above branding from 0.3 */
+    flex: 0.4 !important; /* Increased from 0.2 to push branding down and balance ratio */
 }
 
 /* Input Card */
@@ -206,8 +211,8 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 140px; 
-    flex: 2; 
-    margin: 2px 0; /* Reduced from 4px to minimize unequal space */
+    flex: 1.6; 
+    margin: 8px 0; 
 }
 
 /* Loading Toast - Dynamic Island Style */
@@ -358,8 +363,8 @@ textarea.mobile-input {
 
 .toolbar-container {
     position: absolute;
-    left: 16px; /* Increased from 12px */
-    right: 16px; /* Increased from 12px */
+    left: 8px; /* Reduced from 16px to stay at same screen position as card narrows */
+    right: 8px; /* Reduced from 16px to stay at same screen position as card narrows */
     bottom: 12px;
     display: flex;
     align-items: center;
@@ -438,7 +443,7 @@ textarea.mobile-input {
 }
 
 .bottom-action-area {
-    padding: 12px 0 12px; /* Increased top padding from 2px to 12px to give more space from input card */
+    padding: 16px 0 12px; /* Increased top padding from 12px to 16px to give more space from input card */
     width: 100%;
     flex-shrink: 0;
 }

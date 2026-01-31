@@ -454,6 +454,15 @@ async function handleUrlExtraction(url) {
     }
 }
 
+function getFaviconUrl(url) {
+    try {
+        const urlObj = new URL(url);
+        return `https://ico.kucat.cn/get.php?url=${urlObj.hostname}&sz=32`;
+    } catch (e) {
+        return null;
+    }
+}
+
 function renderExtractedUrlCard() {
     if (!currentExtractedData) {
         extractedContentArea.style.display = 'none';
@@ -485,13 +494,20 @@ function renderExtractedUrlCard() {
     }
 
     const isPending = currentExtractedData.pendingExtraction;
+    const faviconUrl = getFaviconUrl(currentExtractedData.url);
+    const iconContent = faviconUrl 
+        ? `<img src="${faviconUrl}" style="width:20px; height:20px; object-fit:contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+           <svg viewBox="0 0 24 24" width="24" height="24" fill="#4361ee" style="display:none;">
+               <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+           </svg>`
+        : `<svg viewBox="0 0 24 24" width="24" height="24" fill="#4361ee">
+               <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+           </svg>`;
     
     extractedContentArea.innerHTML = `
         <div class="extracted-url-card ${isPending ? 'pending-style' : ''}">
             <div class="url-card-icon">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="#4361ee">
-                    <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
-                </svg>
+                ${iconContent}
             </div>
             <div class="url-card-info">
                 <div class="url-card-title">${currentExtractedData.title || '检测网页'}</div>
@@ -600,11 +616,14 @@ async function runDetection() {
         return;
     }
 
-    const text = textInput.value;
+    const text = textInput.value.trim();
     const images = uploadedImages.map(img => img.url);
     const url = currentExtractedData ? currentExtractedData.url : null;
     
-    if (!text && images.length === 0 && !url) return;
+    if (text.length === 0) {
+        showToast('请输入文本', 'info');
+        return;
+    }
     
     // Init Loading State
     const originalText = '开始检测';
@@ -776,14 +795,12 @@ async function runDetection() {
 }
 
 function updateButtonState() {
-    const hasText = textInput.value.trim().length > 0;
-    const hasImages = uploadedImages.length > 0;
-    const hasUrl = !!currentExtractedData;
     // If running (is-stop), button is always enabled (to allow stop)
     if (detectBtn.classList.contains('is-stop')) {
         detectBtn.disabled = false;
     } else {
-        detectBtn.disabled = !(hasText || hasImages || hasUrl);
+        // We keep it enabled to show hints if clicked while empty
+        detectBtn.disabled = false;
     }
 }
 
@@ -871,6 +888,20 @@ docInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Type validation
+    const docExtensions = ['.doc', '.docx', '.pdf', '.txt', '.md'];
+    const imgExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'];
+    const fileName = file.name.toLowerCase();
+    
+    const isDoc = docExtensions.some(ext => fileName.endsWith(ext));
+    const isImg = imgExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!isDoc && !isImg) {
+        showToast('暂不支持此文件', 'error');
+        docInput.value = '';
+        return;
+    }
+
     // Size limit: 15MB
     const maxSize = 15 * 1024 * 1024;
     if (file.size > maxSize) {
@@ -879,7 +910,20 @@ docInput.addEventListener('change', async (e) => {
         return;
     }
 
-    // Conflict Check: Files count as "extraction content", similar to links
+    // If it's an image, redirect to image logic
+    if (isImg) {
+        // Image logic already handles its own conflicts internally when adding
+        if (!!currentExtractedData) {
+            pendingConflict = { type: 'images', data: [file] };
+            showConflictModal();
+        } else {
+            await processAndAddImages([file]);
+        }
+        docInput.value = '';
+        return;
+    }
+
+    // Conflict Check for Documents: Files count as "extraction content", similar to links
     if (uploadedImages.length > 0 && !currentExtractedData) {
         pendingConflict = { type: 'doc', data: file };
         showConflictModal();
@@ -1070,10 +1114,17 @@ function renderHistoryList() {
 
         const dateStr = new Date(item.timestamp).toLocaleString();
         
-        // Strip HTML tags for preview
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = item.content || '';
-        const plainText = tempDiv.textContent || tempDiv.innerText || '';
+        // Use result title, scraper title, or fallback to content preview
+        let displayTitle = '';
+        if (item.result && item.result.title) {
+            displayTitle = item.result.title;
+        } else if (item.title) {
+            displayTitle = item.title;
+        } else {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = item.content || '';
+            displayTitle = tempDiv.textContent || tempDiv.innerText || '[无标题内容]';
+        }
         
         // Show URL if available
         let urlDisplay = '';
@@ -1089,7 +1140,7 @@ function renderHistoryList() {
         div.innerHTML = `
             <div class="history-date">${dateStr}</div>
             ${urlDisplay}
-            <div class="history-preview">${plainText || '[无文本内容]'}</div>
+            <div class="history-preview">${displayTitle}</div>
         `;
         list.appendChild(div);
     });
@@ -1238,8 +1289,14 @@ function showResult(result, originalText, originalImages, sourceUrl) {
        let displayUrl = sourceUrl;
        try { displayUrl = new URL(sourceUrl).hostname; } catch(e){}
 
+       const faviconUrl = getFaviconUrl(sourceUrl);
+       const iconHtml = faviconUrl 
+           ? `<img src="${faviconUrl}" style="width:14px; height:14px; object-fit:contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="display:none;"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>`
+           : `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>`;
+
        urlDiv.innerHTML = `
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+            ${iconHtml}
             <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">来源: ${displayUrl}</span>
             <a href="${sourceUrl}" target="_blank" style="color:var(--primary-color); text-decoration:none; margin-left:auto;">访问</a>
        `;
@@ -1412,10 +1469,17 @@ async function processAndAddImages(files) {
     for (const file of files) {
         if (uploadedImages.length >= 4) break;
         
+        // Basic type validation for images
+        const isHEIC = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+        if (!file.type.startsWith('image/') && !isHEIC) {
+            showToast('暂不支持此文件', 'error');
+            continue;
+        }
+
         let processFile = file;
         
         // HEIC/HEIF conversion logic
-        if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+        if (isHEIC) {
             try {
                 // Show Dynamic Island Toast for conversion
                 const loadingToast = document.getElementById('loadingToast');
