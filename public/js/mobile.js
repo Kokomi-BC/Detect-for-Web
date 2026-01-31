@@ -85,59 +85,70 @@ function setupNavigation() {
         if (imageModal && imageModal.style.display === 'flex') {
             imageModal.style.display = 'none';
             window.history.pushState({ page: 'home' }, '');
+            lastBackPress = 0; // Reset timer when handling UI
             return;
         }
 
         if (tooltip && tooltip.classList.contains('active')) {
             hideTooltip();
             window.history.pushState({ page: 'home' }, '');
+            lastBackPress = 0;
             return;
         }
 
         if (confirmModal && confirmModal.style.display === 'flex') {
             closeConfirmModal();
             window.history.pushState({ page: 'home' }, '');
+            lastBackPress = 0;
             return;
         }
 
         if (conflictModal && conflictModal.style.display === 'flex') {
             closeConflictModal();
             window.history.pushState({ page: 'home' }, '');
+            lastBackPress = 0;
             return;
         }
 
         if (historyDrawer && historyDrawer.classList.contains('active')) {
             toggleHistory(false);
             window.history.pushState({ page: 'home' }, '');
+            lastBackPress = 0;
             return;
         }
 
         if (actionSheet && actionSheet.classList.contains('active')) {
             closeActionSheet();
             window.history.pushState({ page: 'home' }, '');
+            lastBackPress = 0;
             return;
         }
 
         if (currentMode === 'result') {
             showInputView();
             window.history.pushState({ page: 'home' }, '');
+            lastBackPress = 0;
             return;
         }
 
         if (isInputFullscreen) {
             exitFullscreenInput();
             window.history.pushState({ page: 'home' }, '');
+            lastBackPress = 0;
             return;
         }
 
         // Home page double back to exit
         const now = Date.now();
-        if (now - lastBackPress < 2000) {
-            // Close the app or go back to actual previous page
-            window.history.back(); 
+        if (now - lastBackPress < 2000 && lastBackPress > 0) {
+            // Logic: If user click back twice in 2s, don't pushState anymore.
+            // Let the browser actually go back to the previous page (e.g. Login or previous site).
+            // This is the cleanest way to "exit" a web context.
+            showToast('正在退出...', 'info');
         } else {
             lastBackPress = now;
             showToast('再按一次返回键退出程序', 'info');
+            // Re-push home state to intercept next back
             window.history.pushState({ page: 'home' }, '');
         }
     });
@@ -805,8 +816,8 @@ function updateButtonState() {
     if (detectBtn.classList.contains('is-stop')) {
         detectBtn.disabled = false;
     } else {
-        // We keep it enabled to show hints if clicked while empty
-        detectBtn.disabled = false;
+        // Only enable if there is content
+        detectBtn.disabled = textInput.value.trim().length === 0;
     }
 }
 
