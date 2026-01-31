@@ -23,12 +23,15 @@ let uploadedImages = [];
 let currentMode = 'input'; // input, result
 let isInputFullscreen = false;
 let allHistory = [];
+let lastBackPress = 0;
+let pendingConflict = null;
 
 // --- Elements ---
 const textInput = document.getElementById('textInput');
 const detectBtn = document.getElementById('detectBtn');
 const plusBtn = document.getElementById('plusBtn');
 const fileInput = document.getElementById('fileInput');
+const docInput = document.getElementById('docInput');
 const previewImages = document.getElementById('previewImages');
 const historyBtn = document.getElementById('historyBtn');
 const exitEditBtn = document.getElementById('exitEditBtnInside');
@@ -45,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initHistory();
     loadHistory();
     initSSE(); // Ensure SSE is initialized for real-time status
+    setupNavigation();
 
     // Add global click listener for tooltips
     document.addEventListener('click', (e) => {
@@ -57,6 +61,85 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+function setupNavigation() {
+    // Push initial state to enable back interception
+    if (window.history.state?.page !== 'home') {
+        window.history.pushState({ page: 'home' }, '');
+    }
+
+    window.addEventListener('popstate', (event) => {
+        // If we are navigating away from home or state is null, we might be exiting
+        // But we want to intercept as long as we have overlays
+        
+        const historyDrawer = document.getElementById('historyDrawer');
+        const actionSheet = document.getElementById('actionSheet');
+        const tooltip = document.getElementById('customTooltip');
+        const conflictModal = document.getElementById('conflictModal');
+        const confirmModal = document.getElementById('confirmModal');
+        const imageModal = document.getElementById('imageModal');
+
+        // Check priorities (Topmost UI first)
+        if (imageModal && imageModal.style.display === 'flex') {
+            imageModal.style.display = 'none';
+            window.history.pushState({ page: 'home' }, '');
+            return;
+        }
+
+        if (tooltip && tooltip.classList.contains('active')) {
+            hideTooltip();
+            window.history.pushState({ page: 'home' }, '');
+            return;
+        }
+
+        if (confirmModal && confirmModal.style.display === 'flex') {
+            closeConfirmModal();
+            window.history.pushState({ page: 'home' }, '');
+            return;
+        }
+
+        if (conflictModal && conflictModal.style.display === 'flex') {
+            closeConflictModal();
+            window.history.pushState({ page: 'home' }, '');
+            return;
+        }
+
+        if (historyDrawer && historyDrawer.classList.contains('active')) {
+            toggleHistory(false);
+            window.history.pushState({ page: 'home' }, '');
+            return;
+        }
+
+        if (actionSheet && actionSheet.classList.contains('active')) {
+            closeActionSheet();
+            window.history.pushState({ page: 'home' }, '');
+            return;
+        }
+
+        if (currentMode === 'result') {
+            showInputView();
+            window.history.pushState({ page: 'home' }, '');
+            return;
+        }
+
+        if (isInputFullscreen) {
+            exitFullscreenInput();
+            window.history.pushState({ page: 'home' }, '');
+            return;
+        }
+
+        // Home page double back to exit
+        const now = Date.now();
+        if (now - lastBackPress < 2000) {
+            // Close the app or go back to actual previous page
+            window.history.back(); 
+        } else {
+            lastBackPress = now;
+            showToast('再按一次返回键退出程序', 'info');
+            window.history.pushState({ page: 'home' }, '');
+        }
+    });
+}
 
 function initSSE() {
     const eventSource = new EventSource('/api/events');
@@ -226,24 +309,67 @@ exitResultBtn.addEventListener('click', () => {
     showInputView();
 });
 
+// --- Confirmation Modal Logic ---
+let confirmCallback = null;
+
+function showConfirm(title, message, onConfirm) {
+    const modal = document.getElementById('confirmModal');
+    const titleEl = document.getElementById('confirmTitle');
+    const msgEl = document.getElementById('confirmMessage');
+    const execBtn = document.getElementById('confirmExecuteBtn');
+
+    if (!modal || !titleEl || !msgEl || !execBtn) return;
+
+    titleEl.textContent = title || '确认提示';
+    msgEl.textContent = message || '';
+    confirmCallback = onConfirm;
+
+    execBtn.onclick = () => {
+        if (confirmCallback) confirmCallback();
+        closeConfirmModal();
+    };
+
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('active'), 10);
+}
+
+window.closeConfirmModal = function() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => { modal.style.display = 'none'; }, 300);
+    }
+    confirmCallback = null;
+}
+
 // Clear Button Logic
 const clearBtn = document.getElementById('clearBtn');
 if (clearBtn) {
     clearBtn.addEventListener('click', () => {
-        // Clear logic
-        textInput.value = '';
-        const indicator = document.getElementById('wordCountIndicator');
-        if (indicator) {
-            indicator.textContent = '0/10000';
-            indicator.style.color = 'var(--text-muted)';
+        if (textInput.value.trim() || uploadedImages.length > 0 || currentExtractedData) {
+            showConfirm('清空内容', '确定要清空当前所有内容吗？此操作不可恢复。', () => {
+                executeClear();
+            });
+        } else {
+            executeClear();
         }
-        currentExtractedData = null;
-        uploadedImages = [];
-        renderImages();
-        renderExtractedUrlCard();
-        updateButtonState();
-        showToast('内容已清空', 'success');
     });
+}
+
+function executeClear() {
+    // Clear logic
+    textInput.value = '';
+    const indicator = document.getElementById('wordCountIndicator');
+    if (indicator) {
+        indicator.textContent = '0/10000';
+        indicator.style.color = 'var(--text-muted)';
+    }
+    currentExtractedData = null;
+    uploadedImages = [];
+    renderImages();
+    renderExtractedUrlCard();
+    updateButtonState();
+    showToast('内容已清空', 'success');
 }
 
 // --- Input Logic ---
@@ -301,6 +427,13 @@ function handleInputChanges() {
 async function handleUrlExtraction(url) {
     if (extractionLock) return;
     
+    // Conflict Check: If images exist, show modal
+    if (uploadedImages.length > 0) {
+        pendingConflict = { type: 'link', data: url };
+        showConflictModal();
+        return;
+    }
+
     try {
         const domain = (new URL(url)).hostname;
         currentExtractedData = {
@@ -329,6 +462,28 @@ function renderExtractedUrlCard() {
     }
 
     extractedContentArea.style.display = 'block';
+    
+    if (currentExtractedData.type === 'doc') {
+        const ext = currentExtractedData.format || 'DOC';
+        extractedContentArea.innerHTML = `
+            <div class="extracted-url-card" style="background: var(--bg-secondary); border: 1px solid var(--border-color); margin-bottom: 4px;">
+                <div class="url-card-icon" style="background: var(--primary-light);">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--primary-color)">
+                        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                    </svg>
+                </div>
+                <div class="url-card-info">
+                    <div class="url-card-title" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${currentExtractedData.title}</div>
+                    <div class="url-card-tag" style="color: var(--primary-color);">已解析 ${ext} 格式文件</div>
+                </div>
+                <div class="url-card-remove" onclick="removeExtractedUrl()">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
     const isPending = currentExtractedData.pendingExtraction;
     
     extractedContentArea.innerHTML = `
@@ -350,14 +505,32 @@ function renderExtractedUrlCard() {
 }
 
 window.removeExtractedUrl = function() {
-    if (currentExtractedData && currentExtractedData.url) {
+    if (currentExtractedData) {
+        const typeName = currentExtractedData.type === 'doc' ? '解析文件' : '解析链接';
+        showConfirm('移除内容', `确定要移除已加载的${typeName}吗？${currentExtractedData.type === 'doc' ? '移除后将同时清空输入框。' : ''}`, () => {
+            executeRemoveExtractedUrl();
+        });
+    }
+}
+
+function executeRemoveExtractedUrl() {
+    if (!currentExtractedData) return;
+
+    if (currentExtractedData.url) {
         const urlMatch = currentExtractedData.url;
         // Also remove the URL from the text input if it exists there
         if (textInput.value.includes(urlMatch)) {
             textInput.value = textInput.value.replace(urlMatch, '').trim();
-            handleInputChanges(); // Trigger word count and button state update
         }
     }
+    
+    // If it was a document, we clear the whole input because the input IS the document content
+    if (currentExtractedData.type === 'doc') {
+        textInput.value = '';
+    }
+    
+    handleInputChanges(); // Trigger word count and button state update
+    
     currentExtractedData = null;
     renderExtractedUrlCard();
     updateButtonState();
@@ -615,23 +788,37 @@ function updateButtonState() {
 }
 
 function showToast(message, type = 'info') {
-    // Reuse existing toast logic or create new
+    // Remove any existing non-loading toasts to prevent overlapping
+    const existing = document.querySelectorAll('.custom-toast:not(.is-loading)');
+    existing.forEach(t => t.remove());
+
     const toast = document.createElement('div');
     toast.className = 'custom-toast';
     toast.textContent = message;
     toast.style.position = 'fixed';
-    toast.style.bottom = '100px';
+    toast.style.bottom = '120px'; /* Raised slightly to avoid conflict with buttons */
     toast.style.left = '50%';
     toast.style.transform = 'translateX(-50%)';
-    toast.style.background = 'rgba(0,0,0,0.7)';
+    toast.style.background = 'rgba(0,0,0,0.85)';
     toast.style.color = '#fff';
-    toast.style.padding = '8px 16px';
-    toast.style.borderRadius = '20px';
-    toast.style.zIndex = '9999';
+    toast.style.padding = '10px 20px';
+    toast.style.borderRadius = '24px';
+    toast.style.zIndex = '10000';
     toast.style.fontSize = '14px';
+    toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+    toast.style.whiteSpace = 'nowrap';
+    toast.style.pointerEvents = 'none';
+    
     document.body.appendChild(toast);
+    
+    // Simple fade in/out
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease';
+    requestAnimationFrame(() => toast.style.opacity = '1');
+
     setTimeout(() => {
-        toast.remove();
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
     }, 2000);
 }
 
@@ -644,7 +831,7 @@ function initActionSheet() {
         const content = document.getElementById('actionSheetContent');
         content.innerHTML = `
              <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="triggerImageUpload()">添加图片</div>
-             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="triggerImageUpload()">打开文件</div> 
+             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="triggerFileUpload()">打开文件</div> 
         `;
         
         document.getElementById('actionSheetBackdrop').classList.add('active');
@@ -664,15 +851,126 @@ window.triggerImageUpload = function() {
 }
 
 window.triggerFileUpload = function() {
-    // Same as image for now
-    fileInput.click();
-    closeActionSheet();
+    // Overwrite Check: If there's content, ask the user first
+    const hasText = textInput.value.trim().length > 0;
+    const hasImages = uploadedImages.length > 0;
+    const hasUrl = !!currentExtractedData;
+
+    if (hasText || hasImages || hasUrl) {
+        showConfirm('上传确认', '上传文件可能会合并或覆盖当前内容，是否继续？', () => {
+            docInput.click();
+            closeActionSheet();
+        });
+    } else {
+        docInput.click();
+        closeActionSheet();
+    }
 }
 
-fileInput.addEventListener('change', (e) => {
+docInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Size limit: 15MB
+    const maxSize = 15 * 1024 * 1024;
+    if (file.size > maxSize) {
+        showToast('超过文件大小限制 (最大 15MB)', 'warning');
+        docInput.value = '';
+        return;
+    }
+
+    // Conflict Check: Files count as "extraction content", similar to links
+    if (uploadedImages.length > 0 && !currentExtractedData) {
+        pendingConflict = { type: 'doc', data: file };
+        showConflictModal();
+        docInput.value = '';
+        return;
+    }
+
+    await handleDocParsing(file);
+    docInput.value = '';
+});
+
+async function handleDocParsing(file) {
+    const reader = new FileReader();
+    
+    // Show loading UI
+    const loadingToast = document.getElementById('loadingToast');
+    if (loadingToast) {
+        loadingToast.classList.add('active');
+        setToastText('正在解析文件...');
+    }
+
+    try {
+        const base64Data = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+
+        const result = await window.api.invoke('process-file-upload', {
+            name: file.name,
+            data: base64Data
+        });
+
+        // Backend returns result.data.text usually
+        const parsedContent = result.data?.text || result.content || '';
+        const parsedImages = result.data?.images || result.images || [];
+
+        if (parsedContent || parsedImages.length > 0) {
+            const ext = file.name.split('.').pop().toUpperCase();
+            currentExtractedData = {
+                type: 'doc', 
+                title: file.name,
+                format: ext,
+                content: parsedContent,
+                images: parsedImages,
+                pendingExtraction: false
+            };
+
+            // If images were extracted from the doc, add them to uploadedImages
+            if (parsedImages.length > 0) {
+                parsedImages.forEach(img => {
+                    const url = typeof img === 'string' ? img : img.url;
+                    if (url && uploadedImages.length < 4) {
+                        uploadedImages.push({ url: url, isExtracted: true });
+                    }
+                });
+                renderImages();
+            }
+
+            // Sync text to editor
+            if (parsedContent) {
+                textInput.value = parsedContent.trim(); // Overwrite instead of append to avoid mess
+                handleInputChanges();
+            }
+
+            renderExtractedUrlCard();
+            updateButtonState();
+            showToast('文件解析成功', 'success');
+        } else {
+            showToast('文件内容为空或解析失败', 'warning');
+        }
+    } catch (err) {
+        console.error('Doc parse error:', err);
+        showToast('解析失败: ' + err.message, 'error');
+    } finally {
+        if (loadingToast) loadingToast.classList.remove('active');
+    }
+}
+
+fileInput.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     
+    // Conflict Check: If URL already extracted, show modal
+    if (currentExtractedData) {
+        pendingConflict = { type: 'images', data: files };
+        showConflictModal();
+        fileInput.value = '';
+        return;
+    }
+
     // Check total images limit (max 4)
     if (uploadedImages.length + files.length > 4) {
         showToast('最多仅支持上传4张图片', 'warning');
@@ -680,18 +978,7 @@ fileInput.addEventListener('change', (e) => {
         return;
     }
     
-    files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            uploadedImages.push({
-                url: ev.target.result,
-                file: file
-            });
-            renderImages();
-            updateButtonState();
-        };
-        reader.readAsDataURL(file);
-    });
+    await processAndAddImages(files);
     fileInput.value = '';
 });
 
@@ -833,19 +1120,19 @@ window.showResultFromHistory = function(index) {
 }
 
 window.deleteHistoryItem = async function(index) {
-    if (!confirm('确定要删除这条记录吗？')) return;
-    
-    const item = allHistory[index];
-    try {
-        await window.api.invoke('delete-history', item.timestamp);
-        allHistory.splice(index, 1);
-        renderHistoryList();
-        closeActionSheet();
-        showToast('记录已删除', 'success');
-    } catch (err) {
-        console.error('Delete failed', err);
-        showToast('删除失败', 'error');
-    }
+    showConfirm('删除记录', '确定要删除这条历史记录吗？', async () => {
+        const item = allHistory[index];
+        try {
+            await window.api.invoke('delete-history', item.timestamp);
+            allHistory.splice(index, 1);
+            renderHistoryList();
+            closeActionSheet();
+            showToast('记录已删除', 'success');
+        } catch (err) {
+            console.error('Delete failed', err);
+            showToast('删除失败', 'error');
+        }
+    });
 }
 
 // --- Result Rendering ---
@@ -1090,4 +1377,111 @@ window.showReasonTooltip = function(element) {
 
 window.hideTooltip = function() {
     document.getElementById('customTooltip').classList.remove('active');
+}
+
+// --- Conflict Modal Logic ---
+function showConflictModal() {
+    const modal = document.getElementById('conflictModal');
+    if (modal) {
+        // Adjust text if it's a link conflict vs image conflict
+        const desc = modal.querySelector('div[style*="font-size: 14px"]');
+        const keepLinkBtn = modal.querySelector('button[onclick*="link"]');
+        
+        if (pendingConflict.type === 'link') {
+            desc.textContent = '检测网页链接时，无法同时分析已上传的本地图片。是否清空图片并继续提取链接？';
+            keepLinkBtn.textContent = '保留网页链接';
+        } else if (pendingConflict.type === 'doc') {
+            desc.textContent = '解析文档文件时，无法同时分析已上传的本地图片。是否清空图片并继续解析？';
+            keepLinkBtn.textContent = '保留文档文件';
+        } else {
+            desc.textContent = '检测图片内容时，无法同时分析检测到的网页或文件。是否移除它们并继续上传图片？';
+            keepLinkBtn.textContent = '保留网页/文件';
+        }
+        modal.style.display = 'flex';
+    }
+}
+
+window.closeConflictModal = function() {
+    const modal = document.getElementById('conflictModal');
+    if (modal) modal.style.display = 'none';
+    pendingConflict = null;
+}
+
+// Helper to handle image processing including HEIC conversion
+async function processAndAddImages(files) {
+    for (const file of files) {
+        if (uploadedImages.length >= 4) break;
+        
+        let processFile = file;
+        
+        // HEIC/HEIF conversion logic
+        if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+            try {
+                // Show Dynamic Island Toast for conversion
+                const loadingToast = document.getElementById('loadingToast');
+                if (loadingToast) {
+                    setToastText('正在转换 HEIC 图片...');
+                    loadingToast.classList.add('active');
+                }
+
+                const blob = await heic2any({
+                    blob: file,
+                    toType: 'image/jpeg',
+                    quality: 0.7
+                });
+                
+                if (loadingToast) loadingToast.classList.remove('active');
+                
+                const finalBlob = Array.isArray(blob) ? blob[0] : blob;
+                processFile = new File([finalBlob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+            } catch (err) {
+                console.error('HEIC conversion failed', err);
+                showToast('HEIC 转换失败', 'error');
+                continue;
+            }
+        }
+
+        const reader = new FileReader();
+        await new Promise((resolve) => {
+            reader.onload = (ev) => {
+                uploadedImages.push({
+                    url: ev.target.result,
+                    file: processFile
+                });
+                resolve();
+            };
+            reader.readAsDataURL(processFile);
+        });
+    }
+    renderImages();
+    updateButtonState();
+}
+
+window.resolveConflict = async function(choice) {
+    if (!pendingConflict) return;
+
+    const modal = document.getElementById('conflictModal');
+    const keepLinkBtn = modal.querySelector('button[onclick*="link"]');
+
+    if (choice === 'link') {
+        // Keep Link/Doc: Remove existing images and proceed
+        uploadedImages = [];
+        renderImages();
+        
+        if (pendingConflict.type === 'link') {
+            handleUrlExtraction(pendingConflict.data); 
+        } else if (pendingConflict.type === 'doc') {
+            handleDocParsing(pendingConflict.data);
+        }
+    } else if (choice === 'images') {
+        // Keep Images: Remove existing link/doc and proceed
+        currentExtractedData = null;
+        renderExtractedUrlCard();
+
+        if (pendingConflict.type === 'images') {
+            await processAndAddImages(pendingConflict.data);
+        }
+    }
+    
+    closeConflictModal();
 }

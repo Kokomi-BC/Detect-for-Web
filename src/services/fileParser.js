@@ -1,36 +1,46 @@
 const pdf = require('pdf-parse');
 const mammoth = require('mammoth');
 const xlsx = require('xlsx');
-// Optional: If word-extractor is needed for .doc (binary), include it, but mammoth handles docx.
-// Assuming .doc support is less critical or can be added later.
+const WordExtractor = require('word-extractor');
 
 class FileParser {
+    constructor() {
+        this.extractor = new WordExtractor();
+    }
+
     async parseFile(buffer, filename) {
         const ext = filename.split('.').pop().toLowerCase();
         
         try {
             if (ext === 'pdf') {
                 const data = await pdf(buffer);
-                // Return structure matching what frontend expects roughly
-                // Frontend code: data?.text
                 return { 
                     success: true,
                     type: 'pdf', 
                     data: { 
                         text: data.text, 
                         pages: data.numpages,
-                        images: [] // PDF image extraction is hard with just pdf-parse
+                        images: [] 
                     }
                 };
             } else if (ext === 'docx') {
                 const result = await mammoth.extractRawText({ buffer: buffer });
-                // Mammoth messages can be warnings
                 return { 
                     success: true,
                     type: 'docx', 
                     data: { 
                         text: result.value,
                         images: [] 
+                    }
+                };
+            } else if (ext === 'doc') {
+                const extracted = await this.extractor.extract(buffer);
+                return {
+                    success: true,
+                    type: 'doc',
+                    data: {
+                        text: extracted.getBody(),
+                        images: []
                     }
                 };
             } else if (ext === 'txt' || ext === 'md' || ext === 'json') {

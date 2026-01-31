@@ -57,6 +57,12 @@ module.exports = {
       cache: false,
       minify: minifyOptions,
     }),
+    new HtmlWebpackPlugin({
+      template: path.join(__dirname, 'public/Mobile.html'),
+      filename: 'Mobile.html',
+      cache: false,
+      minify: minifyOptions,
+    }),
     new webpack.DefinePlugin({
       'global': 'global',
       'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),

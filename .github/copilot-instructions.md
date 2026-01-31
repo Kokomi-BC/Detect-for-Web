@@ -128,12 +128,14 @@ public/
     theme-loader.js
     user-editor.js
     export-manager.js
+    Mobile.js        # Mobile UI logic
   assets/
     ico/              # Application Icons
   Login.html          # Auth UI
   Welcome.html        # Welcome UI
   Main.html           # Main UI
   Admin.html          # Anomaly & Proxy Management UI
+  Mobile.html         # Mobile-friendly UI
 data/                 # Persistent storage
   anomalies/          # HTML snapshots of blocked pages
   anomalies.json      # Persistent anomaly logs
