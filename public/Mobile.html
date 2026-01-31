@@ -46,6 +46,14 @@
         <button id="exitResultBtn" class="exit-result-btn" style="display: none;">
              <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
         </button>
+
+        <!-- 用户按钮 (右上角) -->
+        <div id="userBtn" class="icon-btn" style="right: 8px; left: auto;">
+            <img id="topBarAvatar" src="" style="display:none; width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--border-color);">
+            <svg id="topBarUserIcon" viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+            </svg>
+        </div>
     </header>
 
     <!-- Loading Toast Area -->
@@ -208,6 +216,7 @@
     <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
     <input type="file" id="docInput" accept=".doc,.docx,.pdf,.txt,.md,.jpg,.jpeg,.png,.webp,.heic,.heif" style="display: none;">
 
+    <script src="/js/user-editor.js"></script>
     <script src="/js/mobile.js"></script>
 </body>
 </html>

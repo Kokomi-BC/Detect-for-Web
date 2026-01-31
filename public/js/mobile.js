@@ -34,6 +34,7 @@ const fileInput = document.getElementById('fileInput');
 const docInput = document.getElementById('docInput');
 const previewImages = document.getElementById('previewImages');
 const historyBtn = document.getElementById('historyBtn');
+const userBtn = document.getElementById('userBtn');
 const exitEditBtn = document.getElementById('exitEditBtnInside');
 const exitResultBtn = document.getElementById('exitResultBtn');
 const headerTitle = document.getElementById('headerTitle');
@@ -46,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initInputLogic();
     initActionSheet();
     initHistory();
+    initUser();
     loadHistory();
     initSSE(); // Ensure SSE is initialized for real-time status
     setupNavigation();
@@ -222,6 +224,7 @@ function enterFullscreenInput() {
     
     // Header changes
     historyBtn.style.display = 'none';
+    if (userBtn) userBtn.style.display = 'none';
     const exitEditBtn = document.getElementById('exitEditBtnInside'); 
     
     if (exitEditBtn) exitEditBtn.style.display = 'flex';
@@ -248,6 +251,7 @@ function exitFullscreenInput() {
     const exitEditBtn = document.getElementById('exitEditBtnInside');
     if (exitEditBtn) exitEditBtn.style.display = 'none';
     historyBtn.style.display = 'flex';
+    if (userBtn) userBtn.style.display = 'flex';
     if (startBranding) startBranding.style.display = 'block';
     
     const mobileHeader = document.querySelector('.mobile-header');
@@ -267,6 +271,7 @@ function showResultView() {
     
     // Header
     historyBtn.style.display = 'none';
+    if (userBtn) userBtn.style.display = 'none';
     exitEditBtn.style.display = 'none';
     exitResultBtn.style.display = 'flex';
     if (headerTitle) headerTitle.style.display = 'block';
@@ -284,6 +289,7 @@ function showInputView() {
     exitResultBtn.style.display = 'none';
     exitEditBtn.style.display = 'none';
     historyBtn.style.display = 'flex';
+    if (userBtn) userBtn.style.display = 'flex';
     
     // Explicitly restore elements hidden by fullscreen mode if we were stuck
     if (startBranding) startBranding.style.display = 'block';
@@ -859,7 +865,11 @@ function initActionSheet() {
 
 window.closeActionSheet = function() {
     document.getElementById('actionSheetBackdrop').classList.remove('active');
-    document.getElementById('actionSheet').style.transform = 'translateY(100%)';
+    const actionSheet = document.getElementById('actionSheet');
+    if (actionSheet) {
+        actionSheet.classList.remove('active');
+        actionSheet.style.transform = 'translateY(100%)';
+    }
 }
 
 window.triggerImageUpload = function() {
@@ -1549,3 +1559,95 @@ window.resolveConflict = async function(choice) {
     
     closeConflictModal();
 }
+
+// --- User Logic (Reused from PC) ---
+async function initUser() {
+    const userBtn = document.getElementById('userBtn');
+    if (!userBtn) return;
+
+    userBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showUserActionSheet();
+    });
+
+    try {
+        const res = await fetch('/auth/me');
+        const data = await res.json();
+        if (data.success) {
+            window.currentUser = data.user;
+            updateAvatar(data.user);
+        }
+    } catch (err) {
+        console.error('Failed to fetch user info', err);
+    }
+}
+
+function updateAvatar(user) {
+    const avatarImg = document.getElementById('topBarAvatar');
+    const userIcon = document.getElementById('topBarUserIcon');
+    if (!avatarImg || !userIcon || !user) return;
+
+    // Remove timestamp to allow browser caching
+    avatarImg.src = `/api/public/avatar/${user.id}`;
+    
+    avatarImg.onload = () => {
+        avatarImg.style.display = 'block';
+        userIcon.style.display = 'none';
+    };
+    
+    avatarImg.onerror = () => {
+        avatarImg.style.display = 'none';
+        userIcon.style.display = 'block';
+    };
+}
+
+function showUserActionSheet() {
+    const user = window.currentUser;
+    if (!user) return;
+
+    const actionSheet = document.getElementById('actionSheet');
+    const backdrop = document.getElementById('actionSheetBackdrop');
+    const content = document.getElementById('actionSheetContent');
+
+    let html = `
+        <div style="padding:15px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-weight:600; color:var(--text-primary); font-size: 16px;">
+            ${user.username}${user.role === 'admin' ? ' (管理员)' : ''}
+        </div>
+        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="openMobileUserEditor()">修改用户信息</div>
+    `;
+
+    if (user.role === 'admin') {
+        html += `<div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="location.href='/Admin'">进入后台管理</div>`;
+    }
+
+    html += `<div style="padding:20px; text-align:center; font-size:16px; color:var(--danger-color);" onclick="handleLogout()">退出登录</div>`;
+
+    content.innerHTML = html;
+    
+    actionSheet.style.transform = 'translateY(0)';
+    actionSheet.classList.add('active');
+    backdrop.classList.add('active');
+    
+    // Push state for back button handling
+    window.history.pushState({ page: 'user-sheet' }, '');
+}
+
+window.openMobileUserEditor = function() {
+    closeActionSheet();
+    if (window.userEditor) {
+        window.userEditor.open({
+            userId: window.currentUser.id, username: window.currentUser.username, onSuccess: () => location.reload()
+        });
+    }
+};
+
+window.handleLogout = async function() {
+    if (confirm('确认退出登录？')) {
+        try {
+            await fetch('/auth/logout', { method: 'POST' });
+            location.href = '/Login';
+        } catch (err) {
+            console.error('Logout failed', err);
+        }
+    }
+};

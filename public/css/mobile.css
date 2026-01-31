@@ -48,8 +48,9 @@ body {
     letter-spacing: -0.5px;
 }
 
-.icon-btn {
+.mobile-header .icon-btn {
     position: absolute; 
+    top: 7px;
     background: none;
     border: none;
     padding: 8px;
@@ -154,6 +155,11 @@ body {
 
 #historyBtn {
     left: 8px;
+}
+
+#userBtn {
+    right: 8px;
+    left: auto;
 }
 
 /* Container */
