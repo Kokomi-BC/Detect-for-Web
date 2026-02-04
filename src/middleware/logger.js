@@ -37,7 +37,7 @@ const loggerMiddleware = async (req, res, next) => {
     let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     if (ip && ip.includes(',')) ip = ip.split(',')[0].trim();
     if (ip && ip.startsWith('::ffff:')) ip = ip.substring(7);
-    
+
     const ua = req.headers['user-agent'] || 'Unknown';
 
     // 1. Crawler Defense Logic
@@ -78,15 +78,15 @@ const loggerMiddleware = async (req, res, next) => {
                 console.error('Failed to log blocked crawler:', e);
             }
         })();
-        return res.status(403).send('Forbidden: Access denied by security policy.');
+        res.sendStatus(403);
     }
-    
+
     // 2. Blacklist Check
     try {
-         const [rows] = await pool.query('SELECT 1 FROM ip_blacklist WHERE ip = ?', [ip]);
-         if (rows.length > 0) {
-             // Record blacklist block in logs
-             (async () => {
+        const [rows] = await pool.query('SELECT 1 FROM ip_blacklist WHERE ip = ?', [ip]);
+        if (rows.length > 0) {
+            // Record blacklist block in logs
+            (async () => {
                 try {
                     const region = await getIpRegion(ip);
                     await pool.query(`
@@ -100,11 +100,11 @@ const loggerMiddleware = async (req, res, next) => {
                         VALUES (CURDATE(), 1)
                         ON DUPLICATE KEY UPDATE blocked_count = blocked_count + 1
                     `);
-                } catch(e) {}
-             })();
-             return res.status(403).send('Access Denied');
-         }
-    } catch(e) {}
+                } catch (e) { }
+            })();
+            return res.status(403).send('Access Denied');
+        }
+    } catch (e) { }
 
     // 3. Normal Access Log (Log to DB)
     (async () => {
@@ -133,7 +133,7 @@ const loggerMiddleware = async (req, res, next) => {
                 VALUES (?, ?, NOW(), ?) 
                 ON DUPLICATE KEY UPDATE last_access = NOW(), region = IFNULL(region, ?)
             `, [ip, ua, region, region]);
-            
+
             // Log access_today - Check for unique IP today
             const [todayResult] = await pool.query(`
                 INSERT IGNORE INTO access_today (ip, access_date, hit_count, last_access, region)
@@ -165,15 +165,15 @@ const loggerMiddleware = async (req, res, next) => {
                     `, [region, ip]);
                 }
             }
-            
+
         } catch (e) {
             console.error(`[Logger] Failed to record IP ${ip} to DB:`, e.stack);
         }
     })();
-    
+
     // Set daily session cookie
     if (!req.cookies.visited_session) {
-         res.cookie('visited_session', '1', { httpOnly: true, maxAge: 86400000 }); // 24 hours
+        res.cookie('visited_session', '1', { httpOnly: true, maxAge: 86400000 }); // 24 hours
     }
 
     const start = Date.now();
