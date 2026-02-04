@@ -26,6 +26,11 @@ let allHistory = [];
 let lastBackPress = 0;
 let pendingConflict = null;
 
+let historyPage = 1;
+let historyLoading = false;
+let hasMoreHistory = true;
+const historyLimit = 20;
+
 // --- Elements ---
 const textInput = document.getElementById('textInput');
 const detectBtn = document.getElementById('detectBtn');
@@ -65,93 +70,105 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupNavigation() {
-    // Push initial state to enable back interception
-    if (window.history.state?.page !== 'home') {
-        window.history.pushState({ page: 'home' }, '');
-    }
+    // 【计数器拦截系统 - 终极防御版】
+    let exitCount = 0;
+    let exitTimer = null;
+
+    // 状态恢复函数：确保始终处于 home 运行态
+    const resetToHomeState = () => {
+        if (!window.history.state || window.history.state.page !== 'home') {
+            window.history.pushState({ page: 'home' }, '');
+        }
+    };
+
+    // 初始化三级历史栈：[base, stable, home]
+    // 这种结构可以抵御甚至连续三次极速点击
+    window.history.replaceState({ page: 'base' }, '');
+    window.history.pushState({ page: 'stable' }, '');
+    window.history.pushState({ page: 'home' }, '');
 
     window.addEventListener('popstate', (event) => {
-        // If we are navigating away from home or state is null, we might be exiting
-        // But we want to intercept as long as we have overlays
-        
-        const historyDrawer = document.getElementById('historyDrawer');
-        const actionSheet = document.getElementById('actionSheet');
-        const tooltip = document.getElementById('customTooltip');
-        const conflictModal = document.getElementById('conflictModal');
-        const confirmModal = document.getElementById('confirmModal');
-        const imageModal = document.getElementById('imageModal');
+        // 关键逻辑：只要被监测到离开 home 态，不论是回到 stable 还是 base，都视为一次返回尝试
+        if (!event.state || event.state.page !== 'home') {
+            
+            // 实时状态检测
+            const getOverlayActive = () => {
+                const els = ['imageModal', 'confirmModal', 'conflictModal'];
+                let active = els.some(id => {
+                    const el = document.getElementById(id);
+                    return el && el.style.display === 'flex';
+                });
+                
+                const classes = ['customTooltip', 'historyDrawer', 'actionSheet'];
+                active = active || classes.some(id => {
+                    const el = document.getElementById(id);
+                    return el && el.classList.contains('active');
+                });
+                return active;
+            };
 
-        // Check priorities (Topmost UI first)
-        if (imageModal && imageModal.style.display === 'flex') {
-            imageModal.style.display = 'none';
-            window.history.pushState({ page: 'home' }, '');
-            lastBackPress = 0; // Reset timer when handling UI
-            return;
-        }
+            const getResultActive = () => {
+                const inputView = document.getElementById('inputView');
+                const isInputActive = inputView && inputView.classList.contains('active');
+                return (currentMode === 'result' || !isInputActive || isInputFullscreen);
+            };
 
-        if (tooltip && tooltip.classList.contains('active')) {
-            hideTooltip();
-            window.history.pushState({ page: 'home' }, '');
-            lastBackPress = 0;
-            return;
-        }
+            // 1. 浮层计数器逻辑
+            if (getOverlayActive()) {
+                if (document.getElementById('imageModal')) document.getElementById('imageModal').style.display = 'none';
+                if (typeof hideTooltip === 'function') hideTooltip();
+                if (typeof closeConfirmModal === 'function') closeConfirmModal();
+                if (typeof closeConflictModal === 'function') closeConflictModal();
+                if (typeof toggleHistory === 'function') toggleHistory(false);
+                if (typeof closeActionSheet === 'function') closeActionSheet();
+                
+                exitCount = 0; 
+                resetToHomeState();
+                console.log('Intercepted back for Overlay');
+                return;
+            }
 
-        if (confirmModal && confirmModal.style.display === 'flex') {
-            closeConfirmModal();
-            window.history.pushState({ page: 'home' }, '');
-            lastBackPress = 0;
-            return;
-        }
+            // 2. 结果页/全屏态计数器逻辑
+            if (getResultActive()) {
+                if (currentMode === 'result' || !document.getElementById('inputView').classList.contains('active')) {
+                    if (typeof showInputView === 'function') showInputView();
+                } else if (isInputFullscreen) {
+                    if (typeof exitFullscreenInput === 'function') exitFullscreenInput();
+                }
+                
+                exitCount = 0;
+                resetToHomeState();
+                console.log('Intercepted back for Result/Fullscreen');
+                return;
+            }
 
-        if (conflictModal && conflictModal.style.display === 'flex') {
-            closeConflictModal();
-            window.history.pushState({ page: 'home' }, '');
-            lastBackPress = 0;
-            return;
-        }
+            // 3. 处于主页面，二次退出计数器逻辑
+            exitCount++;
+            
+            if (exitCount === 1) {
+                showToast('再按一次返回键退出程序', 'info');
+                resetToHomeState(); // 立即补回 home 运行态
 
-        if (historyDrawer && historyDrawer.classList.contains('active')) {
-            toggleHistory(false);
-            window.history.pushState({ page: 'home' }, '');
-            lastBackPress = 0;
-            return;
-        }
-
-        if (actionSheet && actionSheet.classList.contains('active')) {
-            closeActionSheet();
-            window.history.pushState({ page: 'home' }, '');
-            lastBackPress = 0;
-            return;
-        }
-
-        if (currentMode === 'result') {
-            showInputView();
-            window.history.pushState({ page: 'home' }, '');
-            lastBackPress = 0;
-            return;
-        }
-
-        if (isInputFullscreen) {
-            exitFullscreenInput();
-            window.history.pushState({ page: 'home' }, '');
-            lastBackPress = 0;
-            return;
-        }
-
-        // Home page double back to exit
-        const now = Date.now();
-        if (now - lastBackPress < 2000 && lastBackPress > 0) {
-            // Logic: If user click back twice in 2s, don't pushState anymore.
-            // Let the browser actually go back to the previous page (e.g. Login or previous site).
-            // This is the cleanest way to "exit" a web context.
-            showToast('正在退出...', 'info');
-        } else {
-            lastBackPress = now;
-            showToast('再按一次返回键退出程序', 'info');
-            // Re-push home state to intercept next back
-            window.history.pushState({ page: 'home' }, '');
+                if (exitTimer) clearTimeout(exitTimer);
+                exitTimer = setTimeout(() => {
+                    exitCount = 0;
+                }, 2000);
+                console.log('Intercepted back for Exit Step 1');
+            } else if (exitCount >= 2) {
+                // 2秒内连续返回，且无拦截需求：允许退出
+                showToast('正在退出程序...', 'info');
+                console.log('Final Exit allowed');
+                // 不再 pushState，允许浏览器穿透到 base 之前的真实记录（即退出）
+            }
         }
     });
+
+    // 补偿机制：极少情况下用户可能卡在 base 态
+    document.addEventListener('click', () => {
+        if (!window.history.state || window.history.state.page === 'base') {
+            resetToHomeState();
+        }
+    }, { capture: true, passive: true });
 }
 
 function initSSE() {
@@ -419,6 +436,40 @@ function initInputLogic() {
     
 
     detectBtn.addEventListener('click', runDetection);
+
+    // Image/Text paste logic for mobile
+    textInput.addEventListener('paste', async (e) => {
+        let hasHandled = false;
+
+        // 1. Files from clipboard
+        if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+            const imageFiles = Array.from(e.clipboardData.files).filter(file => {
+                const isHEIC = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+                return file.type.startsWith('image/') || isHEIC;
+            });
+            if (imageFiles.length > 0) {
+                e.preventDefault();
+                await processAndAddImages(imageFiles);
+                hasHandled = true;
+            }
+        }
+
+        // 2. Items (screenshots, etc)
+        if (!hasHandled) {
+            const items = e.clipboardData.items;
+            for (let item of items) {
+                if (item.type.indexOf('image') !== -1 || item.type.indexOf('heic') !== -1 || item.type.indexOf('heif') !== -1) {
+                    const file = item.getAsFile();
+                    if (file) {
+                        e.preventDefault();
+                        await processAndAddImages([file]);
+                        hasHandled = true;
+                    }
+                    break;
+                }
+            }
+        }
+    });
 }
 
 function handleInputChanges() {
@@ -484,32 +535,20 @@ function renderExtractedUrlCard() {
     if (!currentExtractedData) {
         extractedContentArea.style.display = 'none';
         extractedContentArea.innerHTML = '';
+        renderImages(); // Refresh to remove doc from previewImages if it was deleted
+        return;
+    }
+
+    // Docs are now rendered inside previewImages (Unified Media Area)
+    if (currentExtractedData.type === 'doc') {
+        extractedContentArea.style.display = 'none';
+        extractedContentArea.innerHTML = '';
+        renderImages();
         return;
     }
 
     extractedContentArea.style.display = 'block';
     
-    if (currentExtractedData.type === 'doc') {
-        const ext = currentExtractedData.format || 'DOC';
-        extractedContentArea.innerHTML = `
-            <div class="extracted-url-card" style="background: var(--bg-secondary); border: 1px solid var(--border-color); margin-bottom: 4px;">
-                <div class="url-card-icon" style="background: var(--primary-light);">
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--primary-color)">
-                        <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
-                    </svg>
-                </div>
-                <div class="url-card-info">
-                    <div class="url-card-title" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${currentExtractedData.title}</div>
-                    <div class="url-card-tag" style="color: var(--primary-color);">已解析 ${ext} 格式文件</div>
-                </div>
-                <div class="url-card-remove" onclick="removeExtractedUrl()">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </div>
-            </div>
-        `;
-        return;
-    }
-
     const isPending = currentExtractedData.pendingExtraction;
     const faviconUrl = getFaviconUrl(currentExtractedData.url);
     const iconContent = faviconUrl 
@@ -933,8 +972,8 @@ docInput.addEventListener('change', async (e) => {
 
     // If it's an image, redirect to image logic
     if (isImg) {
-        // Image logic already handles its own conflicts internally when adding
-        if (!!currentExtractedData) {
+        // Allow images to coexist with documents, only conflict with links
+        if (!!currentExtractedData && currentExtractedData.type === 'link') {
             pendingConflict = { type: 'images', data: [file] };
             showConflictModal();
         } else {
@@ -944,8 +983,8 @@ docInput.addEventListener('change', async (e) => {
         return;
     }
 
-    // Conflict Check for Documents: Files count as "extraction content", similar to links
-    if (uploadedImages.length > 0 && !currentExtractedData) {
+    // Conflict Check for Documents: Only conflict with links
+    if (currentExtractedData && currentExtractedData.type === 'link') {
         pendingConflict = { type: 'doc', data: file };
         showConflictModal();
         docInput.value = '';
@@ -1028,8 +1067,8 @@ fileInput.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     
-    // Conflict Check: If URL already extracted, show modal
-    if (currentExtractedData) {
+    // Conflict Check: Only conflict with links
+    if (currentExtractedData && currentExtractedData.type === 'link') {
         pendingConflict = { type: 'images', data: files };
         showConflictModal();
         fileInput.value = '';
@@ -1049,6 +1088,27 @@ fileInput.addEventListener('change', async (e) => {
 
 function renderImages() {
     previewImages.innerHTML = '';
+    
+    // Unified rendering for Document and Images
+    if (currentExtractedData && currentExtractedData.type === 'doc') {
+        const ext = currentExtractedData.format || 'DOC';
+        const docDiv = document.createElement('div');
+        docDiv.className = 'preview-doc-card';
+        docDiv.innerHTML = `
+            <div class="doc-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--primary-color)">
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                </svg>
+            </div>
+            <div class="doc-info">
+                <div class="doc-title">${escapeHTML(currentExtractedData.title)}</div>
+                <div class="doc-ext">${ext}</div>
+            </div>
+            <div class="remove-doc-btn" onclick="removeExtractedUrl()">×</div>
+        `;
+        previewImages.appendChild(docDiv);
+    }
+
     uploadedImages.forEach((img, index) => {
         const div = document.createElement('div');
         div.className = 'preview-img-wrapper';
@@ -1058,6 +1118,12 @@ function renderImages() {
         `;
         previewImages.appendChild(div);
     });
+
+    if (previewImages.innerHTML === '') {
+        previewImages.style.display = 'none';
+    } else {
+        previewImages.style.display = 'flex';
+    }
 }
 
 window.removeImage = function(index) {
@@ -1070,6 +1136,17 @@ window.removeImage = function(index) {
 function initHistory() {
     historyBtn.addEventListener('click', () => {
         toggleHistory(true);
+        // Refresh history when opening
+        loadHistory(false);
+    });
+
+    const list = document.getElementById('historyList');
+    list.addEventListener('scroll', () => {
+        if (list.scrollTop + list.clientHeight >= list.scrollHeight - 50) {
+            if (hasMoreHistory && !historyLoading) {
+                loadHistory(true);
+            }
+        }
     });
 }
 
@@ -1085,15 +1162,52 @@ function toggleHistory(show) {
     }
 }
 
-async function loadHistory() {
+async function loadHistory(isLoadMore = false) {
+    if (historyLoading) return;
+    if (isLoadMore && !hasMoreHistory) return;
+
+    historyLoading = true;
+    
+    // Show a small loader if loading more
+    const list = document.getElementById('historyList');
+    let loader = null;
+    if (isLoadMore) {
+        loader = document.createElement('div');
+        loader.className = 'history-loader-item';
+        loader.style.textAlign = 'center';
+        loader.style.padding = '10px';
+        loader.innerHTML = '<span style="color:var(--text-muted); font-size:12px;">加载中...</span>';
+        list.appendChild(loader);
+    } else {
+        historyPage = 1;
+        hasMoreHistory = true;
+    }
+
     try {
-        const history = await window.api.invoke('get-history');
-        if (Array.isArray(history)) {
-            allHistory = history;
-            renderHistoryList();
+        const result = await window.api.invoke('get-history', { 
+            metadataOnly: true,
+            page: historyPage,
+            limit: historyLimit
+        });
+        
+        const data = result.data || [];
+        hasMoreHistory = result.hasMore;
+
+        if (isLoadMore) {
+            if (loader) loader.remove();
+            allHistory = allHistory.concat(data);
+        } else {
+            allHistory = data;
         }
+
+        renderHistoryList();
+        historyPage++;
     } catch(e) {
         console.warn('Failed to load history', e);
+        if (isLoadMore && loader) loader.remove();
+        if (!isLoadMore) list.innerHTML = '<div style="text-align:center; color:var(--text-secondary); padding:20px;">加载失败</div>';
+    } finally {
+        historyLoading = false;
     }
 }
 
@@ -1112,40 +1226,51 @@ function renderHistoryList() {
         const div = document.createElement('div');
         div.className = 'history-item';
         
-        // Touch events for long press
+        // Touch events for long press (context menu or delete)
         div.addEventListener('touchstart', (e) => {
             pressTimer = setTimeout(() => {
                 showHistoryContext(item, index, e);
             }, 600);
         });
 
-        div.addEventListener('touchend', () => {
-            clearTimeout(pressTimer);
-        });
+        div.addEventListener('touchend', () => clearTimeout(pressTimer));
+        div.addEventListener('touchmove', () => clearTimeout(pressTimer));
 
-        div.addEventListener('touchmove', () => {
-            clearTimeout(pressTimer);
-        });
+        div.onclick = async () => {
+             // If info is not full, load it now
+             let fullItem = item;
+             if (!item.result && !item.content) {
+                 try {
+                     setToastText('正在加载详情...');
+                     const loadingToast = document.getElementById('loadingToast');
+                     if (loadingToast) loadingToast.classList.add('active');
 
-        div.onclick = () => {
-             showResult(item.result, item.content, item.images || [], item.url); 
+                     fullItem = await window.api.invoke('get-history-item', item.timestamp);
+                     
+                     if (loadingToast) loadingToast.classList.remove('active');
+                     
+                     if (!fullItem) {
+                         showToast('无法加载历史详情', 'error');
+                         return;
+                     }
+                     // Update local cache
+                     allHistory[index] = fullItem;
+                 } catch (err) {
+                     console.error(err);
+                     showToast('加载失败', 'error');
+                     return;
+                 }
+             }
+
+             showResult(fullItem.result, fullItem.content, fullItem.images || [], fullItem.url); 
              showResultView();
              toggleHistory(false);
         };
 
         const dateStr = new Date(item.timestamp).toLocaleString();
         
-        // Use result title, scraper title, or fallback to content preview
-        let displayTitle = '';
-        if (item.result && item.result.title) {
-            displayTitle = item.result.title;
-        } else if (item.title) {
-            displayTitle = item.title;
-        } else {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = item.content || '';
-            displayTitle = tempDiv.textContent || tempDiv.innerText || '[无标题内容]';
-        }
+        // Use pre-computed title from metadata
+        let displayTitle = item.title || '[无标题内容]';
         
         // Show URL if available
         let urlDisplay = '';

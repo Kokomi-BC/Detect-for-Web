@@ -198,9 +198,55 @@ module.exports = function(services, state) {
                     const historyPath = getUserHistoryPath(req.userId);
                     try {
                         const data = await fsPromises.readFile(historyPath, 'utf8');
-                        result = JSON.parse(data);
+                        let history = JSON.parse(data);
+                        
+                        // Pagination
+                        const page = parseInt(args[0]?.page) || 1;
+                        const limit = parseInt(args[0]?.limit) || 20;
+                        const startIndex = (page - 1) * limit;
+                        const endIndex = page * limit;
+                        
+                        const hasMore = history.length > endIndex;
+                        let pageResult = history.slice(startIndex, endIndex);
+
+                        // User requested metadata only?
+                        if (args && args[0] && args[0].metadataOnly) {
+                            pageResult = pageResult.map(item => {
+                                // Extract preview content if possible
+                                let preview = '';
+                                if (item.content) {
+                                    preview = item.content.replace(/<[^>]*>/g, '').substring(0, 50).trim();
+                                }
+                                
+                                return {
+                                    timestamp: item.timestamp,
+                                    title: item.result?.title || item.title || (preview ? preview.substring(0, 15) : '未命名分析'),
+                                    preview: preview,
+                                    url: item.url,
+                                    hasResult: !!item.result,
+                                    hasImages: !!(item.images && item.images.length > 0)
+                                };
+                            });
+                        }
+                        result = {
+                            data: pageResult,
+                            hasMore: hasMore,
+                            total: history.length
+                        };
                     } catch (err) {
-                        result = (err.code === 'ENOENT') ? [] : (function(){throw err})();
+                        result = (err.code === 'ENOENT') ? { data: [], hasMore: false, total: 0 } : (function(){throw err})();
+                    }
+                    break;
+                }
+                case 'get-history-item': {
+                    const historyPath = getUserHistoryPath(req.userId);
+                    const timestamp = args[0];
+                    try {
+                        const data = await fsPromises.readFile(historyPath, 'utf8');
+                        const history = JSON.parse(data);
+                        result = history.find(item => item.timestamp === timestamp);
+                    } catch (err) {
+                        result = null;
                     }
                     break;
                 }

@@ -888,6 +888,7 @@ textarea.mobile-input {
     gap: 10px;
     overflow-x: auto;
     padding: 10px 0;
+    align-items: center;
 }
 .preview-img-wrapper {
     position: relative;
@@ -901,6 +902,67 @@ textarea.mobile-input {
     object-fit: cover;
     border-radius: 8px;
 }
+
+/* Document Card in Preview Area */
+.preview-doc-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    min-width: 150px;
+    max-width: 200px;
+    height: 80px;
+    flex-shrink: 0;
+    border: 1px solid var(--border-color);
+    position: relative;
+    box-sizing: border-box;
+}
+.doc-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-light);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.doc-info {
+    flex: 1;
+    overflow: hidden;
+}
+.doc-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.doc-ext {
+    font-size: 11px;
+    color: var(--primary-color);
+    font-weight: bold;
+    margin-top: 2px;
+}
+.remove-doc-btn {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: var(--danger-color);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    border: 2px solid white;
+}
+
 .remove-img-btn {
     position: absolute;
     top: -6px;

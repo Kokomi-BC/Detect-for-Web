@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="/css/variables.css">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/main.css">
+    <script src="/js/heic2any.min.js"></script>
     <script src="/js/theme-loader.js"></script>
 </head>
 
@@ -146,8 +147,8 @@
             </div>
         </div>
     </div>
-    <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
-    <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+    <input type="file" id="fileInput" multiple accept="image/*,.heic,.heif" style="display: none;">
+    <input type="file" id="avatarInput" accept="image/*,.heic,.heif" style="display: none;">
     <div class="container">
         <div class="left-sidebar" id="leftSidebar">
             <!-- 工具栏 -->
@@ -2641,20 +2642,40 @@
 
                 for (const item of items) {
                     // 1. 优先处理图片
-                    const imageType = item.types.find(type => type.startsWith('image/'));
+                    const imageType = item.types.find(type => type.startsWith('image/') || type.includes('heic') || type.includes('heif'));
                     if (imageType) {
                         if (uploadedImages.length >= maxImages) {
                             showToast(`最多只能上传${maxImages}张图片`, 'warning');
                             return;
                         }
 
-                        const blob = await item.getType(imageType);
+                        let blob = await item.getType(imageType);
+                        let name = '剪贴板图片';
+
+                        const isHEIC = imageType.includes('heic') || imageType.includes('heif');
+                        if (isHEIC) {
+                            try {
+                                showToast('正在转换 HEIC 图片...', 'info');
+                                const convertedBlob = await heic2any({
+                                    blob: blob,
+                                    toType: 'image/jpeg',
+                                    quality: 0.7
+                                });
+                                blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                                name = '剪贴板图片.jpg';
+                            } catch (err) {
+                                console.error('HEIC conversion failed', err);
+                                showToast('HEIC 转换失败', 'error');
+                                continue;
+                            }
+                        }
+
                         const reader = new FileReader();
                         reader.onload = function (e) {
                             const imageData = {
                                 id: Date.now() + Math.random(),
                                 url: e.target.result,
-                                name: '剪贴板图片'
+                                name: name
                             };
                             uploadedImages.push(imageData);
                             renderImages();
@@ -2876,7 +2897,10 @@
 
                 // 优先处理文件
                 if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                    const hasImage = Array.from(e.dataTransfer.files).some(f => f.type.startsWith('image/'));
+                    const hasImage = Array.from(e.dataTransfer.files).some(f => {
+                        const isHEIC = f.name.toLowerCase().endsWith('.heic') || f.name.toLowerCase().endsWith('.heif');
+                        return f.type.startsWith('image/') || isHEIC;
+                    });
                     if (!hasImage) {
                         showToast('不支持的内容', 'error');
                         return;
@@ -2943,7 +2967,10 @@
 
                 // 1. 优先检查 files 列表（支持从文件管理器复制的文件）
                 if (e.clipboardData.files && e.clipboardData.files.length > 0) {
-                    const imageFiles = Array.from(e.clipboardData.files).filter(file => file.type.startsWith('image/'));
+                    const imageFiles = Array.from(e.clipboardData.files).filter(file => {
+                        const isHEIC = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+                        return file.type.startsWith('image/') || isHEIC;
+                    });
                     if (imageFiles.length > 0) {
                         e.preventDefault();
                         handleFiles(imageFiles);
@@ -2955,7 +2982,7 @@
                 if (!hasHandled) {
                     const items = e.clipboardData.items;
                     for (let item of items) {
-                        if (item.type.indexOf('image') !== -1) {
+                        if (item.type.indexOf('image') !== -1 || item.type.indexOf('heic') !== -1 || item.type.indexOf('heif') !== -1) {
                             e.preventDefault();
                             const file = item.getAsFile();
                             if (file) {
@@ -2985,34 +3012,63 @@
             });
 
             // 处理文件
-            function handleFiles(files) {
-                // 新增：只允许添加剩余数量的图片
+            async function handleFiles(files) {
                 const remain = maxImages - uploadedImages.length;
                 if (remain <= 0) {
                     showToast(`最多只能上传${maxImages}张图片`, 'warning');
                     return;
                 }
+
                 let addedCount = 0;
-                let validFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-                // 只取剩余数量的图片
-                validFiles = validFiles.slice(0, remain);
-                validFiles.forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = function (e) {
-                        const imageData = {
-                            id: Date.now() + Math.random(),
-                            url: e.target.result,
-                            name: file.name
+                const fileList = Array.from(files);
+
+                for (const file of fileList) {
+                    if (addedCount >= remain) break;
+
+                    const isHEIC = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+                    if (!file.type.startsWith('image/') && !isHEIC) {
+                        continue;
+                    }
+
+                    let processFile = file;
+                    if (isHEIC) {
+                        try {
+                            showToast('正在转换 HEIC 图片...', 'info');
+                            const blob = await heic2any({
+                                blob: file,
+                                toType: 'image/jpeg',
+                                quality: 0.7
+                            });
+                            const finalBlob = Array.isArray(blob) ? blob[0] : blob;
+                            processFile = new File([finalBlob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+                        } catch (err) {
+                            console.error('HEIC conversion failed', err);
+                            showToast('HEIC 转换失败', 'error');
+                            continue;
+                        }
+                    }
+
+                    await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = function (e) {
+                            const imageData = {
+                                id: Date.now() + Math.random(),
+                                url: e.target.result,
+                                name: processFile.name
+                            };
+                            uploadedImages.push(imageData);
+                            renderImages();
+                            addedCount++;
+                            resolve();
                         };
-                        uploadedImages.push(imageData);
-                        renderImages();
-                        showToast('图片上传成功', 'success');
-                    };
-                    reader.readAsDataURL(file);
-                    addedCount++;
-                });
-                if (files.length > 0 && addedCount === 0) {
-                    showToast('不支持的内容', 'error');
+                        reader.readAsDataURL(processFile);
+                    });
+                }
+
+                if (addedCount > 0) {
+                    showToast(`成功添加 ${addedCount} 张图片`, 'success');
+                } else if (files.length > 0) {
+                    showToast('不支持的内容或添加失败', 'error');
                 }
             }
 
@@ -3195,7 +3251,27 @@
                         clearEditorContent(false);
                     }
 
-                    const ext = file.name.split('.').pop().toLowerCase();
+                    let ext = file.name.split('.').pop().toLowerCase();
+                    let finalFile = file;
+
+                    // Support HEIC/HEIF conversion
+                    if (ext === 'heic' || ext === 'heif') {
+                        try {
+                            showToast('正在转换 HEIC 图片...', 'info');
+                            const convertedBlob = await heic2any({
+                                blob: file,
+                                toType: 'image/jpeg',
+                                quality: 0.8
+                            });
+                            const finalBlob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                            finalFile = new File([finalBlob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
+                            ext = 'jpg';
+                        } catch (err) {
+                            console.error('HEIC conversion failed:', err);
+                            showToast('HEIC 转换失败，尝试直接上传', 'warning');
+                        }
+                    }
+
                     const reader = new FileReader();
 
                     // Process function
@@ -3315,7 +3391,7 @@
                     reader.onload = function (evt) {
                         processFile(evt.target.result);
                     };
-                    reader.readAsDataURL(file);
+                    reader.readAsDataURL(finalFile);
                 });
             }
 
@@ -5205,26 +5281,74 @@
         // --- History Management ---
         let allHistory = [];
         let currentHistoryPage = 1;
-        const historyItemsPerPage = 10;
+        let historyLoading = false;
+        let hasMoreHistory = true;
+        const historyLimit = 20;
         let currentHistoryItem = null; // For context menu
 
-        async function loadHistory() {
+        async function loadHistory(isLoadMore = false) {
+            if (historyLoading) return;
+            if (isLoadMore && !hasMoreHistory) return;
+
+            historyLoading = true;
+            if (!isLoadMore) {
+                currentHistoryPage = 1;
+                hasMoreHistory = true;
+            }
+
             try {
-                const history = await api.invoke('get-history');
-                allHistory = Array.isArray(history) ? history : (history && Array.isArray(history.data) ? history.data : []);
+                // Modified: Only load metadata initially with pagination
+                const result = await api.invoke('get-history', { 
+                    metadataOnly: true, 
+                    page: currentHistoryPage, 
+                    limit: historyLimit 
+                });
+                
+                const data = result.data || [];
+                hasMoreHistory = result.hasMore;
+
+                if (isLoadMore) {
+                    allHistory = allHistory.concat(data);
+                } else {
+                    allHistory = data;
+                }
+                
                 renderHistory();
+                currentHistoryPage++;
             } catch (err) {
                 console.error('Failed to load history:', err);
-                allHistory = [];
-                renderHistory();
+                if (!isLoadMore) {
+                    allHistory = [];
+                    renderHistory();
+                }
+            } finally {
+                historyLoading = false;
             }
         }
+
+        // Add scroll listener for lazy loading
+        document.addEventListener('DOMContentLoaded', () => {
+            const hList = document.getElementById('historyList');
+            if (hList) {
+                hList.addEventListener('scroll', () => {
+                    if (hList.scrollTop + hList.clientHeight >= hList.scrollHeight - 60) {
+                        if (hasMoreHistory && !historyLoading) {
+                            loadHistory(true);
+                        }
+                    }
+                });
+            }
+        });
 
         function renderHistory() {
             const historyList = document.getElementById('historyList');
 
             if (!historyList) return;
 
+            // Note: If we are appending, we might not want to clear innerHTML.
+            // But since our renderHistory clears it, it's safer for now or we update it to append.
+            // Given vanilla JS, redraw is easier to maintain but slower. 
+            // However, with metadata-only items, 100 items redraw is very fast.
             historyList.innerHTML = '';
 
             if (allHistory.length === 0) {
@@ -5232,16 +5356,15 @@
                 return;
             }
 
-            allHistory.forEach(item => {
-                if (!item || !item.result) return;
+            allHistory.forEach((item, index) => {
                 const div = document.createElement('div');
                 div.className = 'history-item';
 
                 const date = new Date(item.timestamp || Date.now());
                 const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 
-                const title = item.result.title || (item.content ? item.content.replace(/<[^>]*>/g, '').substring(0, 15) : '未命名分析');
-                const preview = (item.content || '').replace(/<[^>]*>/g, '').substring(0, 30);
+                const title = item.title || '未命名分析';
+                const preview = item.preview || '';
 
                 div.innerHTML = `
                     <div class="history-item-title">${title}</div>
@@ -5251,8 +5374,25 @@
                     </div>
                 `;
 
-                div.addEventListener('click', () => {
-                    restoreHistoryItem(item);
+                div.addEventListener('click', async () => {
+                    // Optimized: Fetch full detail only when clicked
+                    let fullItem = item;
+                    if (!item.result && !item.content) {
+                        try {
+                            showToast('正在加载详情...', 'info');
+                            fullItem = await api.invoke('get-history-item', item.timestamp);
+                            if (!fullItem) {
+                                showToast('加载失败', 'error');
+                                return;
+                            }
+                            // Update cache
+                            allHistory[index] = fullItem;
+                        } catch (err) {
+                            showToast('加载详情出错', 'error');
+                            return;
+                        }
+                    }
+                    restoreHistoryItem(fullItem);
                 });
 
                 div.addEventListener('contextmenu', (e) => {
