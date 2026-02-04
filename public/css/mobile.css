@@ -209,7 +209,7 @@ body {
 .input-card {
     background: var(--bg-primary);
     border-radius: 24px;
-    padding: 8px 16px; /* Increased horizontal padding from 8px */
+    padding: 12px 16px; 
     box-shadow: 0 8px 30px rgba(0,0,0,0.06);
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
@@ -218,7 +218,7 @@ body {
     flex-direction: column;
     min-height: 140px; 
     flex: 1.6; 
-    margin: 8px 0; 
+    margin: 4px 0; 
 }
 
 /* Loading Toast - Dynamic Island Style */
@@ -348,8 +348,10 @@ textarea.mobile-input {
     line-height: 1.6;
     background: transparent;
     color: var(--text-primary);
-    min-height: 100px; /* Further reduced from 120px */
-    margin-bottom: 2px; /* Further reduced from 8px to minimize bottom void */
+    min-height: 100px;
+    margin-top: 4px; /* Reduced from 12px for more compact initial state */
+    margin-bottom: 2px;
+    padding-bottom: 50px; /* Space for absolute floating toolbar */
     flex: 1;
 }
 
@@ -885,96 +887,140 @@ textarea.mobile-input {
 /* Image Preview in Input */
 .preview-images {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     overflow-x: auto;
-    padding: 10px 0;
+    padding: 8px 4px 8px 4px; /* Increased top/bottom padding to prevent button clipping */
     align-items: center;
+    margin-bottom: -4px; /* Move closer to text input */
 }
 .preview-img-wrapper {
     position: relative;
-    width: 80px;
-    height: 80px;
+    width: 72px; /* Reduced from 80px */
+    height: 72px; /* Reduced from 80px */
     flex-shrink: 0;
 }
 .preview-img-wrapper img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 8px;
+    border-radius: 12px; /* More rounded to match card style */
 }
 
 /* Document Card in Preview Area */
 .preview-doc-card {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
+    gap: 10px;
+    padding: 8px 12px;
     background: var(--bg-secondary);
-    border-radius: 12px;
-    min-width: 150px;
-    max-width: 200px;
-    height: 80px;
+    border-radius: 14px;
+    min-width: 160px;
+    max-width: 220px;
+    height: 72px; 
     flex-shrink: 0;
     border: 1px solid var(--border-color);
     position: relative;
     box-sizing: border-box;
 }
+
+.preview-doc-card.is-alone {
+    width: 100%;
+    max-width: none;
+    flex: 1;
+}
+
 .doc-icon {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     background: var(--primary-light);
-    border-radius: 8px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
 }
+
 .doc-info {
     flex: 1;
     overflow: hidden;
 }
+
 .doc-title {
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
 .doc-ext {
     font-size: 11px;
     color: var(--primary-color);
     font-weight: bold;
     margin-top: 2px;
 }
+
+.doc-right-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.doc-size-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
 .remove-doc-btn {
     position: absolute;
-    top: -6px;
-    right: -6px;
+    top: -8px;
+    right: -8px;
     background: var(--danger-color);
     color: white;
     border-radius: 50%;
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 12px;
     border: 2px solid white;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.preview-doc-card.is-alone .remove-doc-btn {
+    position: static;
+    background: transparent;
+    color: var(--text-muted);
+    border: none;
+    width: 32px;
+    height: 32px;
+    box-shadow: none;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .remove-img-btn {
     position: absolute;
-    top: -6px;
-    right: -6px;
+    top: -8px;
+    right: -8px;
     background: var(--danger-color);
     color: white;
     border-radius: 50%;
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 12px;
     border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 10;
 }

@@ -56,7 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHistory();
     initSSE(); // Ensure SSE is initialized for real-time status
     setupNavigation();
-
+    renderImages(); // Ensure initial UI state is correct
+    
     // Add global click listener for tooltips
     document.addEventListener('click', (e) => {
         const tooltip = document.getElementById('customTooltip');
@@ -904,7 +905,7 @@ function initActionSheet() {
         const content = document.getElementById('actionSheetContent');
         content.innerHTML = `
              <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="triggerImageUpload()">添加图片</div>
-             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="triggerFileUpload()">打开文件</div> 
+             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="triggerFileUpload()">上传文件</div> 
         `;
         
         document.getElementById('actionSheetBackdrop').classList.add('active');
@@ -1027,6 +1028,7 @@ async function handleDocParsing(file) {
                 type: 'doc', 
                 title: file.name,
                 format: ext,
+                size: file.size,
                 content: parsedContent,
                 images: parsedImages,
                 pendingExtraction: false
@@ -1089,14 +1091,23 @@ fileInput.addEventListener('change', async (e) => {
 function renderImages() {
     previewImages.innerHTML = '';
     
-    // Unified rendering for Document and Images
-    if (currentExtractedData && currentExtractedData.type === 'doc') {
+    const hasDoc = currentExtractedData && currentExtractedData.type === 'doc';
+    const hasImages = uploadedImages.length > 0;
+
+    const closeSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+
+    // Handle Document Card
+    if (hasDoc) {
+        const isAlone = !hasImages;
         const ext = currentExtractedData.format || 'DOC';
         const docDiv = document.createElement('div');
-        docDiv.className = 'preview-doc-card';
+        docDiv.className = `preview-doc-card ${isAlone ? 'is-alone' : ''}`;
+        
+        const sizeStr = currentExtractedData.size ? formatFileSize(currentExtractedData.size) : '';
+
         docDiv.innerHTML = `
             <div class="doc-icon">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--primary-color)">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="var(--primary-color)">
                     <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
                 </svg>
             </div>
@@ -1104,26 +1115,125 @@ function renderImages() {
                 <div class="doc-title">${escapeHTML(currentExtractedData.title)}</div>
                 <div class="doc-ext">${ext}</div>
             </div>
-            <div class="remove-doc-btn" onclick="removeExtractedUrl()">×</div>
+            <div class="doc-right-actions">
+                <div class="remove-doc-btn">
+                    ${isAlone ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>' : closeSvg}
+                </div>
+                ${sizeStr ? `<div class="doc-size-label">${sizeStr}</div>` : ''}
+            </div>
         `;
+
+        // Direct click removal
+        const removeBtn = docDiv.querySelector('.remove-doc-btn');
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeExtractedUrl();
+        });
+
+        // Long press for doc
+        let pressTimer;
+        docDiv.addEventListener('touchstart', (e) => {
+            pressTimer = setTimeout(() => {
+                if (navigator.vibrate) navigator.vibrate(50);
+                showFileContext();
+            }, 600);
+        });
+        docDiv.addEventListener('touchend', () => clearTimeout(pressTimer));
+        docDiv.addEventListener('touchmove', () => clearTimeout(pressTimer));
+
         previewImages.appendChild(docDiv);
     }
 
+    // Handle Images
     uploadedImages.forEach((img, index) => {
         const div = document.createElement('div');
         div.className = 'preview-img-wrapper';
         div.innerHTML = `
             <img src="${img.url}">
-            <div class="remove-img-btn" onclick="removeImage(${index})">×</div>
+            <div class="remove-img-btn">${closeSvg}</div>
         `;
+
+        // Click to preview
+        div.addEventListener('click', () => {
+            previewImage(img.url);
+        });
+
+        // Click removal
+        const removeBtn = div.querySelector('.remove-img-btn');
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeImage(index);
+        });
+
+        // Long press for image
+        let pressTimer;
+        div.addEventListener('touchstart', (e) => {
+            pressTimer = setTimeout(() => {
+                if (navigator.vibrate) navigator.vibrate(50);
+                showImageContext(img.url, index);
+            }, 600);
+        });
+        div.addEventListener('touchend', () => clearTimeout(pressTimer));
+        div.addEventListener('touchmove', () => clearTimeout(pressTimer));
+
         previewImages.appendChild(div);
     });
 
     if (previewImages.innerHTML === '') {
         previewImages.style.display = 'none';
+        previewImages.classList.remove('has-content');
     } else {
         previewImages.style.display = 'flex';
+        previewImages.classList.add('has-content');
     }
+}
+
+window.showFileContext = function() {
+    const backdrop = document.getElementById('actionSheetBackdrop');
+    const sheet = document.getElementById('actionSheet');
+    const content = document.getElementById('actionSheetContent');
+
+    content.innerHTML = `
+        <div style="padding:15px; font-weight:bold; border-bottom:1px solid var(--bg-tertiary); color:var(--text-secondary); font-size:14px;">文件操作</div>
+        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); color:#ff4d4f; font-size:16px;" onclick="removeExtractedUrl(); closeActionSheet();">删除该文件</div>
+    `;
+
+    backdrop.classList.add('active');
+    sheet.classList.add('active');
+    sheet.style.transform = 'translateY(0)';
+}
+
+window.showImageContext = function(imgUrl, index) {
+    const backdrop = document.getElementById('actionSheetBackdrop');
+    const sheet = document.getElementById('actionSheet');
+    const content = document.getElementById('actionSheetContent');
+
+    content.innerHTML = `
+        <div style="padding:15px; font-weight:bold; border-bottom:1px solid var(--bg-tertiary); color:var(--text-secondary); font-size:14px;">图片操作</div>
+        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); color:#ff4d4f; font-size:16px;" onclick="removeImage(${index}); closeActionSheet();">删除该图片</div>
+        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="previewImage('${imgUrl}'); closeActionSheet();">预览图片</div>
+    `;
+
+    backdrop.classList.add('active');
+    sheet.classList.add('active');
+    sheet.style.transform = 'translateY(0)';
+}
+
+window.previewImage = function(url) {
+    const modal = document.getElementById('imageModal');
+    const img = document.getElementById('modalImage');
+    if (modal && img) {
+        img.src = url;
+        modal.style.display = 'flex';
+    }
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 window.removeImage = function(index) {
@@ -1229,6 +1339,7 @@ function renderHistoryList() {
         // Touch events for long press (context menu or delete)
         div.addEventListener('touchstart', (e) => {
             pressTimer = setTimeout(() => {
+                if (navigator.vibrate) navigator.vibrate(50);
                 showHistoryContext(item, index, e);
             }, 600);
         });
@@ -1279,14 +1390,14 @@ function renderHistoryList() {
             try { hostname = new URL(item.url).hostname; } catch(e) {}
             urlDisplay = `<div style="color:#4361ee; font-size:12px; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
-                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${hostname}</span>
+                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(hostname)}</span>
             </div>`;
         }
 
         div.innerHTML = `
             <div class="history-date">${dateStr}</div>
             ${urlDisplay}
-            <div class="history-preview">${displayTitle}</div>
+            <div class="history-preview">${escapeHTML(displayTitle)}</div>
         `;
         list.appendChild(div);
     });
@@ -1297,8 +1408,10 @@ function showHistoryContext(item, index, e) {
     const sheet = document.getElementById('actionSheet');
     const content = document.getElementById('actionSheetContent');
 
+    const displayTitle = item.title || '操作记录';
+
     content.innerHTML = `
-        <div style="padding:15px; font-weight:bold; border-bottom:1px solid var(--bg-tertiary); color:var(--text-secondary); font-size:14px;">操作记录</div>
+        <div style="padding:15px; font-weight:bold; border-bottom:1px solid var(--bg-tertiary); color:var(--text-secondary); font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(displayTitle)}</div>
         <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); color:#ff4d4f; font-size:16px;" onclick="deleteHistoryItem(${index})">删除此条记录</div>
         <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="showResultFromHistory(${index})">查看详情</div>
     `;
@@ -1308,8 +1421,36 @@ function showHistoryContext(item, index, e) {
     sheet.style.transform = 'translateY(0)';
 }
 
-window.showResultFromHistory = function(index) {
-    const item = allHistory[index];
+window.showResultFromHistory = async function(index) {
+    let item = allHistory[index];
+    
+    // If info is not full, load it now
+    if (!item.result && !item.content) {
+        try {
+            setToastText('正在加载详情...');
+            const loadingToast = document.getElementById('loadingToast');
+            if (loadingToast) loadingToast.classList.add('active');
+
+            const fullItem = await window.api.invoke('get-history-item', item.timestamp);
+            
+            if (loadingToast) loadingToast.classList.remove('active');
+            
+            if (!fullItem) {
+                showToast('无法加载历史详情', 'error');
+                return;
+            }
+            // Update local cache
+            allHistory[index] = fullItem;
+            item = fullItem;
+        } catch (err) {
+            console.error(err);
+            const loadingToast = document.getElementById('loadingToast');
+            if (loadingToast) loadingToast.classList.remove('active');
+            showToast('加载失败', 'error');
+            return;
+        }
+    }
+
     showResult(item.result, item.content, item.images || [], item.url);
     showResultView();
     closeActionSheet();
@@ -1787,3 +1928,11 @@ window.handleLogout = async function() {
         }
     }
 };
+
+// --- Utils ---
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
