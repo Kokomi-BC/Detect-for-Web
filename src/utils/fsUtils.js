@@ -3,12 +3,19 @@ const fs = require('fs');
 const fsPromises = require('fs').promises;
 const crypto = require('crypto');
 
-const IMG_CACHE_DIR = path.join(__dirname, '../../data/img_cache');
-const USERS_DATA_DIR = path.join(__dirname, '../../data/users');
+const DATA_DIR = path.join(__dirname, '../../data');
+const IMG_CACHE_DIR = path.join(DATA_DIR, 'img_cache');
+const USERS_DATA_DIR = path.join(DATA_DIR, 'users');
+const PRESETS_DIR = path.join(DATA_DIR, 'presets');
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+const ANOMALIES_DIR = path.join(DATA_DIR, 'anomalies');
 
-if (!fs.existsSync(IMG_CACHE_DIR)) {
-    fs.mkdirSync(IMG_CACHE_DIR, { recursive: true });
-}
+// Ensure essential directories exist
+[DATA_DIR, IMG_CACHE_DIR, USERS_DATA_DIR, PRESETS_DIR, UPLOADS_DIR, ANOMALIES_DIR].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+});
 
 function getUserHistoryPath(userId) {
     return path.join(USERS_DATA_DIR, String(userId), 'history.json');
@@ -20,22 +27,61 @@ function getUserAvatarDir(userId) {
 
 async function ensureUserDir(userId) {
     const userDir = getUserAvatarDir(userId);
-    await fsPromises.mkdir(userDir, { recursive: true });
+    if (!fs.existsSync(userDir)) {
+        await fsPromises.mkdir(userDir, { recursive: true });
+    }
 }
 
 async function findAvatarFile(userId) {
     const dir = getUserAvatarDir(userId);
     if (!fs.existsSync(dir)) return null;
-    const files = await fsPromises.readdir(dir);
-    const avatarFile = files.find(f => f.startsWith('avatar.'));
-    return avatarFile ? path.join(dir, avatarFile) : null;
+    try {
+        const files = await fsPromises.readdir(dir);
+        const avatarFile = files.find(f => f.startsWith('avatar.'));
+        return avatarFile ? path.join(dir, avatarFile) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+async function getFolderSize(dirPath) {
+    if (!fs.existsSync(dirPath)) return 0;
+    try {
+        const files = await fsPromises.readdir(dirPath);
+        let totalSize = 0;
+        for (const file of files) {
+            const fullPath = path.join(dirPath, file);
+            const stats = await fsPromises.stat(fullPath);
+            if (stats.isFile()) {
+                totalSize += stats.size;
+            } else if (stats.isDirectory()) {
+                totalSize += await getFolderSize(fullPath);
+            }
+        }
+        return totalSize;
+    } catch (e) {
+        return 0;
+    }
+}
+
+async function clearFolderContents(dirPath) {
+    if (!fs.existsSync(dirPath)) return true;
+    try {
+        const files = await fsPromises.readdir(dirPath);
+        for (const file of files) {
+            await fsPromises.rm(path.join(dirPath, file), { recursive: true, force: true });
+        }
+        return true;
+    } catch (e) {
+        console.error(`Error clearing folder ${dirPath}:`, e);
+        return false;
+    }
 }
 
 async function deleteCachedImages(imageUrls) {
     if (!imageUrls || !Array.isArray(imageUrls)) return;
     for (const url of imageUrls) {
         let targetUrl = url;
-        // Decode nested proxy URLs
         while (targetUrl && (targetUrl.startsWith('/api/proxy-image') || targetUrl.includes('api/proxy-image?url='))) {
             try {
                 const urlObj = new URL(targetUrl, 'https://localhost');
@@ -50,16 +96,21 @@ async function deleteCachedImages(imageUrls) {
             const metaPath = cachePath + '.json';
             if (fs.existsSync(cachePath)) await fsPromises.unlink(cachePath);
             if (fs.existsSync(metaPath)) await fsPromises.unlink(metaPath);
-        } catch (e) { console.error('Delete cache error:', e); }
+        } catch (e) {}
     }
 }
 
 module.exports = {
+    DATA_DIR,
     IMG_CACHE_DIR,
     USERS_DATA_DIR,
+    PRESETS_DIR,
+    UPLOADS_DIR,
     getUserHistoryPath,
     getUserAvatarDir,
     ensureUserDir,
     findAvatarFile,
+    getFolderSize,
+    clearFolderContents,
     deleteCachedImages
 };

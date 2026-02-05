@@ -10,7 +10,15 @@ const { pool } = require('../config/db');
 const { authenticate, authenticateAdmin } = require('../middleware/auth');
 
 // Utils & Controllers
-const { IMG_CACHE_DIR, USERS_DATA_DIR, PRESETS_DIR, getUserHistoryPath, findAvatarFile, deleteCachedImages, ensureUserDir } = require('../utils/fsUtils');
+const { 
+    IMG_CACHE_DIR, 
+    USERS_DATA_DIR, 
+    PRESETS_DIR, 
+    getUserHistoryPath, 
+    findAvatarFile, 
+    deleteCachedImages, 
+    ensureUserDir 
+} = require('../utils/fsUtils');
 const historyController = require('../controllers/historyController');
 const adminController = require('../controllers/adminController');
 const userController = require('../controllers/userController');
@@ -84,6 +92,11 @@ module.exports = function(services, state) {
                     break;
                 }
                 case 'convert-image-to-base64': result = await handleConvertImage(args[0]); break;
+                
+                // Admin via Invoke (Fallback)
+                case 'get-cache-stats': result = await adminController.getCacheStats(); break;
+                case 'clear-cache': result = await adminController.handleClearCache(); break;
+                
                 default: result = { success: false, error: 'Unknown channel: ' + channel };
             }
             res.json({ success: true, data: result });
@@ -158,15 +171,117 @@ module.exports = function(services, state) {
         } catch (e) { res.status(500).send('Proxy error'); }
     });
 
-    // Admin Routes
     router.get('/admin/users', authenticate, authenticateAdmin, async (req, res) => {
         try { res.json(await adminController.handleListUsers(pool, req.query)); }
         catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });
 
+    router.get('/admin/anomalies', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.handleAnomalies(extractionManager, req.query)); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/anomalies/clear', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.handleClearAnomalies(extractionManager)); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/anomalies/delete', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.handleDeleteAnomaly(extractionManager, req.body.id)); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.get('/admin/anomalies/view', authenticate, authenticateAdmin, async (req, res) => {
+        try {
+            const id = req.query.id;
+            const anomaliesDir = path.join(__dirname, '../../data/anomalies');
+            const dumpPath = path.join(anomaliesDir, `${id}.html`);
+            if (fs.existsSync(dumpPath)) res.sendFile(dumpPath);
+            else res.status(404).send('Snapshot not found');
+        } catch (err) { res.status(500).send('Error'); }
+    });
+
+    router.get('/admin/ip-logs', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.handleIPLogs(pool, req.query)); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/ip-logs/clear', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.handleClearIPLogs(pool)); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.get('/admin/blacklist', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.handleBlacklist(pool, req.query)); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/blacklist/add', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.addBlacklist(pool, req.body)); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/blacklist/remove', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.removeBlacklist(pool, req.body.id)); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.get('/admin/crawler/settings', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.getCrawlerSettings(pool)); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/crawler/settings', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.saveCrawlerSettings(pool, req.body)); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.get('/admin/crawler/logs', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.handleCrawlerLogs(pool, req.query)); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/crawler/logs/clear', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.clearCrawlerLogs(pool)); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.get('/admin/config', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.getConfig()); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/config', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.saveConfig(req.body)); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.get('/admin/presets', authenticate, authenticateAdmin, async (req, res) => {
+        try {
+            const p = path.join(PRESETS_DIR, 'themes.json');
+            if (fs.existsSync(p)) res.json({ success: true, data: JSON.parse(await fsPromises.readFile(p, 'utf8')) });
+            else res.json({ success: true, data: [] });
+        } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    });
+
+    router.post('/admin/presets', authenticate, authenticateAdmin, async (req, res) => {
+        try {
+            const p = path.join(PRESETS_DIR, 'themes.json');
+            await fsPromises.writeFile(p, JSON.stringify(req.body, null, 2));
+            res.json({ success: true });
+        } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    });
+
     router.post('/admin/user/add', authenticate, authenticateAdmin, async (req, res) => {
         try { res.json(await adminController.addUser(pool, req.body)); }
         catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/user/approve', authenticate, authenticateAdmin, async (req, res) => {
+        try {
+            await pool.query('UPDATE users SET status = ? WHERE id = ?', ['active', req.body.userId]);
+            res.json({ success: true });
+        } catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });
 
     router.post('/admin/user/delete', authenticate, authenticateAdmin, async (req, res) => {
@@ -189,7 +304,30 @@ module.exports = function(services, state) {
     });
 
     router.get('/admin/histories', authenticate, authenticateAdmin, async (req, res) => {
-        try { res.json(await adminController.handleAdminHistories(pool, req.query, USERS_DATA_DIR)); }
+        try { res.json(await adminController.handleAdminHistories(pool, req.query)); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/history/delete', authenticate, authenticateAdmin, async (req, res) => {
+        try {
+            const { userId, timestamp } = req.body;
+            const hPath = getUserHistoryPath(userId);
+            if (fs.existsSync(hPath)) {
+                let history = JSON.parse(await fsPromises.readFile(hPath, 'utf8'));
+                history = history.filter(h => h.timestamp !== timestamp);
+                await fsPromises.writeFile(hPath, JSON.stringify(history, null, 2));
+            }
+            res.json({ success: true });
+        } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.get('/admin/cache/stats', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.getCacheStats()); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    });
+
+    router.post('/admin/cache/clear', authenticate, authenticateAdmin, async (req, res) => {
+        try { res.json(await adminController.handleClearCache()); }
         catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });
 
@@ -217,12 +355,33 @@ module.exports = function(services, state) {
         } catch(e) { res.status(500).send('Error'); }
     });
 
+    router.get('/public/presets', async (req, res) => {
+        try {
+            const p = path.join(PRESETS_DIR, 'themes.json');
+            if (fs.existsSync(p)) res.json({ success: true, data: JSON.parse(await fsPromises.readFile(p, 'utf8')) });
+            else res.json({ success: true, data: [] });
+        } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    });
+
     router.post('/user/avatar', authenticate, uploadAvatar.single('avatar'), async (req, res) => {
         try { 
             if (!req.file) throw new Error('No file'); 
             await userController.handleAvatarUpload(req.userId, req.file); 
             res.json({ success: true }); 
         } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    });
+
+    router.delete('/user/avatar', authenticate, async (req, res) => {
+        try {
+            const path = await findAvatarFile(req.userId);
+            if (path && fs.existsSync(path)) await fsPromises.unlink(path);
+            res.json({ success: true });
+        } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    });
+
+    router.post('/user/update', authenticate, async (req, res) => {
+        try { res.json(await userController.handleUpdateUser(pool, req.userId, { ...req.body, isSelfUpdate: true })); }
+        catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });
 
     router.get('/user/preferences', authenticate, async (req, res) => {
@@ -240,6 +399,16 @@ module.exports = function(services, state) {
             await fsPromises.writeFile(p, JSON.stringify({ ...cur, ...req.body }, null, 2)); 
             res.json({ success: true }); 
         } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+    });
+
+    router.get('/admin/proxy', authenticate, authenticateAdmin, async (req, res) => {
+        try {
+            const url = req.query.url;
+            if (!url) return res.status(400).send('URL required');
+            const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+            const body = await response.text();
+            res.send(body);
+        } catch (e) { res.status(500).send('Proxy failed'); }
     });
 
     return router;

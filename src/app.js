@@ -201,6 +201,7 @@ app.use(express.static(path.join(__dirname, '../dist'), {
 }));
 
 app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/')) return res.status(404).json({ success: false, error: 'API route not found' });
     if (req.path === '/') {
         const token = req.cookies.token;
         if (token) {

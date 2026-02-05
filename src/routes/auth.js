@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+
+// Global state for brute force protection (persistent during process life)
+var loginAttempts = new Map(); 
+var loginBlockHistory = new Map(); 
+
 const { pool } = require('../config/db');
 const { SECRET_KEY, authenticate } = require('../middleware/auth');
 const { getNextAvailableUserId } = require('../utils/dbUtils');
-
-// Brute force protection
-const loginAttempts = new Map(); // IP -> { count, lastAttempt }
-const loginBlockHistory = new Map(); // IP -> { count, lastBlockTime }
 
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;

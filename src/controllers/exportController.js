@@ -7,62 +7,79 @@ async function handleExportPdf(req, res, args) {
     const { html } = args[0];
     let browser = null;
     try {
-        const fontPath = path.join(__dirname, '../../font/HarmonyOS_Sans_Regular.ttf');
-        const boldPath = path.join(__dirname, '../../font/HarmonyOS_Sans_Bold.ttf');
-        
-        let fontBase64 = '';
-        let boldFontBase64 = '';
-        
-        try {
+        const fontFiles = {
+            '400': '../../font/HarmonyOS_Sans_Regular.ttf',
+            '700': '../../font/HarmonyOS_Sans_Bold.ttf',
+            '500': '../../font/HarmonyOS_Sans_Medium.ttf',
+            '300': '../../font/HarmonyOS_Sans_Light.ttf'
+        };
+
+        let fontStyles = '';
+        for (const [weight, relativePath] of Object.entries(fontFiles)) {
+            const fontPath = path.join(__dirname, relativePath);
             if (fs.existsSync(fontPath)) {
-                const regularFont = await fsPromises.readFile(fontPath);
-                fontBase64 = regularFont.toString('base64');
+                try {
+                    const buffer = await fsPromises.readFile(fontPath);
+                    const base64 = buffer.toString('base64');
+                    fontStyles += `
+                        @font-face {
+                            font-family: 'HarmonyOS Sans';
+                            src: url(data:font/ttf;base64,${base64}) format('truetype');
+                            font-weight: ${weight};
+                            font-style: normal;
+                            font-display: block;
+                        }
+                    `;
+                } catch (e) {
+                    console.warn(`Failed to load font weight ${weight}:`, e);
+                }
             }
-            if (fs.existsSync(boldPath)) {
-                const boldFont = await fsPromises.readFile(boldPath);
-                boldFontBase64 = boldFont.toString('base64');
-            }
-        } catch (fontErr) {
-            console.warn('Font loading failed:', fontErr);
         }
 
         browser = await chromium.launch({
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox',
+                '--disable-font-subpixel-positioning',
+                '--font-render-hinting=none'
+            ]
         });
         const context = await browser.newContext();
         const page = await context.newPage();
         
-        // Use a simpler approach for font injection to ensure stability
-        await page.setContent(html, { waitUntil: 'load' });
+        // 1. Set content
+        await page.setContent(html, { waitUntil: 'networkidle' });
 
-        if (fontBase64) {
-            await page.addStyleTag({
-                content: `
-                    @font-face {
-                        font-family: 'HarmonyOS Sans';
-                        src: url(data:font/ttf;base64,${fontBase64}) format('truetype');
-                        font-weight: normal;
-                        font-style: normal;
-                    }
-                    ${boldFontBase64 ? `
-                    @font-face {
-                        font-family: 'HarmonyOS Sans';
-                        src: url(data:font/ttf;base64,${boldFontBase64}) format('truetype');
-                        font-weight: bold;
-                        font-style: normal;
-                    }
-                    ` : ''}
-                    * {
-                        font-family: 'HarmonyOS Sans', -apple-system, sans-serif !important;
-                    }
-                `
-            });
-        }
+        // 2. Inject font facial and force override
+        // We use addStyleTag which is more reliable than embedding in setContent for some reason
+        await page.addStyleTag({
+            content: `
+                ${fontStyles}
+                
+                * {
+                    font-family: 'HarmonyOS Sans', "PingFang SC", "Microsoft YaHei", sans-serif !important;
+                }
+                
+                h1, h2, h3, h4, h5, h6, strong, b {
+                    font-weight: 700 !important;
+                }
+                
+                body {
+                    -webkit-font-smoothing: antialiased;
+                    -moz-osx-font-smoothing: grayscale;
+                    text-rendering: optimizeLegibility;
+                }
+            `
+        });
 
-        // Wait for fonts to be ready
-        await page.evaluateHandle('document.fonts.ready');
+        // 3. Wait for all fonts (including the newly added ones) to be loaded
+        await page.evaluate(async () => {
+            await document.fonts.ready;
+            // Force a layout reflow
+            document.body.getBoundingClientRect();
+        });
         
-        // Wait a bit more for images and layout
+        // Extra wait for layout stabilization
         await page.waitForTimeout(1500);
 
         const pdfBuffer = await page.pdf({
