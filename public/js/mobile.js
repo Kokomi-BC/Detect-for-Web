@@ -190,7 +190,6 @@ function initSSE() {
 
 function updateStatusUI(status, data) {
     const summaryDescText = document.getElementById('summaryDescText');
-    const loadingToast = document.getElementById('loadingToast');
     
     if (!summaryDescText) return;
 
@@ -216,12 +215,63 @@ function updateStatusUI(status, data) {
     }
     
     // Show toast if we are in input mode (detection just started)
-    if (currentMode === 'input' && loadingToast && !loadingToast.classList.contains('active')) {
-        loadingToast.classList.add('active');
+    if (currentMode === 'input') {
+        showLoadingToast(message);
     }
 }
 
 // Global helper to update Toast with "Dynamic Island" transition
+let toastShowTime = 0;
+let toastHideTimeout = null;
+function showLoadingToast(message) {
+    if (toastHideTimeout) {
+        clearTimeout(toastHideTimeout);
+        toastHideTimeout = null;
+    }
+
+    const loadingToast = document.getElementById('loadingToast');
+    if (loadingToast) {
+        // Reset exit animation styles
+        loadingToast.style.transform = '';
+        loadingToast.style.opacity = '';
+    }
+
+    setToastText(message);
+    if (loadingToast && !loadingToast.classList.contains('active')) {
+        loadingToast.classList.add('active');
+        toastShowTime = Date.now();
+    }
+}
+
+function hideLoadingToast() {
+    const loadingToast = document.getElementById('loadingToast');
+    if (!loadingToast) return;
+    
+    // Minimum display time of 0.5 seconds
+    const minTime = 500;
+    const elapsed = Date.now() - toastShowTime;
+    const remaining = Math.max(0, minTime - elapsed);
+    
+    if (toastHideTimeout) clearTimeout(toastHideTimeout);
+    
+    toastHideTimeout = setTimeout(() => {
+        // Exit animation: Slide up out of screen, then fade out
+        loadingToast.style.transform = 'translateX(-50%) translateY(-150%)';
+        
+        setTimeout(() => {
+            loadingToast.style.opacity = '0';
+        }, 300);
+
+        setTimeout(() => {
+            loadingToast.classList.remove('active');
+            // Restore styles after it's hidden so it can show again normally
+            loadingToast.style.transform = '';
+            loadingToast.style.opacity = '';
+            toastHideTimeout = null;
+        }, 700);
+    }, remaining);
+}
+
 function setToastText(message) {
     const toastMessage = document.getElementById('toastMessage');
     const loadingToast = document.getElementById('loadingToast');
@@ -238,8 +288,10 @@ function setToastText(message) {
         toastMessage.style.transform = 'translateY(0)';
         
         // Dynamic Island Width Transition Trick
-        // We set explicitly to permit CSS transition
-        const contentWidth = document.querySelector('.toast-content').scrollWidth;
+        // We measure the natural width of the content (now that width: 100% is removed from css)
+        const content = document.querySelector('.toast-content');
+        const contentWidth = content.offsetWidth || content.scrollWidth;
+        // Adding specific padding for the capsule look
         loadingToast.style.width = (contentWidth + 60) + 'px'; 
     }, 150);
 }
@@ -689,15 +741,10 @@ async function runDetection() {
     window._abortController = new AbortController();
     window.currentAnalysisStatus = 'initializing';
     
-    const loadingToast = document.getElementById('loadingToast');
-    const toastMessage = document.getElementById('toastMessage');
     const progressBar = document.getElementById('progressBar');
     const progressContainer = document.getElementById('progressBarContainer');
 
-    if (loadingToast) {
-        loadingToast.classList.add('active');
-        setToastText('正在初始化...');
-    }
+    showLoadingToast('正在初始化...');
     if (progressContainer) progressContainer.style.display = 'block';
     
     // --- Progress Bar Logic (Ported from Main.html) ---
@@ -839,7 +886,7 @@ async function runDetection() {
         detectBtn.classList.remove('is-stop'); // BUG FIX: Ensure is-stop is removed
         detectBtn.disabled = false;
         detectBtn.textContent = originalText;
-        if (loadingToast) loadingToast.classList.remove('active');
+        hideLoadingToast();
         if (progressContainer) {
             setTimeout(() => {
                 progressContainer.style.display = 'none';
@@ -1000,11 +1047,7 @@ async function handleDocParsing(file) {
     const reader = new FileReader();
     
     // Show loading UI
-    const loadingToast = document.getElementById('loadingToast');
-    if (loadingToast) {
-        loadingToast.classList.add('active');
-        setToastText('正在解析文件...');
-    }
+    showLoadingToast('正在解析文件...');
 
     try {
         const base64Data = await new Promise((resolve, reject) => {
@@ -1061,7 +1104,7 @@ async function handleDocParsing(file) {
         console.error('Doc parse error:', err);
         showToast('解析失败: ' + err.message, 'error');
     } finally {
-        if (loadingToast) loadingToast.classList.remove('active');
+        hideLoadingToast();
     }
 }
 
@@ -1352,13 +1395,11 @@ function renderHistoryList() {
              let fullItem = item;
              if (!item.result && !item.content) {
                  try {
-                     setToastText('正在加载详情...');
-                     const loadingToast = document.getElementById('loadingToast');
-                     if (loadingToast) loadingToast.classList.add('active');
+                     showLoadingToast('正在加载详情...');
 
                      fullItem = await window.api.invoke('get-history-item', item.timestamp);
                      
-                     if (loadingToast) loadingToast.classList.remove('active');
+                     hideLoadingToast();
                      
                      if (!fullItem) {
                          showToast('无法加载历史详情', 'error');
@@ -1427,13 +1468,11 @@ window.showResultFromHistory = async function(index) {
     // If info is not full, load it now
     if (!item.result && !item.content) {
         try {
-            setToastText('正在加载详情...');
-            const loadingToast = document.getElementById('loadingToast');
-            if (loadingToast) loadingToast.classList.add('active');
+            showLoadingToast('正在加载详情...');
 
             const fullItem = await window.api.invoke('get-history-item', item.timestamp);
             
-            if (loadingToast) loadingToast.classList.remove('active');
+            hideLoadingToast();
             
             if (!fullItem) {
                 showToast('无法加载历史详情', 'error');
@@ -1444,8 +1483,7 @@ window.showResultFromHistory = async function(index) {
             item = fullItem;
         } catch (err) {
             console.error(err);
-            const loadingToast = document.getElementById('loadingToast');
-            if (loadingToast) loadingToast.classList.remove('active');
+            hideLoadingToast();
             showToast('加载失败', 'error');
             return;
         }
@@ -1769,11 +1807,7 @@ async function processAndAddImages(files) {
         if (isHEIC) {
             try {
                 // Show Dynamic Island Toast for conversion
-                const loadingToast = document.getElementById('loadingToast');
-                if (loadingToast) {
-                    setToastText('正在转换 HEIC 图片...');
-                    loadingToast.classList.add('active');
-                }
+                showLoadingToast('正在转换 HEIC 图片...');
 
                 const blob = await heic2any({
                     blob: file,
@@ -1781,7 +1815,7 @@ async function processAndAddImages(files) {
                     quality: 0.7
                 });
                 
-                if (loadingToast) loadingToast.classList.remove('active');
+                hideLoadingToast();
                 
                 const finalBlob = Array.isArray(blob) ? blob[0] : blob;
                 processFile = new File([finalBlob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });

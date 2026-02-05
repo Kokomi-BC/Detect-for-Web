@@ -25,18 +25,18 @@ The application runs as an Express server.
         - Crawler Anomalies: `data/anomalies.json` (metadata) and `data/anomalies/*.html` (page snapshots).
 
 ### Frontend Process (`public/` & `dist/`)
-- **`public/Main.html`**: The main detection interface (Vanilla JS).
+- **`public/Main.html`**: The main desktop detection interface (Vanilla JS).
+- **`public/Mobile.html`**: Mobile-optimized detection interface with "Dynamic Island" UI.
 - **`public/Login.html`**: User authentication gateway.
 - **`public/Welcome.html`**: Intermediate welcome screen.
 - **`public/css/`**: Centralized style management.
     - `variables.css`: Global theme variables and color palette.
     - `common.css`: Shared resets and global components.
-    - `admin.css`, `login.css`, `main.css`, `welcome.css`: Page-specific modular styles.
+    - `main.css`, `mobile.css`, `admin.css`: Page-specific modular styles.
 - **`public/js/`**: Client-side logic.
+    - `mobile.js`: Core logic for mobile version, including Toast management.
     - `theme-loader.js`: Dynamic theme application.
     - `user-editor.js`: User profile editing logic.
-    - `export-manager.js`: Detection history export management.
-- **`public/assets/`**: Static assets like icons and images.
 - **`window.electronAPI` Mock**: A bridge in the frontend that converts old Electron `ipcRenderer.invoke` calls into REST API `fetch` requests to `/api/invoke`.
 
 ## Deployment & Development
@@ -91,6 +91,10 @@ The application runs as an Express server.
     - Maintain "Single Source of Truth" for colors using `variables.css`.
     - Support Dark Mode via `[data-theme="dark"]` attribute on `<html>`.
     - Replace text-based buttons with SVG icons for a modern UI.
+- **Mobile UX**:
+    - **Loading Toast**: Use `showLoadingToast(message)` and `hideLoadingToast()` for consistent "Dynamic Island" status updates.
+    - **Timing**: Loading Toasts have a minimum display duration (default 500ms) and use slide-out + fade animations.
+    - **Actions**: Prefer high-feedback interactions (long press, transitions).
 
 ### Scraper (Extraction)
 - **Engine**: `Crawlee` with `PlaywrightCrawler` (Headless Chromium). 
@@ -118,28 +122,34 @@ src/
     auth.js           # JWT Auth middleware
     logger.js         # Request logger middleware
   utils/
-    utils.js          # Helpers
+    dbUtils.js        # Database helper functions
+    fsUtils.js        # File system helper functions
+    utils.js          # General purpose helpers
 public/
   css/                # Unified CSS Management
     variables.css     # Global Colors & Variables
-    common.css        # Shared Styles
+    common.css        # Shared Resets & Layouts
+    mobile.css        # Mobile-specific styles
+    main.css          # Desktop-specific styles
     admin.css         # Admin Dashboard specific
   js/                 # Client-side JS logic
-    theme-loader.js
-    user-editor.js
-    export-manager.js
-    Mobile.js        # Mobile UI logic
-  assets/
-    ico/              # Application Icons
+    mobile.js         # Core logic for Mobile version
+    theme-loader.js   # Dynamic theme injection
+    user-editor.js    # Entry for user profile editing
+    user-editor-core.js # Shared user editing logic
+    export-manager.js # History export logic
+  assets/             # Static images and icons
   Login.html          # Auth UI
   Welcome.html        # Welcome UI
-  Main.html           # Main UI
-  Admin.html          # Anomaly & Proxy Management UI
-  Mobile.html         # Mobile-friendly UI
+  Main.html           # Main Desktop UI
+  Admin.html          # Admin Dashboard UI
+  Mobile.html         # Mobile-optimized UI
 data/                 # Persistent storage
-  anomalies/          # HTML snapshots of blocked pages
-  anomalies.json      # Persistent anomaly logs
-  users/              # Per-user history folders
+  img_cache/          # Cached external images
+  anomalies/          # Extraction error snapshots
+  anomalies.json      # Extraction error metadata
+  users/              # User-specific history JSONs
 dist/                 # Webpack build output
+storage/              # Crawlee state storage (KV & Queues)
 ```
 
