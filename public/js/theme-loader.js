@@ -103,14 +103,16 @@
         }
     };
 
-    window.applyDynamicTheme = async function() {
+    window.applyDynamicTheme = async function(force = false) {
         try {
-            const cachedData = localStorage.getItem('dynamic_theme_cache');
-            if (cachedData) {
-                const { theme, timestamp } = JSON.parse(cachedData);
-                renderTheme(theme);
-                // Cache for 2 minutes to keep it relatively fresh but avoid spam
-                if (Date.now() - timestamp < 120 * 1000) return;
+            if (!force) {
+                const cachedData = localStorage.getItem('dynamic_theme_cache');
+                if (cachedData) {
+                    const { theme, timestamp } = JSON.parse(cachedData);
+                    renderTheme(theme);
+                    // Cache for 2 minutes to keep it relatively fresh but avoid spam
+                    if (Date.now() - timestamp < 120 * 1000) return;
+                }
             }
 
             const response = await fetch('/api/public/theme');

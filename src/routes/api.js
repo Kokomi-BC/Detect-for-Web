@@ -24,6 +24,28 @@ const adminController = require('../controllers/adminController');
 const userController = require('../controllers/userController');
 const exportController = require('../controllers/exportController');
 
+// Global state for CPU tracking
+let lastCpuInfo = os.cpus();
+let lastCpuUsage = 0;
+function updateCpuUsage() {
+    const currentCpuInfo = os.cpus();
+    if (!currentCpuInfo || currentCpuInfo.length === 0) return;
+    let totalDiff = 0;
+    let idleDiff = 0;
+    for (let i = 0; i < currentCpuInfo.length; i++) {
+        const last = lastCpuInfo[i]?.times;
+        const current = currentCpuInfo[i].times;
+        if (!last) continue;
+        const lastTotal = last.user + last.nice + last.sys + last.idle + last.irq;
+        const currentTotal = current.user + current.nice + current.sys + current.idle + current.irq;
+        totalDiff += (currentTotal - lastTotal);
+        idleDiff += (current.idle - last.idle);
+    }
+    lastCpuInfo = currentCpuInfo;
+    if (totalDiff > 0) lastCpuUsage = Math.max(0, Math.min(100, Math.round(100 * (1 - idleDiff / totalDiff))));
+}
+setInterval(updateCpuUsage, 2000);
+
 // Multer storage configuration for avatars
 const uploadAvatar = multer({
     storage: multer.memoryStorage(),
@@ -89,6 +111,16 @@ module.exports = function(services, state) {
                         }
                     };
                     result = await llmService.analyzeContent(text, imageUrls, url, onStatusChange);
+                    break;
+                }
+                case 'extract-content-sync': {
+                    const url = args[0];
+                    result = await extractionManager.extractContent(url);
+                    break;
+                }
+                case 'cancel-extraction': {
+                    extractionManager.cancelExtraction();
+                    result = { success: true };
                     break;
                 }
                 case 'convert-image-to-base64': result = await handleConvertImage(args[0]); break;
@@ -336,13 +368,26 @@ module.exports = function(services, state) {
             const [[stats]] = await pool.query('SELECT * FROM system_stats WHERE stat_date = CURDATE()');
             const [[yesterday]] = await pool.query('SELECT * FROM system_stats WHERE stat_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY)');
             const [[{ totalUsers }]] = await pool.query('SELECT COUNT(*) as totalUsers FROM users');
+            
+            // System Resource Stats
+            const totalMem = os.totalmem();
+            const freeMem = os.freemem();
+            const usedMem = totalMem - freeMem;
+            const memUsage = Math.round((usedMem / totalMem) * 100);
+
             res.json({ 
                 success: true, 
                 data: stats || {}, 
                 yesterday: yesterday || {}, 
                 totalUsers, 
                 totalAnomalies: extractionManager.getAnomalies().length, 
-                system: { cpuUsage: 0, memUsage: 0, uptime: os.uptime() } 
+                system: { 
+                    cpuUsage: lastCpuUsage, 
+                    memUsage: memUsage, 
+                    totalMem: totalMem,
+                    usedMem: usedMem,
+                    uptime: os.uptime() 
+                } 
             });
         } catch (err) { res.status(500).json({ success: false, error: err.message }); }
     });

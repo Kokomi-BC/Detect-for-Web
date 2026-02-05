@@ -6515,7 +6515,7 @@
                 if (data.success) {
                     // Reload theme from server (which now respects user pref)
                     if (window.applyDynamicTheme) {
-                        await window.applyDynamicTheme();
+                        await window.applyDynamicTheme(true);
                     }
                     // Updates active class
                     initColorPalette();
