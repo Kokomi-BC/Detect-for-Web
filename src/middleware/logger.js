@@ -78,7 +78,7 @@ const loggerMiddleware = async (req, res, next) => {
                 console.error('Failed to log blocked crawler:', e);
             }
         })();
-        res.sendStatus(403);
+        return res.sendStatus(403);
     }
 
     // 2. Blacklist Check

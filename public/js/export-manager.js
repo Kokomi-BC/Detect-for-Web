@@ -8,7 +8,7 @@ class ExportManager {
         ];
     }
 
-    async exportResult() {
+    async exportResult(format = 'html') {
         const resultItem = document.getElementById('resultItem');
         if (!resultItem || !resultItem.classList.contains('active')) {
             if (window.showToast) {
@@ -18,7 +18,7 @@ class ExportManager {
         }
         
         if (window.showToast) {
-            window.showToast('正在准备导出...', 'info');
+            window.showToast(`正在生成 ${format.toUpperCase()} 导出文件，请稍候...`, 'info', 0);
         }
 
         // Clone the result item to modify it for export
@@ -44,8 +44,45 @@ class ExportManager {
         // Construct HTML
         const html = this.buildHtml(clone.outerHTML, cssContent);
 
-        // Trigger download
-        this.downloadFile(html);
+        if (format === 'pdf') {
+            try {
+                const response = await fetch('/api/invoke', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        channel: 'export-pdf',
+                        args: [{ html }]
+                    })
+                });
+
+                if (!response.ok) throw new Error('PDF 导出失败');
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `分析结果_${new Date().getTime()}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                if (window.showToast) {
+                    window.showToast('PDF 报告已生成', 'success');
+                }
+            } catch (err) {
+                console.error('PDF Export Error:', err);
+                if (window.showToast) {
+                    window.showToast(err.message || 'PDF 导出失败', 'error');
+                }
+            }
+        } else {
+            // Trigger download for HTML
+            this.downloadFile(html);
+        }
     }
 
     async processImages(container) {
@@ -168,7 +205,7 @@ class ExportManager {
                 overflow: auto !important;
                 background: var(--bg-primary); 
                 color: var(--text-primary);
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                font-family: "HarmonyOS Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "WenQuanYi Zen Hei", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
                 margin: 0;
                 padding: 0;
                 user-select: text !important;

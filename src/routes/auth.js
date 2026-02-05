@@ -3,22 +3,11 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/db');
 const { SECRET_KEY, authenticate } = require('../middleware/auth');
+const { getNextAvailableUserId } = require('../utils/dbUtils');
 
 // Brute force protection
 const loginAttempts = new Map(); // IP -> { count, lastAttempt }
 const loginBlockHistory = new Map(); // IP -> { count, lastBlockTime }
-
-// --- Helper to get smallest available ID ---
-async function getNextAvailableUserId() {
-    const [rows] = await pool.query(`
-        SELECT 
-            CASE 
-                WHEN NOT EXISTS (SELECT 1 FROM users WHERE id = 1) THEN 1 
-                ELSE (SELECT MIN(id + 1) FROM users WHERE (id + 1) NOT IN (SELECT id FROM users)) 
-            END AS next_id
-    `);
-    return rows[0].next_id;
-}
 
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
@@ -195,4 +184,3 @@ router.post('/logout', (req, res) => {
 });
 
 module.exports = router;
-module.exports.getNextAvailableUserId = getNextAvailableUserId;
