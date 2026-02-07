@@ -90,9 +90,14 @@ class LLMService {
         throw new Error('搜索接口未配置 (Search API Key is missing)');
       }
       
-      const searchUrl = (this.config && this.config.search && this.config.search.baseURL) || 'https://api.bochaai.com/v1/web-search';
+      let searchUrl = (this.config && this.config.search && this.config.search.baseURL) || 'https://api.bochaai.com/v1/web-search';
       
-      console.log(`正在执行联网搜索: ${query}`);
+      // Fix: If it's a versioned base URL, append the endpoint
+      if (searchUrl.endsWith('/v1') || searchUrl.endsWith('/v1/')) {
+        searchUrl = searchUrl.replace(/\/$/, '') + '/web-search';
+      }
+
+      console.log(`正在执行联网搜索: ${query} (URL: ${searchUrl})`);
       const response = await fetch(searchUrl, {
         method: 'POST',
         headers: {
@@ -129,16 +134,18 @@ class LLMService {
         
         // 返回包含格式化字符串和原始数据的对象
         return {
+          success: true,
           formattedString: toonResult,
           rawResults: results
         };
       }
       
-      return { formattedString: "未搜索到相关结果。", rawResults: [] };
+      return { success: true, formattedString: "未搜索到相关结果。", rawResults: [] };
     } catch (error) {
       console.error('联网搜索失败:', error);
       // Return error structure that matches the expected object format
       return { 
+        success: false,
         formattedString: `(搜索遇到错误: ${error.message})`, 
         rawResults: [] 
       };
@@ -305,6 +312,17 @@ Summary: Use concise Chinese keywords for search; output strictly valid JSON; al
         // 执行搜索
         // 修改：现在 performWebSearch 返回 { formattedString, rawResults } 用于前端展示
         const searchData = await this.performWebSearch(result.search_query);
+        
+        if (!searchData.success) {
+            console.warn(`联网搜索遇到问题: ${searchData.formattedString}`);
+            if (typeof onStatusChange === 'function') {
+                onStatusChange('search-failed', { 
+                    query: result.search_query, 
+                    error: searchData.formattedString 
+                });
+            }
+        }
+
         const searchSummary = typeof searchData === 'object' ? searchData.formattedString : searchData;
         
         // 保存原始搜索结果以便合并到最终输出
@@ -395,10 +413,10 @@ Summary: Use concise Chinese keywords for search; output strictly valid JSON; al
         try {
           return JSON.parse(match[0]);
         } catch (e2) {
-          return { error: '解析响应失败', raw: content };
+          throw new Error('解析响应失败');
         }
       }
-      return { error: '解析响应失败', raw: content };
+      throw new Error('解析响应失败');
     }
   }
 }

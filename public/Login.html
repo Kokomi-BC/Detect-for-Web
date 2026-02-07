@@ -195,7 +195,7 @@
                 
                 const data = await res.json();
                 
-                if (data.success) {
+                if (data.status !== "fail") {
                     if (data.message) {
                         // Registration success message
                         alert(data.message);
@@ -207,7 +207,7 @@
                         window.location.href = '/Welcome';
                     }
                 } else {
-                    showError(data.error || '操作失败，请重试');
+                    showError(data.message || data.error || '操作失败，请重试');
                 }
             } catch (err) {
                 console.error(err);

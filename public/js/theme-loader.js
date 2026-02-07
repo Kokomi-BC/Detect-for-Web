@@ -118,7 +118,7 @@
             const response = await fetch('/api/public/theme');
             const data = await response.json();
             
-            if (data.success && data.theme) {
+            if (data.status !== 'fail' && data.theme) {
                 localStorage.setItem('dynamic_theme_cache', JSON.stringify({
                     theme: data.theme,
                     timestamp: Date.now()

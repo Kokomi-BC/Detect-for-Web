@@ -17,11 +17,23 @@ router.post('/login', async (req, res) => {
         
         // Length validation
         if (!username || username.length < 3 || username.length > 20) {
-            return res.status(400).json({ success: false, error: '用户名长度需在3-20位之间' });
+            return res.status(400).json({
+            "status": "fail",
+            "code": 400,
+            "message": '用户名长度需在3-20位之间',
+            "data": {},
+            "error": {}
+        });
         }
         // Password is SHA256 hashed on client (64 chars)
         if (!password || password.length < 10 || password.length > 128) {
-            return res.status(400).json({ success: false, error: '无效的要求' });
+            return res.status(400).json({
+            "status": "fail",
+            "code": 400,
+            "message": '无效的要求',
+            "data": {},
+            "error": {}
+        });
         }
 
         const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '0.0.0.0';
@@ -32,7 +44,13 @@ router.post('/login', async (req, res) => {
         
         // Check if currently blocked (30s)
         if (attempts.count >= 3 && now - attempts.lastAttempt < 30000) {
-            return res.status(429).json({ success: false, error: '登录失败次数过多，请30秒后再试' });
+            return res.status(429).json({
+            "status": "fail",
+            "code": 429,
+            "message": '登录失败次数过多，请30秒后再试',
+            "data": {},
+            "error": {}
+        });
         }
         
         // If block expired, reset count
@@ -51,11 +69,23 @@ router.post('/login', async (req, res) => {
             if (!isMatch) {
                 const count = (attempts.count || 0) + 1;
                 loginAttempts.set(ip, { count, lastAttempt: now });
-                return res.status(401).json({ success: false, error: '用户名或密码错误' });
+                return res.status(401).json({
+            "status": "fail",
+            "code": 401,
+            "message": '用户名或密码错误',
+            "data": {},
+            "error": {}
+        });
             }
 
             if (user.status !== 'active') {
-                return res.status(401).json({ success: false, error: '账户待审核，请联系管理员' });
+                return res.status(401).json({
+            "status": "fail",
+            "code": 401,
+            "message": '账户待审核，请联系管理员',
+            "data": {},
+            "error": {}
+        });
             }
 
             // Reset attempts on successful login
@@ -87,7 +117,7 @@ router.post('/login', async (req, res) => {
                 maxAge: 12 * 60 * 60 * 1000 
             });
             
-            res.json({ success: true, userId: user.id, role: user.role });
+            return res.json({ status: "success", userId: user.id, role: user.role });
         } else {
             // Track failed attempts
             attempts.count++;
@@ -114,16 +144,40 @@ router.post('/login', async (req, res) => {
                         await pool.query('INSERT IGNORE INTO ip_blacklist (ip, reason) VALUES (?, ?)', [ip, '多次触发登录频次限制 (自动封禁)']);
                         loginAttempts.delete(ip);
                         loginBlockHistory.delete(ip);
-                        return res.status(403).json({ success: false, error: '您的 IP 已被暂时封禁，请联系管理员' });
+                        return res.status(403).json({
+            "status": "fail",
+            "code": 403,
+            "message": '您的 IP 已被暂时封禁，请联系管理员',
+            "data": {},
+            "error": {}
+        });
                      } catch (e) { }
                 }
-                return res.status(429).json({ success: false, error: '登录失败次数过多，请30秒后再试' });
+                return res.status(429).json({
+            "status": "fail",
+            "code": 429,
+            "message": '登录失败次数过多，请30秒后再试',
+            "data": {},
+            "error": {}
+        });
             }
-            res.status(401).json({ success: false, error: '用户名或密码错误' });
+            return res.status(401).json({
+            "status": "fail",
+            "code": 401,
+            "message": '用户名或密码错误',
+            "data": {},
+            "error": {}
+        });
         }
     } catch (err) {
         console.error('Login error:', err);
-        res.status(500).json({ success: false, error: err.message });
+        return res.status(500).json({
+            "status": "fail",
+            "code": 500,
+            "message": err.message,
+            "data": {},
+            "error": {}
+        });
     }
 });
 
@@ -132,23 +186,47 @@ router.post('/register', async (req, res) => {
 
     // Length validation
     if (!username || username.length < 3 || username.length > 20) {
-        return res.status(400).json({ success: false, error: '用户名长度需在3-20位之间' });
+        return res.status(400).json({
+            "status": "fail",
+            "code": 400,
+            "message": '用户名长度需在3-20位之间',
+            "data": {},
+            "error": {}
+        });
     }
     // Password is SHA256 hashed on client (64 chars)
     if (!password || password.length < 10 || password.length > 128) {
-        return res.status(400).json({ success: false, error: '注册参数错误' });
+        return res.status(400).json({
+            "status": "fail",
+            "code": 400,
+            "message": '注册参数错误',
+            "data": {},
+            "error": {}
+        });
     }
 
     try {
         // Check for pending users count
         const [pendingRows] = await pool.query('SELECT COUNT(*) as count FROM users WHERE status = ?', ['pending']);
         if (pendingRows[0].count >= 10) {
-            return res.status(403).json({ success: false, error: '目前待审批用户较多，请稍后重试或联系管理员' });
+            return res.status(403).json({
+            "status": "fail",
+            "code": 403,
+            "message": '目前待审批用户较多，请稍后重试或联系管理员',
+            "data": {},
+            "error": {}
+        });
         }
 
         const [rows] = await pool.query('SELECT id FROM users WHERE username = ?', [username]);
         if (rows.length > 0) {
-            return res.status(400).json({ success: false, error: '用户名已存在' });
+            return res.status(400).json({
+            "status": "fail",
+            "code": 400,
+            "message": '用户名已存在',
+            "data": {},
+            "error": {}
+        });
         }
         
         const nextId = await getNextAvailableUserId();
@@ -165,9 +243,15 @@ router.post('/register', async (req, res) => {
             `);
         } catch(e) {}
             
-        res.json({ success: true, message: '注册成功，请等待管理员审核' });
+        return res.json({ status: "success", message: '注册成功，请等待管理员审核' });
     } catch (err) {
-        res.status(500).json({ success: false, error: '注册失败: ' + err.message });
+        return res.status(500).json({
+            "status": "fail",
+            "code": 500,
+            "message": '注册失败: ' + err.message,
+            "data": {},
+            "error": {}
+        });
     }
 });
 
@@ -175,18 +259,30 @@ router.get('/me', authenticate, async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT id, username, role, last_login_at, last_login_ip FROM users WHERE id = ?', [req.userId]);
         if (rows.length > 0) {
-            res.json({ success: true, user: rows[0] });
+            return res.json({ status: "success", user: rows[0] });
         } else {
-            res.status(404).json({ success: false, error: 'User not found' });
+            return res.status(404).json({
+            "status": "fail",
+            "code": 404,
+            "message": 'User not found',
+            "data": {},
+            "error": {}
+        });
         }
     } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
+        return res.status(500).json({
+            "status": "fail",
+            "code": 500,
+            "message": err.message,
+            "data": {},
+            "error": {}
+        });
     }
 });
 
 router.post('/logout', (req, res) => {
     res.clearCookie('token');
-    res.json({ success: true });
+    return res.json({ status: "success" });
 });
 
 module.exports = router;

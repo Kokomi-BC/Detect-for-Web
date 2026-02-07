@@ -10,8 +10,7 @@ window.api = {
         });
         const result = await response.json();
         // Standard API Logic
-        if (result.error) throw new Error(result.error);
-        if (result.success === false) throw new Error('Request failed');
+        if (result.status === 'fail') throw new Error(result.message || result.error || 'Request failed');
         // Handle direct data return or nested data property depending on backend
         // Backend returns: { success: true, data: ... }
         return result.data; 
@@ -193,30 +192,66 @@ function updateStatusUI(status, data) {
     
     if (!summaryDescText) return;
 
+    // Clear any existing search timer
+    if (window.mobileStatusTimeout) {
+        clearTimeout(window.mobileStatusTimeout);
+        window.mobileStatusTimeout = null;
+    }
+
+    const applyMessage = (msg) => {
+        setToastText(msg);
+        if (summaryDescText && summaryDescText.textContent !== msg) {
+            summaryDescText.textContent = msg;
+        }
+        if (currentMode === 'input') {
+            showLoadingToast(msg);
+        }
+    };
+
     let message = '';
     switch(status) {
         case 'extracting':
-            message = '正在提取内容...';
+            message = data?.step === 'images' ? '正在加载正文图片...' : '正在提取网页内容...';
+            applyMessage(message);
             break;
         case 'parsing':
-            message = '正在解析文本...';
+            message = '正在解析内容...';
+            applyMessage(message);
             break;
         case 'analyzing':
             message = 'AI 正在推理中...';
+            applyMessage(message);
+            break;
+        case 'searching':
+            window.searchStartTime = Date.now();
+            message = `正在联网搜索: ${data?.query || ''}`;
+            applyMessage(message);
+            // Limit search word display to max 5 seconds
+            window.mobileStatusTimeout = setTimeout(() => {
+                updateStatusUI('deep-analysis', null);
+            }, 5000);
+            break;
+        case 'search-failed':
+            message = '联网搜索失败，正在分析...';
+            applyMessage(message);
+            break;
+        case 'deep-analysis':
+            const elapsed = Date.now() - (window.searchStartTime || 0);
+            const minDisplay = 4000;
+            message = '正在进行深度分析...';
+
+            if (elapsed < minDisplay && window.searchStartTime) {
+                // Keep the search keyword visible for at least 4 seconds
+                window.mobileStatusTimeout = setTimeout(() => {
+                    applyMessage(message);
+                }, minDisplay - elapsed);
+            } else {
+                applyMessage(message);
+            }
             break;
         default:
             message = '正在分析中...';
-    }
-
-    setToastText(message);
-    
-    if (summaryDescText && summaryDescText.textContent !== message) {
-        summaryDescText.textContent = message;
-    }
-    
-    // Show toast if we are in input mode (detection just started)
-    if (currentMode === 'input') {
-        showLoadingToast(message);
+            applyMessage(message);
     }
 }
 
@@ -245,6 +280,13 @@ function showLoadingToast(message) {
 
 function hideLoadingToast() {
     const loadingToast = document.getElementById('loadingToast');
+    
+    // Clear any lingering status update timeouts
+    if (window.mobileStatusTimeout) {
+        clearTimeout(window.mobileStatusTimeout);
+        window.mobileStatusTimeout = null;
+    }
+
     if (!loadingToast) return;
     
     // Minimum display time of 0.5 seconds
@@ -790,18 +832,6 @@ async function runDetection() {
                 if (progress > 91) progress = 91;
 
                 progressBar.style.width = Math.min(progress, 90) + '%';
-                
-                // Text Updates
-                let statusText = '正在分析中...';
-                if (window.currentAnalysisStatus === 'searching' && progress >= 38) {
-                    statusText = '正在联网搜索相关信息...';
-                } else if (window.currentAnalysisStatus === 'deep-analysis' && (progress >= 68 || (progress >= 38 && statusTimer > 8000))) {
-                    statusText = '正在进行深度分析...';
-                } else if (progress < 30) {
-                     statusText = '正在初始化分析...';
-                }
-                
-                setToastText(statusText);
             }
         }, 150); // Increased interval slightly to reduce calculation overhead
 
@@ -1892,7 +1922,7 @@ async function initUser() {
     try {
         const res = await fetch('/auth/me');
         const data = await res.json();
-        if (data.success) {
+        if (data.status !== "fail") {
             window.currentUser = data.user;
             updateAvatar(data.user);
         }

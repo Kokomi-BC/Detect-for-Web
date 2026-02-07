@@ -80,7 +80,7 @@ The application runs as an Express server.
 
 ### Backend (Express)
 - **API Pattern**: Use a unified `/api/invoke` endpoint with `channel` and `args` to maintain compatibility with the original IPC design.
-- **Error Handling**: Always return `{ success: boolean, data?: any, error?: string }`.
+- **Error Handling**: Failure responses must follow the format: `{ "status": "fail", "code": 400, "message": "...", "data": {}, "error": {} }`. Return code should match HTTP status.
 - **File System**: Use `fsPromises` for non-blocking history read/writes.
 
 ### Frontend (Vanilla JS)

@@ -168,7 +168,7 @@ class UserEditorCore {
                     formData.append('avatar', this.pendingAvatarFile);
                     const res = await fetch(avatarEndpoint, { method: 'POST', body: formData });
                     const json = await res.json();
-                    if (!json.success) throw new Error(json.error || '头像上传失败');
+                    if (json.status === "fail") throw new Error(json.message || json.error || '头像上传失败');
                 }
                 this.avatarTimestamp = Date.now();
             }
@@ -186,7 +186,7 @@ class UserEditorCore {
                 body: JSON.stringify(payload)
             });
             const json = await res.json();
-            if (!json.success) throw new Error(json.error || '更新失败');
+            if (json.status === "fail") throw new Error(json.message || json.error || '更新失败');
 
             alert('修改成功！');
             this.close();

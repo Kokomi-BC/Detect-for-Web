@@ -102,7 +102,7 @@ app.get('/api/public/theme', (req, res) => {
         } catch(e) { /* Ignore token errors */ }
     }
 
-    res.json({ success: true, theme: themeConfig });
+    res.json({ status: 'success', theme: themeConfig });
 });
 
 // Static Pages and Access Control
@@ -211,7 +211,13 @@ app.use(express.static(path.join(__dirname, '../public'), {
 }));
 
 app.get('*', (req, res) => {
-    if (req.path.startsWith('/api/')) return res.status(404).json({ success: false, error: 'API route not found' });
+    if (req.path.startsWith('/api/')) return res.status(404).json({
+            "status": "fail",
+            "code": 404,
+            "message": 'API route not found',
+            "data": {},
+            "error": {}
+        });
     if (req.path === '/') {
         const token = req.cookies.token;
         if (token) {
@@ -223,7 +229,13 @@ app.get('*', (req, res) => {
         return res.redirect('/Login');
     }
     if (req.path.endsWith('.html') || !req.path.includes('.')) return res.redirect('/Login');
-    res.status(404).send('Not Found');
+    return res.status(404).json({
+            "status": "fail",
+            "code": 404,
+            "message": 'Not Found',
+            "data": {},
+            "error": {}
+        });
 });
 
 module.exports = app;

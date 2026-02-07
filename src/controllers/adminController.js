@@ -254,7 +254,13 @@ async function getConfig() {
         const data = await fsPromises.readFile(configPath, 'utf8');
         return { success: true, data: JSON.parse(data) };
     } catch (e) {
-        return { success: false, error: e.message };
+        return {
+            "status": "fail",
+            "code": 400,
+            "message": e.message,
+            "data": {},
+            "error": {}
+        };
     }
 }
 
@@ -264,7 +270,13 @@ async function saveConfig(config) {
         await fsPromises.writeFile(configPath, JSON.stringify(config, null, 2));
         return { success: true };
     } catch (e) {
-        return { success: false, error: e.message };
+        return {
+            "status": "fail",
+            "code": 400,
+            "message": e.message,
+            "data": {},
+            "error": {}
+        };
     }
 }
 

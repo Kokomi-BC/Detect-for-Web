@@ -902,8 +902,8 @@
                     }
 
                     const result = await response.json();
-                    if (result.success) return result.data;
-                    throw new Error(result.error || 'Server Error');
+                    if (result.status !== 'fail') return result.data;
+                    throw new Error(result.message || result.error || 'Server Error');
                 } catch (error) {
                     console.error(`API Invoke Error (${channel}):`, error);
                     throw error;
@@ -977,7 +977,7 @@
             try {
                 const res = await fetch('/auth/me');
                 const data = await res.json();
-                if (data.success) {
+                if (data.status !== 'fail') {
                     const user = data.user;
                     const display = document.getElementById('usernameDisplay');
                     if (display) display.textContent = user.username + (user.role === 'admin' ? ' (管理员)' : '');
@@ -1013,7 +1013,7 @@
             changeAvatarBtn.addEventListener('click', async () => {
                 const meRes = await fetch('/auth/me');
                 const meData = await meRes.json();
-                if (meData.success) {
+                if (meData.status !== 'fail') {
                     window.userEditor.open({
                         userId: meData.user.id,
                         username: meData.user.username,
@@ -1077,10 +1077,10 @@
                     try {
                         const res = await fetch('/auth/logout', { method: 'POST' });
                         const data = await res.json();
-                        if (data.success) {
+                        if (data.status !== 'fail') {
                             window.location.href = '/Login';
                         } else {
-                            alert('退出失败: ' + (data.error || '未知错误'));
+                            alert('退出失败: ' + (data.message || '未知错误'));
                         }
                     } catch (err) {
                         console.error('Logout error:', err);
@@ -4262,17 +4262,51 @@
                         const { status, data } = JSON.parse(event.data);
                         console.log('Status Update Received:', status);
 
+                        // Clear pending transition timeout
+                        if (window.statusTextTimeout) {
+                            clearTimeout(window.statusTextTimeout);
+                            window.statusTextTimeout = null;
+                        }
+
                         // Update global status variable for the progress bar animation loop
                         window.currentAnalysisStatus = status;
 
-                        // Direct UI update (optional redundancy to ensure responsiveness)
                         const loadingText = document.getElementById('loadingText');
-                        if (loadingText) {
-                            if (status === 'searching') {
-                                loadingText.textContent = '正在联网搜索相关信息...';
-                            } else if (status === 'deep-analysis') {
-                                loadingText.textContent = '正在进行深度分析...';
+                        if (!loadingText) return;
+
+                        const updateText = (text) => {
+                            loadingText.textContent = text;
+                        };
+
+                        if (status === 'extracting') {
+                            updateText(data?.step === 'images' ? '正在为您加载并处理正文图片...' : '正在启动浏览器并提取网页内容...');
+                        } else if (status === 'parsing') {
+                            updateText('网页内容提取成功，正在解析...');
+                        } else if (status === 'searching') {
+                            window.searchStartTime = Date.now();
+                            updateText(`正在联网搜索: ${data?.query || ''}`);
+                            // Limit display of search query to max 5 seconds
+                            window.statusTextTimeout = setTimeout(() => {
+                                if (window.currentAnalysisStatus === 'searching') {
+                                    updateText('正在进行深度分析...');
+                                }
+                            }, 5000);
+                        } else if (status === 'search-failed') {
+                            updateText('联网搜索失败，正在进行离线分析...');
+                        } else if (status === 'deep-analysis') {
+                            const elapsed = Date.now() - (window.searchStartTime || 0);
+                            const minDisplay = 4000;
+                            
+                            if (elapsed < minDisplay && window.searchStartTime) {
+                                // If the search keyword was shown for too short, wait until 4s is reached
+                                window.statusTextTimeout = setTimeout(() => {
+                                    updateText('正在进行深度分析...');
+                                }, minDisplay - elapsed);
+                            } else {
+                                updateText('正在进行深度分析...');
                             }
+                        } else {
+                            updateText('AI 正在分析中，请稍候...');
                         }
                     } catch (e) {
                         console.error('Failed to parse status update', e);
@@ -4714,23 +4748,6 @@
                     if (progress > 91) progress = 91;
 
                     progressBar.style.width = Math.min(progress, 90) + '%';
-
-                    // 文本过渡逻辑：合并状态监听与进度条位置
-                    // 1. 如果进入搜索状态且进度已接近或超过40%
-                    if (window.currentAnalysisStatus === 'searching' && progress >= 38) {
-                        if (loadingText.textContent !== '正在联网搜索相关信息...') {
-                            loadingText.textContent = '正在联网搜索相关信息...';
-                        }
-                    }
-                    // 2. 如果进入深度分析状态（无论是搜索完进入，还是跳过搜索进入）
-                    else if (window.currentAnalysisStatus === 'deep-analysis') {
-                        // 如果进度已经过了搜索阶段（70%），或者模型根本不需要搜索（直接从40%跳到分析）
-                        if (progress >= 68 || (progress >= 38 && loadingText.textContent === '正在初始化分析...')) {
-                            if (loadingText.textContent !== '正在进行深度分析...') {
-                                loadingText.textContent = '正在进行深度分析...';
-                            }
-                        }
-                    }
                 }
             }, 80);
 
@@ -4787,6 +4804,12 @@
                             previewBtn.disabled = false;
                             previewBtn.style.opacity = '1';
                             previewBtn.style.pointerEvents = 'auto';
+                        }
+                        
+                        // Clear any lingering status status text timeout
+                        if (window.statusTextTimeout) {
+                            clearTimeout(window.statusTextTimeout);
+                            window.statusTextTimeout = null;
                         }
                     }
 
@@ -6404,7 +6427,13 @@
                             });
                             analysisResult = response;
                         } catch (e) {
-                            analysisResult = { success: false, error: e.message };
+                            analysisResult = {
+            "status": "fail",
+            "code": 400,
+            "message": e.message,
+            "data": {},
+            "error": {}
+        };
                         }
                     } else {
                         // Normal analysis
@@ -6418,7 +6447,7 @@
 
                     clearInterval(progressInterval);
 
-                    if (analysisResult && (analysisResult.success || analysisResult.probability !== undefined)) {
+                    if (analysisResult && (analysisResult.status !== 'fail' || analysisResult.probability !== undefined)) {
                         // Normalize result - handle nested data or flat object
                         item.result = analysisResult.data || analysisResult;
                         const fakeProb = item.result.probability || 0;
@@ -6435,7 +6464,7 @@
                     } else {
                         item.status = 'error';
                         item.progress = 0;
-                        console.error(analysisResult ? (analysisResult.error || '分析失败') : '无响应');
+                        console.error(analysisResult ? (analysisResult.message || '分析失败') : '无响应');
                     }
                 } catch (err) {
                     console.error(err);
@@ -6468,9 +6497,9 @@
                     fetch('/api/user/preferences').then(r => r.json())
                 ]);
 
-                const presets = presetsRes.success ? presetsRes.data : [];
+                const presets = presetsRes.status !== 'fail' ? presetsRes.data : [];
                 // Allow "0" or null to mean default
-                const userThemeId = (prefsRes.success && prefsRes.preferences && prefsRes.preferences.themeId) ? prefsRes.preferences.themeId : 0;
+                const userThemeId = (prefsRes.status !== 'fail' && prefsRes.preferences && prefsRes.preferences.themeId) ? prefsRes.preferences.themeId : 0;
 
                 container.innerHTML = '';
 
@@ -6509,7 +6538,7 @@
                 });
                 const data = await res.json();
 
-                if (data.success) {
+                if (data.status !== 'fail') {
                     // Reload theme from server (which now respects user pref)
                     if (window.applyDynamicTheme) {
                         await window.applyDynamicTheme(true);

@@ -127,7 +127,7 @@ Detect 是一款基于网页端的假新闻检测应用，由 Electron 版本迁
 
 - API 接口规范：统一采用 /api/invoke 端点，通过 channel（渠道）和 args（参数）传递请求信息，保持与原 Electron 版本的 IPC 设计兼容。
 
-- 错误处理规范：所有 API 响应均需遵循 { success: boolean, data?: any, error?: string } 格式，统一错误返回逻辑。
+- 错误处理规范：所有 API 响应均需遵循标准格式。失败响应格式为：`{ "status": "fail", "code": 400, "message": "...", "data": {}, "error": {} }`。
 
 - 文件操作规范：读取/写入用户历史等本地文件时，需使用 fsPromises 异步方法，避免阻塞服务器进程。
 

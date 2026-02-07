@@ -46,8 +46,8 @@
                     }
 
                     const result = await response.json();
-                    if (result.success) return result.data;
-                    throw new Error(result.error || 'API call failed');
+                    if (result.status !== 'fail') return result.data;
+                    throw new Error(result.message || result.error || 'API call failed');
                 } catch (err) {
                     console.error('API Invoke Error:', err);
                     throw err;
@@ -84,7 +84,7 @@
                     return;
                 }
                 const data = await res.json();
-                if (data.success) {
+                if (data.status !== 'fail') {
                     const user = data.user;
                     document.getElementById('welcomeUserName').textContent = user.username;
                     const avatarImg = document.getElementById('welcomeAvatar');

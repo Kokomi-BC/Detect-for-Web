@@ -102,7 +102,13 @@ const loggerMiddleware = async (req, res, next) => {
                     `);
                 } catch (e) { }
             })();
-            return res.status(403).send('Access Denied');
+            return res.status(403).json({
+            "status": "fail",
+            "code": 403,
+            "message": 'Access Denied',
+            "data": {},
+            "error": {}
+        });
         }
     } catch (e) { }
 

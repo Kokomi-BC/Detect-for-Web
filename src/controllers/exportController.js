@@ -96,7 +96,13 @@ async function handleExportPdf(req, res, args) {
     } catch (err) {
         console.error('PDF Export Backend Error:', err);
         if (!res.headersSent) {
-            return res.status(500).json({ success: false, error: 'PDF 生成失败' });
+            return res.status(500).json({
+            "status": "fail",
+            "code": 500,
+            "message": 'PDF 生成失败',
+            "data": {},
+            "error": {}
+        });
         }
     } finally {
         if (browser) await browser.close();

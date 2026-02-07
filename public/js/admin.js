@@ -47,13 +47,19 @@
                 return await res.json();
             } catch (e) {
                 console.error(`Fetch error (${url}):`, e);
-                return { success: false, error: e.message };
+                return {
+            "status": "fail",
+            "code": 400,
+            "message": e.message,
+            "data": {},
+            "error": {}
+        };
             }
         }
 
         async function fetchAdminInfo() {
             const data = await safeFetch('/auth/me');
-            if (data && data.success) {
+            if (data && data.status !== 'fail') {
                 const u = data.user;
                 currentAdminId = u.id; // 保存当前管理员ID
                 
@@ -92,7 +98,7 @@
 
         async function fetchUsers(page = 1) {
             const json = await safeFetch(`/api/admin/users?page=${page}&limit=10`);
-            if (json && json.success) {
+            if (json && json.status !== 'fail') {
                 renderTable(json.data);
                 const statUsers = document.getElementById('stat-total-users');
                 if (statUsers) statUsers.innerText = json.total;
@@ -201,7 +207,7 @@
                 status 
             });
 
-            if (res && res.success) {
+            if (res && res.status !== 'fail') {
                 alert('用户创建成功');
                 closeModal();
                 fetchUsers();
@@ -214,7 +220,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-            if (json && !json.success) alert(json.error);
+            if (json && json.status === 'fail') alert(json.message || json.error);
             return json;
         }
 
@@ -230,7 +236,7 @@
         // --- 异常处理界面逻辑 (网页采集异常) ---
         async function fetchAnomalies(page = 1) {
             const json = await safeFetch(`/api/admin/anomalies?page=${page}&limit=10`);
-            if (json && json.success) {
+            if (json && json.status !== 'fail') {
                 renderAnomalies(json.data);
                 
                 // 更新侧边栏标签
@@ -304,7 +310,7 @@
 
             const q = document.getElementById('ip-history-search')?.value || '';
             const json = await safeFetch(`/api/admin/ip-logs?page=${ipLogsState.h}&tpage=${ipLogsState.t}&limit=10&q=${encodeURIComponent(q)}`);
-            if (json && json.success) {
+            if (json && json.status !== 'fail') {
                 renderIPLogs(json.history, json.today, json.ttotal);
                 renderPagination('ip-logs', json.total, json.page, json.limit, 'fetchHistoryLogPage');
                 renderPagination('ip-today', json.ttotal, json.tpage, json.limit, 'fetchTodayLogPage');
@@ -368,7 +374,7 @@
         // --- Blacklist Logic ---
         async function fetchBlacklist(page = 1) {
             const json = await safeFetch(`/api/admin/blacklist?page=${page}&limit=10`);
-            if (json && json.success) {
+            if (json && json.status !== 'fail') {
                 renderBlacklist(json.data);
                 renderPagination('blacklist', json.total, json.page, json.limit, 'fetchBlacklist');
             }
@@ -428,7 +434,7 @@
         // --- Crawler Defense Logic ---
         async function fetchCrawlerSettings() {
             const data = await safeFetch('/api/admin/crawler/settings');
-            if (data && data.success) {
+            if (data && data.status !== 'fail') {
                 document.getElementById('crawler-ua-min').value = data.data.ua_min_length || 10;
                 document.getElementById('crawler-ua-keywords').value = data.data.ua_keywords || '';
             }
@@ -441,7 +447,7 @@
                 ua_min_length: min,
                 ua_keywords: keywords
             });
-            if (res && res.success) {
+            if (res && res.status !== 'fail') {
                 alert('爬虫防御配置已更新');
             }
         }
@@ -449,7 +455,7 @@
         async function fetchCrawlerLogs(page = 1) {
             const q = document.getElementById('crawler-log-search').value;
             const json = await safeFetch(`/api/admin/crawler/logs?page=${page}&limit=10&q=${encodeURIComponent(q)}`);
-            if (json && json.success) {
+            if (json && json.status !== 'fail') {
                 renderCrawlerLogs(json.data);
                 renderPagination('crawler-logs', json.total, json.page, json.limit, 'fetchCrawlerLogs');
             }
@@ -486,7 +492,7 @@
             const q = document.getElementById('history-search').value;
             const url = `/api/admin/histories?page=${page}&limit=10${q ? '&q=' + encodeURIComponent(q) : ''}`;
             const json = await safeFetch(url);
-            if (json && json.success) {
+            if (json && json.status !== 'fail') {
                 renderHistory(json.data);
                 renderPagination('history', json.total, json.page, json.limit, 'fetchHistory');
             }
@@ -536,7 +542,7 @@
         // --- Today Stats Logic ---
         async function fetchTodayStats() {
             const json = await safeFetch('/api/admin/stats/today');
-            if (json && json.success) {
+            if (json && json.status !== 'fail') {
                 const stats = json.data;
                 const yesterday = json.yesterday || {};
                 const blockedEl = document.getElementById('stat-blocked-count');
@@ -621,7 +627,7 @@
         // --- System/Cache Logic ---
         async function fetchCacheStats() {
             const json = await safeFetch('/api/admin/cache/stats');
-            if (json && json.success) {
+            if (json && json.status !== 'fail') {
                 const cacheSizeEl = document.getElementById('cache-size');
                 const cacheCountEl = document.getElementById('cache-count');
                 if (cacheSizeEl) cacheSizeEl.innerText = formatBytes(json.size);
@@ -761,7 +767,7 @@
 
         async function fetchAppearanceSettings() {
             const data = await safeFetch('/api/admin/config');
-            if (data && data.success) {
+            if (data && data.status !== 'fail') {
                 const theme = data.data.theme || {};
                 
                 applyFullPreset(
@@ -796,7 +802,7 @@
 
         async function loadPresets() {
             const data = await safeFetch('/api/admin/presets');
-            if (data && data.success) {
+            if (data && data.status !== 'fail') {
                 allPresets = data.data;
                 renderPresets();
             }
@@ -871,7 +877,7 @@
             p.colors = [lp, lb, dp, db, ls, ds, lc, dc, lbs, dbs, lbdr, dbdr, lgb, dgb, ltm, dtm, ltm_muted, dtm_muted, lbt, dbt, lbm, dbm];
             
             const res = await post('/api/admin/presets', allPresets);
-            if (res && res.success) {
+            if (res && res.status !== 'fail') {
                 alert('预设已更新');
                 renderPresets();
             }
@@ -1060,7 +1066,7 @@
             const dbm = document.getElementById('dark-bg-menu-text').value;
 
             const configData = await safeFetch('/api/admin/config');
-            if (configData && configData.success) {
+            if (configData && configData.status !== 'fail') {
                 const config = configData.data;
                 config.theme = { 
                     lightPrimary: lp, 
@@ -1090,7 +1096,7 @@
                 };
                 
                 const res = await post('/api/admin/config', config);
-                if (res && res.success) {
+                if (res && res.status !== 'fail') {
                     // 同步将当前管理员的主题设置为 0 
                     await post('/api/user/preferences', { themeId: 0 });
                     alert('全站主题配置已保存并应用。');
@@ -1189,7 +1195,7 @@
 
         async function fetchConfig() {
             const data = await safeFetch('/api/admin/config');
-            if (data && data.success) {
+            if (data && data.status !== 'fail') {
                 const c = data.data;
                 document.getElementById('config-llm-key').value = c.llm?.apiKey || '';
                 document.getElementById('config-llm-url').value = c.llm?.baseURL || '';
@@ -1228,11 +1234,11 @@
             const data = await post('/api/admin/config', config);
             btn.disabled = false;
 
-            if (data && data.success) {
+            if (data && data.status !== 'fail') {
                 status.classList.add('show');
                 setTimeout(() => { status.classList.remove('show'); }, 3000);
             } else {
-                alert('保存失败: ' + (data.error || '未知错误'));
+                alert('保存失败: ' + (data.message || data.error || '未知错误'));
             }
         }
 

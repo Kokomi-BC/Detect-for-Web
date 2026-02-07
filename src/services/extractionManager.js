@@ -46,8 +46,11 @@ class ExtractionManager {
     }
   }
 
-  async extractContent(url) {
+  async extractContent(url, onStatusChange = null) {
     this.isExtractionCancelled = false;
+    if (typeof onStatusChange === 'function') {
+        onStatusChange('extracting', { url });
+    }
     try {
       if (this.urlProcessor.isImageUrl(url)) {
         return this.createImageResult(url);
@@ -73,6 +76,10 @@ class ExtractionManager {
       
       let htmlContent = '';
       
+      if (typeof onStatusChange === 'function') {
+        onStatusChange('extracting', { url, step: 'browser-start' });
+      }
+
       // 使用 Crawlee 的 PlaywrightCrawler
       const crawler = new PlaywrightCrawler({
           launchContext: {
@@ -153,6 +160,9 @@ class ExtractionManager {
               });
               
               try {
+                  if (typeof onStatusChange === 'function') {
+                    onStatusChange('extracting', { url, step: 'loading' });
+                  }
                   // 先进行初步加载等待
                   await Promise.race([
                       page.waitForLoadState('domcontentloaded', { timeout: 10000 }),
@@ -194,6 +204,9 @@ class ExtractionManager {
                       await this.imageExtractor.waitForWechatContent(page);
                   }
                   
+                  if (typeof onStatusChange === 'function') {
+                    onStatusChange('extracting', { url, step: 'images' });
+                  }
                   // 等待所有正文图片加载以获取真实尺寸
                   await this.imageExtractor.waitForImagesLoad(page);
 
@@ -201,10 +214,14 @@ class ExtractionManager {
                   console.warn(`[Crawler] 加载过程阶段性超时/错误 (非致命): ${e.message}`);
               }
               
-              htmlContent = await page.content();
-              console.log(`[Crawler] Content retrieved, length: ${htmlContent.length}`);
+      htmlContent = await page.content();
+      console.log(`[Crawler] Content retrieved, length: ${htmlContent.length}`);
 
-              // 异常检测（防爬虫拦截）
+      if (typeof onStatusChange === 'function') {
+          onStatusChange('parsing', { url });
+      }
+
+      // 异常检测（防爬虫拦截）
               const anomalyKeywords = [
                   '环境异常', '安全验证', '验证码', '访问受限', 'Forbidden', 'Cloudflare', 
                   '访问过于频繁', 'unsupported browser'
