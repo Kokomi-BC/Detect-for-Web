@@ -1,5 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const webpack = require('webpack');
 
 const isProduction = process.env.NODE_ENV === 'production' || process.argv.includes('production');
@@ -19,20 +21,42 @@ const minifyOptions = isProduction ? {
 
 module.exports = {
   mode: isProduction ? 'production' : 'development',
-  entry: {},
+  entry: {
+    main: './public/js/mobile.js', // Just placeholders since we mostly serve static
+    admin: './public/js/theme-loader.js',
+  },
   output: {
     path: path.join(__dirname, 'dist'),
-    filename: '[name].[contenthash:8].js',
-    clean: true, // 构建前清理 dist
+    filename: 'js/[name].[contenthash:8].js',
+    clean: true,
   },
   cache: isProduction ? { type: 'filesystem' } : false,
+  module: {
+    rules: [
+      {
+        test: /\.css$/i,
+        use: [
+          isProduction ? MiniCssExtractPlugin.loader : 'style-loader',
+          'css-loader',
+          'postcss-loader',
+        ],
+      },
+    ],
+  },
   optimization: {
     minimize: isProduction,
+    minimizer: [
+      `...`,
+      new CssMinimizerPlugin(),
+    ],
     splitChunks: {
       chunks: 'all',
     },
   },
   plugins: [
+    new MiniCssExtractPlugin({
+      filename: 'css/[name].[contenthash:8].css',
+    }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'public/Main.html'),
       filename: 'Main.html',

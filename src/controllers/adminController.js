@@ -8,6 +8,7 @@ const {
 const fs = require('fs');
 const fsPromises = require('fs').promises;
 const path = require('path');
+const bcrypt = require('bcrypt');
 
 // Admin Stats
 async function getAdminStats(pool) {
@@ -45,9 +46,10 @@ async function addUser(pool, userData) {
     
     const { getNextAvailableUserId } = require('../utils/dbUtils');
     const nextId = await getNextAvailableUserId();
+    const hashedPassword = await bcrypt.hash(password, 10);
     
     await pool.query('INSERT INTO users (id, username, password, role, status, last_login_at) VALUES (?, ?, ?, ?, ?, NOW())', 
-        [nextId, username, password, role || 'user', status || 'active']);
+        [nextId, username, hashedPassword, role || 'user', status || 'active']);
 
     await pool.query(`
         INSERT INTO system_stats (stat_date, new_user_count)

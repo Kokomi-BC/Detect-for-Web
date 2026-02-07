@@ -172,7 +172,7 @@ const loggerMiddleware = async (req, res, next) => {
     })();
 
     // Set daily session cookie
-    if (!req.cookies.visited_session) {
+    if (!res.headersSent && !req.cookies.visited_session) {
         res.cookie('visited_session', '1', { httpOnly: true, maxAge: 86400000 }); // 24 hours
     }
 

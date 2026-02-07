@@ -1,57 +1,66 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
 
-// Global state for brute force protection (persistent during process life)
-var loginAttempts = new Map(); 
-var loginBlockHistory = new Map(); 
+// Global state for brute force protection
+const loginAttempts = new Map(); 
+const loginBlockHistory = new Map(); 
 
 const { pool } = require('../config/db');
 const { SECRET_KEY, authenticate } = require('../middleware/auth');
 const { getNextAvailableUserId } = require('../utils/dbUtils');
 
 router.post('/login', async (req, res) => {
-    const { username, password } = req.body;
-    
-    // Length validation
-    if (!username || username.length < 3 || username.length > 20) {
-        return res.status(400).json({ success: false, error: '用户名长度需在3-20位之间' });
-    }
-    // Password is SHA256 hashed on client (64 chars)
-    if (!password || password.length < 10 || password.length > 128) {
-        return res.status(400).json({ success: false, error: '无效的要求' });
-    }
-
-    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-
-    // Brute force protection
-    const now = Date.now();
-    const attempts = loginAttempts.get(ip) || { count: 0, lastAttempt: 0 };
-    
-    // Check if currently blocked (30s)
-    if (attempts.count >= 3 && now - attempts.lastAttempt < 30000) {
-        return res.status(429).json({ success: false, error: '登录失败次数过多，请30秒后再试' });
-    }
-    
-    // If block expired, reset count (partially, but we keep history in another map)
-    if (attempts.count >= 3 && now - attempts.lastAttempt >= 30000) {
-       attempts.count = 0; 
-       attempts.lastAttempt = 0;
-       loginAttempts.set(ip, attempts);
-    }
-
     try {
-        const [rows] = await pool.query('SELECT * FROM users WHERE username = ? AND password = ?', [username, password]);
+        const { username, password } = req.body;
+        
+        // Length validation
+        if (!username || username.length < 3 || username.length > 20) {
+            return res.status(400).json({ success: false, error: '用户名长度需在3-20位之间' });
+        }
+        // Password is SHA256 hashed on client (64 chars)
+        if (!password || password.length < 10 || password.length > 128) {
+            return res.status(400).json({ success: false, error: '无效的要求' });
+        }
+
+        const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '0.0.0.0';
+
+        // Brute force protection
+        const now = Date.now();
+        const attempts = loginAttempts.get(ip) || { count: 0, lastAttempt: 0 };
+        
+        // Check if currently blocked (30s)
+        if (attempts.count >= 3 && now - attempts.lastAttempt < 30000) {
+            return res.status(429).json({ success: false, error: '登录失败次数过多，请30秒后再试' });
+        }
+        
+        // If block expired, reset count
+        if (attempts.count >= 3 && now - attempts.lastAttempt >= 30000) {
+           attempts.count = 0; 
+           attempts.lastAttempt = 0;
+           loginAttempts.set(ip, attempts);
+        }
+
+        const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
         if (rows.length > 0) {
             const user = rows[0];
             
+            // Verify password
+            const isMatch = await bcrypt.compare(password, user.password);
+            if (!isMatch) {
+                const count = (attempts.count || 0) + 1;
+                loginAttempts.set(ip, { count, lastAttempt: now });
+                return res.status(401).json({ success: false, error: '用户名或密码错误' });
+            }
+
             if (user.status !== 'active') {
                 return res.status(401).json({ success: false, error: '账户待审核，请联系管理员' });
             }
 
             // Reset attempts on successful login
             loginAttempts.delete(ip);
-            loginBlockHistory.delete(ip); // Also clear block history on success
+            loginBlockHistory.delete(ip);
 
             // Invalidate old sessions by incrementing token_version
             const newTokenVersion = (user.token_version || 0) + 1;
@@ -96,29 +105,24 @@ router.post('/login', async (req, res) => {
             
             // Check if this failure triggers a block
             if (attempts.count >= 3) {
-                // Increment global block history for this IP
                 const blockHist = loginBlockHistory.get(ip) || { count: 0 };
                 blockHist.count++;
                 loginBlockHistory.set(ip, blockHist);
                 
-                // If blocked 3 times in a row (meaning 3 sets of 3 failures), then ban
                 if (blockHist.count >= 3) {
                      try {
                         await pool.query('INSERT IGNORE INTO ip_blacklist (ip, reason) VALUES (?, ?)', [ip, '多次触发登录频次限制 (自动封禁)']);
                         loginAttempts.delete(ip);
                         loginBlockHistory.delete(ip);
                         return res.status(403).json({ success: false, error: '您的 IP 已被暂时封禁，请联系管理员' });
-                     } catch (e) {
-                         console.error('Auto ban failed:', e);
-                     }
+                     } catch (e) { }
                 }
-                
                 return res.status(429).json({ success: false, error: '登录失败次数过多，请30秒后再试' });
             }
-            
             res.status(401).json({ success: false, error: '用户名或密码错误' });
         }
     } catch (err) {
+        console.error('Login error:', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -148,8 +152,9 @@ router.post('/register', async (req, res) => {
         }
         
         const nextId = await getNextAvailableUserId();
+        const hashedPassword = await bcrypt.hash(password, 10);
         await pool.query('INSERT INTO users (id, username, password, status, role, last_login_at) VALUES (?, ?, ?, ?, ?, NOW())', 
-            [nextId, username, password, 'pending', 'user']);
+            [nextId, username, hashedPassword, 'pending', 'user']);
 
         // Update new user stats
         try {

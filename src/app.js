@@ -148,6 +148,9 @@ app.use('/js', express.static(path.join(__dirname, '../public/js'), {
     maxAge: '1h'
 }));
 
+app.use('/css', express.static(path.join(__dirname, '../dist/css'), {
+    maxAge: '1h'
+}));
 app.use('/css', express.static(path.join(__dirname, '../public/css'), {
     maxAge: '1h'
 }));
@@ -197,7 +200,17 @@ app.get('/*.html', (req, res) => {
 });
 
 app.use(express.static(path.join(__dirname, '../dist'), {
-    maxAge: '1h'
+    maxAge: '1h',
+    setHeaders: (res, path) => {
+        if (path.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+}));
+// Fallback to public for non-bundled assets
+app.use(express.static(path.join(__dirname, '../public'), {
+    maxAge: '1h',
+    setHeaders: (res, path) => {
+        if (path.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
 }));
 
 app.get('*', (req, res) => {

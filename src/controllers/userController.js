@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const fsPromises = require('fs').promises;
 const sharp = require('sharp');
+const bcrypt = require('bcrypt');
 const { ensureUserDir, getUserAvatarDir, findAvatarFile } = require('../utils/fsUtils');
 
 async function handleAvatarUpload(userId, file) {
@@ -44,7 +45,11 @@ async function handleUpdateUser(pool, userId, body) {
     let params = [];
     
     if (username) { q += ', username = ?'; params.push(username); }
-    if (password) { q += ', password = ?'; params.push(password); }
+    if (password) { 
+        const hashedPassword = await bcrypt.hash(password, 10);
+        q += ', password = ?'; 
+        params.push(hashedPassword); 
+    }
     if (role && !body.isSelfUpdate) { q += ', role = ?'; params.push(role); }
     
     q += ' WHERE id = ?';

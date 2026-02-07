@@ -319,6 +319,8 @@ module.exports = function(services, state) {
     router.post('/admin/user/delete', authenticate, authenticateAdmin, async (req, res) => {
         try {
             const userId = req.body.userId;
+            if (userId == req.userId) return res.status(400).json({ success: false, error: '无法删除当前登录的管理员账户' });
+
             const [rows] = await pool.query('SELECT role FROM users WHERE id = ?', [userId]);
             if (rows.length > 0 && rows[0].role === 'admin') {
                 const [admins] = await pool.query("SELECT COUNT(*) as c FROM users WHERE role = 'admin'");
@@ -346,7 +348,8 @@ module.exports = function(services, state) {
             const hPath = getUserHistoryPath(userId);
             if (fs.existsSync(hPath)) {
                 let history = JSON.parse(await fsPromises.readFile(hPath, 'utf8'));
-                history = history.filter(h => h.timestamp !== timestamp);
+                // Use != for loose comparison in case of string/number mismatch
+                history = history.filter(h => h.timestamp != timestamp);
                 await fsPromises.writeFile(hPath, JSON.stringify(history, null, 2));
             }
             res.json({ success: true });
