@@ -94,6 +94,8 @@ body::after {
 .input-icon {
     position: absolute;
     left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
     color: var(--text-main);
     width: 20px;
     height: 20px;
@@ -108,7 +110,7 @@ body::after {
 
 input {
     width: 100%;
-    padding: 14px 16px 14px 48px;
+    padding: 14px 48px 14px 48px;
     background: var(--input-bg, rgba(255, 255, 255, 0.5));
     border: 2px solid var(--input-border);
     border-radius: 12px;
@@ -147,6 +149,8 @@ input:focus + .input-icon {
 .toggle-password {
     position: absolute;
     right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
     background: none;
     border: none;
     cursor: pointer;

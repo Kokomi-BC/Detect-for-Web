@@ -1303,15 +1303,23 @@ function initHistory() {
     });
 }
 
-function toggleHistory(show) {
+window.toggleHistory = function(show) {
     const backdrop = document.getElementById('historyDrawerBackdrop');
     const drawer = document.getElementById('historyDrawer');
     if (show) {
-        backdrop.classList.add('active');
-        drawer.classList.add('active');
+        backdrop.style.display = 'block';
+        setTimeout(() => {
+            backdrop.classList.add('active');
+            drawer.classList.add('active');
+        }, 10);
     } else {
         backdrop.classList.remove('active');
         drawer.classList.remove('active');
+        setTimeout(() => {
+            if (!backdrop.classList.contains('active')) {
+                backdrop.style.display = 'none';
+            }
+        }, 300);
     }
 }
 
@@ -1898,8 +1906,8 @@ function updateAvatar(user) {
     const userIcon = document.getElementById('topBarUserIcon');
     if (!avatarImg || !userIcon || !user) return;
 
-    // Remove timestamp to allow browser caching
-    avatarImg.src = `/api/public/avatar/${user.id}`;
+    // Use thumbnail for top bar
+    avatarImg.src = `/api/public/avatar/${user.id}?thumbnail=1`;
     
     avatarImg.onload = () => {
         avatarImg.style.display = 'block';

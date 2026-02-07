@@ -23,7 +23,7 @@ This document describes the MySQL database tables used in the **Detect** (Fake N
 Stores user credentials and status.
 - `id`: Primary key (Manual or Auto-inc)
 - `username`: Unique username
-- `password`: Plaintext (Not recommended for production, but used here)
+- `password`: Hashed password (Stored in a `TEXT` field for compatibility and length)
 - `role`: `admin` or `user`
 - `status`: `active` or `pending` (for approval)
 - `last_login_at`, `last_login_ip`, `last_login_region`: Login tracking

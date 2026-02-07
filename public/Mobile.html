@@ -4,11 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TruthGuard</title>
-    <link rel="stylesheet" href="/css/variables.css">
-    <link rel="stylesheet" href="/css/mobile.css">
-    <link rel="stylesheet" href="/css/common.css">
     <script src="/js/heic2any.min.js"></script>
-    <script src="/js/theme-loader.js"></script>
     <style>
         .tooltip-tag {
             display: inline-block;
@@ -174,7 +170,7 @@
          <div style="padding:20px; text-align:center; color:var(--text-secondary); font-size:16px;" onclick="closeActionSheet()">取消</div>
     </div>
 
-    <div id="historyDrawerBackdrop" class="drawer-backdrop" onclick="toggleHistory(false)"></div>
+    <div id="historyDrawerBackdrop" class="drawer-backdrop" style="display: none;" onclick="toggleHistory(false)"></div>
     <div id="historyDrawer" class="drawer-panel">
          <div class="drawer-header">历史记录</div>
          <div class="history-list" id="historyList"></div>
@@ -215,8 +211,5 @@
 
     <input type="file" id="fileInput" multiple accept="image/*,.heic,.heif" style="display: none;">
     <input type="file" id="docInput" accept=".doc,.docx,.pdf,.txt,.md,.jpg,.jpeg,.png,.webp,.heic,.heif" style="display: none;">
-
-    <script src="/js/user-editor.js"></script>
-    <script src="/js/mobile.js"></script>
 </body>
 </html>

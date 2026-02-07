@@ -22,15 +22,49 @@ const minifyOptions = isProduction ? {
 module.exports = {
   mode: isProduction ? 'production' : 'development',
   entry: {
-    main: './public/js/mobile.js', // Just placeholders since we mostly serve static
-    admin: './public/js/theme-loader.js',
+    main: [
+      './public/js/theme-loader.js',
+      './public/js/user-editor.js',
+      './public/js/export-manager.js',
+      './public/js/mobile.js',
+      './public/css/variables.css',
+      './public/css/common.css',
+      './public/css/main.css'
+    ],
+    admin: [
+      './public/js/theme-loader.js',
+      './public/js/user-editor.js',
+      './public/js/admin.js',
+      './public/css/variables.css',
+      './public/css/common.css',
+      './public/css/admin.css'
+    ],
+    login: [
+      './public/css/variables.css',
+      './public/css/common.css',
+      './public/css/login.css'
+    ],
+    welcome: [
+      './public/js/theme-loader.js',
+      './public/css/variables.css',
+      './public/css/common.css',
+      './public/css/welcome.css' 
+    ],
+    mobile: [
+      './public/js/theme-loader.js',
+      './public/js/user-editor.js',
+      './public/js/mobile.js',
+      './public/css/variables.css',
+      './public/css/common.css',
+      './public/css/mobile.css'
+    ]
   },
   output: {
     path: path.join(__dirname, 'dist'),
     filename: 'js/[name].[contenthash:8].js',
     clean: true,
   },
-  cache: isProduction ? { type: 'filesystem' } : false,
+  cache: { type: 'filesystem' },
   module: {
     rules: [
       {
@@ -60,30 +94,35 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'public/Main.html'),
       filename: 'Main.html',
+      chunks: ['main'],
       cache: false,
       minify: minifyOptions,
     }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'public/Welcome.html'),
       filename: 'Welcome.html',
+      chunks: ['welcome'],
       cache: false,
       minify: minifyOptions,
     }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'public/Login.html'),
       filename: 'Login.html',
+      chunks: ['login'],
       cache: false,
       minify: minifyOptions,
     }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'public/Admin.html'),
       filename: 'Admin.html',
+      chunks: ['admin'],
       cache: false,
       minify: minifyOptions,
     }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'public/Mobile.html'),
       filename: 'Mobile.html',
+      chunks: ['mobile'],
       cache: false,
       minify: minifyOptions,
     }),

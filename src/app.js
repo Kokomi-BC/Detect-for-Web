@@ -187,10 +187,7 @@ app.get('/Welcome', checkCookieAuth, (req, res) => {
 
 app.get('/Mobile', checkCookieAuth, (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    // Serve from dist if built, or check public if needed. Assuming dist for consistency
-    // But since I won't run full build, I'll direct to public for now or ensure I copy it.
-    // Let's stick to dist pattern and I will copy it.
-    res.sendFile(path.join(__dirname, '../public/Mobile.html')); 
+    res.sendFile(path.join(__dirname, '../dist/Mobile.html')); 
 });
 
 // Redirect .html requests

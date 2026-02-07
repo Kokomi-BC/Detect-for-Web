@@ -5,6 +5,7 @@ const fsPromises = require('fs').promises;
 const fs = require('fs');
 const crypto = require('crypto');
 const os = require('os');
+const sharp = require('sharp');
 const multer = require('multer');
 const { pool } = require('../config/db');
 const { authenticate, authenticateAdmin } = require('../middleware/auth');
@@ -397,10 +398,27 @@ module.exports = function(services, state) {
 
     router.get('/public/avatar/:userId', authenticate, async (req, res) => {
         try {
-            const path = await findAvatarFile(req.params.userId);
-            if (path && fs.existsSync(path)) res.sendFile(path);
-            else res.setHeader('Content-Type', 'image/svg+xml').send('<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#e2e8f0"/><path d="M12 12C14.2091 12 16 10.2091 16 8C16 5.79086 14.2091 4 12 4C9.79086 4 8 5.79086 8 8C8 10.2091 9.79086 12 12 12Z" fill="#94a3b8"/><path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" fill="#94a3b8"/></svg>');
-        } catch(e) { res.status(500).send('Error'); }
+            const avatarPath = await findAvatarFile(req.params.userId);
+            
+            // Set Cache-Control for 1 hour to avoid repeated requests while navigating
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+
+            if (avatarPath && fs.existsSync(avatarPath)) {
+                if (req.query.thumbnail === '1') {
+                    const buffer = await sharp(avatarPath)
+                        .resize(100, 100, { fit: 'cover' })
+                        .toBuffer();
+                    res.set('Content-Type', 'image/jpeg');
+                    return res.send(buffer);
+                }
+                res.sendFile(avatarPath);
+            } else {
+                res.setHeader('Content-Type', 'image/svg+xml').send('<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#e2e8f0"/><path d="M12 12C14.2091 12 16 10.2091 16 8C16 5.79086 14.2091 4 12 4C9.79086 4 8 5.79086 8 8C8 10.2091 9.79086 12 12 12Z" fill="#94a3b8"/><path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" fill="#94a3b8"/></svg>');
+            }
+        } catch(e) { 
+            console.error('Avatar error:', e);
+            res.status(500).send('Error'); 
+        }
     });
 
     router.get('/public/presets', async (req, res) => {
