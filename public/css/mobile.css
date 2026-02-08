@@ -50,18 +50,37 @@ body {
 
 .mobile-header .icon-btn {
     position: absolute; 
-    top: 7px;
-    background: none;
-    border: none;
-    padding: 8px;
+    top: 5px; /* (50px header - 40px button) / 2 = 5px */
+    width: 40px;
+    height: 40px;
+    background: var(--bg-tertiary);
+    border: 1.5px solid var(--border-color);
     color: var(--text-primary);
     cursor: pointer;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s;
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    z-index: 10;
+    padding: 0;
 }
+
+.mobile-header .icon-btn:active {
+    background: var(--border-color);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+    border-color: var(--primary-color);
+}
+
+#historyBtn {
+    left: 12px;
+}
+
+#userBtn {
+    right: 12px;
+    overflow: hidden;
+}
+
 
 .exit-edit-btn {
     position: absolute;
@@ -83,18 +102,26 @@ body {
 
 .exit-result-btn {
     position: absolute;
-    left: 12px; /* Moved to left */
-    top: 7px;
+    left: 12px; 
+    top: 5px; /* (50px header - 40px btn) / 2 */
     display: none;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    background: var(--bg-secondary);
-    border: none;
+    background: var(--bg-tertiary);
+    border: 1.5px solid var(--border-color);
     align-items: center;
     justify-content: center;
     color: var(--text-primary);
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
     z-index: 30;
+    padding: 0;
+}
+
+.exit-result-btn:active {
+    background: var(--border-color);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+    border-color: var(--primary-color);
 }
 
 /* Start Branding */
@@ -392,18 +419,19 @@ textarea.mobile-input {
 }
 
 .circle-btn-flat {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
     pointer-events: auto;
     color: var(--text-secondary);
     background: none;
     cursor: pointer;
+    transition: all 0.2s;
 }
 
 .circle-btn-flat:active {
@@ -570,7 +598,11 @@ textarea.mobile-input {
 }
 .score-inner {
     position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     text-align: center;
+    line-height: 1;
 }
 .score-val {
     font-size: 20px;

@@ -88,6 +88,67 @@
             document.getElementById('user-dropdown').classList.toggle('show');
         }
 
+        // --- Sidebar Collapse Logic ---
+        function toggleSidebar(customState = null, persist = true) {
+            const sidebar = document.querySelector('.sidebar');
+            const toggleIcon = document.querySelector('#sidebar-toggle svg');
+            const overlay = document.getElementById('sidebar-overlay');
+            
+            const shouldBeCollapsed = customState !== null ? !customState : !sidebar.classList.contains('collapsed');
+            
+            if (!shouldBeCollapsed) {
+                sidebar.classList.remove('collapsed');
+                if (toggleIcon) toggleIcon.style.transform = 'rotate(0deg)';
+                if (persist) localStorage.setItem('sidebar_collapsed', 'false');
+                
+                // 仅在窄屏展开时显示遮罩
+                if (overlay && window.innerWidth < 1024) {
+                    overlay.style.display = 'block';
+                }
+            } else {
+                sidebar.classList.add('collapsed');
+                if (toggleIcon) toggleIcon.style.transform = 'rotate(180deg)';
+                if (persist) localStorage.setItem('sidebar_collapsed', 'true');
+                if (overlay) overlay.style.display = 'none';
+            }
+        }
+
+        // Init Sidebar state
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', () => toggleSidebar());
+            }
+
+            // Restore state
+            const savedState = localStorage.getItem('sidebar_collapsed');
+            if (savedState === 'true') {
+                toggleSidebar(false, true);
+            }
+
+            const overlay = document.getElementById('sidebar-overlay');
+            if (overlay) {
+                overlay.addEventListener('click', () => toggleSidebar(false));
+            }
+
+            // Auto-collapse on small screens
+            const handleResize = () => {
+                const sidebar = document.querySelector('.sidebar');
+                if (window.innerWidth < 1024) {
+                    if (!sidebar.classList.contains('collapsed')) {
+                        toggleSidebar(false, false);
+                    }
+                } else {
+                    const savedState = localStorage.getItem('sidebar_collapsed');
+                    if (savedState === 'false' && sidebar.classList.contains('collapsed')) {
+                        toggleSidebar(true, false);
+                    }
+                }
+            };
+            window.addEventListener('resize', handleResize);
+            handleResize(); // Check on init
+        });
+
         // 全局点击监听，用于关闭用户菜单
         window.addEventListener('click', function(e) {
             if (!e.target.closest('.user-menu-container')) {
@@ -692,6 +753,12 @@
 
         function switchTab(tab) {
             localStorage.setItem('admin_last_tab', tab);
+            
+            // Auto close sidebar on narrow screens when switching tabs
+            if (window.innerWidth < 1024) {
+                toggleSidebar(false, false);
+            }
+            
             const tabs = ['workbench', 'users', 'anomalies', 'ip-logs', 'blacklist', 'crawler-defense', 'history', 'system', 'config', 'appearance'];
             const titles = {
                 'workbench': '工作台',
@@ -1329,6 +1396,7 @@
 // Expose functions to window for HTML onclick handlers (Webpack entry point scoping)
 Object.assign(window, {
     switchTab,
+    toggleSidebar,
     refreshCurrentTab,
     toggleTheme,
     toggleUserMenu,

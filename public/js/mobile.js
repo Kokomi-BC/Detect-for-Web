@@ -1614,9 +1614,16 @@ function showResult(result, originalText, originalImages, sourceUrl) {
             const div = document.createElement('div');
             div.className = 'analysis-item';
             let iconClass = point.status === 'negative' ? 'negative' : (point.status === 'warning' ? 'warning' : 'positive');
-            let icon = point.status === 'negative' ? '✕' : (point.status === 'warning' ? '!' : '✓');
+            let iconSvg = '';
+            if (point.status === 'negative') {
+                iconSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>`;
+            } else if (point.status === 'warning') {
+                iconSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 3.45L19.53 19H4.47L12 5.45zM11 16h2v2h-2v-2zm0-5h2v4h-2v-4z"/></svg>`;
+            } else {
+                iconSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
+            }
             div.innerHTML = `
-                <div class="analysis-icon ${iconClass}">${icon}</div>
+                <div class="analysis-icon ${iconClass}">${iconSvg}</div>
                 <div class="analysis-text">${point.description}</div>
             `;
             analysisContainer.appendChild(div);
@@ -1776,7 +1783,12 @@ window.showReasonTooltip = function(element) {
     } catch(e) {}
 
     tooltip.innerHTML = `
-        <div class="tooltip-header" style="font-weight:600; margin-bottom:10px; padding:18px 20px 14px; border-bottom:1px solid var(--border-color); font-size:18px;">风险详情 <span style="float:right; cursor:pointer; color:var(--text-muted);" onclick="hideTooltip()">×</span></div>
+        <div class="tooltip-header" style="font-weight:600; margin-bottom:10px; padding:18px 20px 14px; border-bottom:1px solid var(--border-color); font-size:18px; display: flex; justify-content: space-between; align-items: center;">
+            <span>风险详情</span>
+            <span style="cursor:pointer; color:var(--text-muted); width: 30px; height: 30px; background: var(--bg-tertiary); border-radius: 50%; display: flex; align-items: center; justify-content: center;" onclick="hideTooltip()">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </span>
+        </div>
         <div style="padding: 20px 24px 40px;">
             <div class="tooltip-section">
                 <div class="tooltip-label" style="font-size:13px; color:var(--text-muted); font-weight:500;">风险类型</div>
@@ -1846,6 +1858,17 @@ async function processAndAddImages(files) {
             try {
                 // Show Dynamic Island Toast for conversion
                 showLoadingToast('正在转换 HEIC 图片...');
+
+                // Dynamically load heic2any if not already loaded
+                if (typeof heic2any === 'undefined') {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = '/js/heic2any.min.js';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                }
 
                 const blob = await heic2any({
                     blob: file,
