@@ -17,6 +17,9 @@ window.api = {
     }
 };
 
+// --- Constants ---
+const UI_CLOSE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+
 // --- State ---
 let uploadedImages = [];
 let currentMode = 'input'; // input, result
@@ -1170,14 +1173,16 @@ function renderImages() {
     const hasDoc = currentExtractedData && currentExtractedData.type === 'doc';
     const hasImages = uploadedImages.length > 0;
 
-    const closeSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+    // Use shared SVG constant
+    const closeSvg = UI_CLOSE_SVG.replace('<svg', '<svg width="12" height="12"');
 
     // Handle Document Card
     if (hasDoc) {
         const isAlone = !hasImages;
         const ext = currentExtractedData.format || 'DOC';
         const docDiv = document.createElement('div');
-        docDiv.className = `preview-doc-card ${isAlone ? 'is-alone' : ''}`;
+        // Added bg-glass class
+        docDiv.className = `preview-doc-card bg-glass ${isAlone ? 'is-alone' : ''}`;
         
         const sizeStr = currentExtractedData.size ? formatFileSize(currentExtractedData.size) : '';
 
@@ -1189,13 +1194,15 @@ function renderImages() {
             </div>
             <div class="doc-info">
                 <div class="doc-title">${escapeHTML(currentExtractedData.title)}</div>
-                <div class="doc-ext">${ext}</div>
-            </div>
-            <div class="doc-right-actions">
-                <div class="remove-doc-btn">
-                    ${isAlone ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>' : closeSvg}
+                <div class="doc-meta">
+                    <span class="doc-ext">${ext}</span>
+                    ${sizeStr ? `<span class="doc-divider">|</span><span class="doc-size">${sizeStr}</span>` : ''}
                 </div>
-                ${sizeStr ? `<div class="doc-size-label">${sizeStr}</div>` : ''}
+            </div>
+            <div class="doc-right">
+                <div class="remove-doc-btn close-circle-btn">
+                    ${closeSvg}
+                </div>
             </div>
         `;
 
@@ -1226,7 +1233,7 @@ function renderImages() {
         div.className = 'preview-img-wrapper';
         div.innerHTML = `
             <img src="${img.url}">
-            <div class="remove-img-btn">${closeSvg}</div>
+            <div class="remove-img-btn close-circle-btn">${closeSvg}</div>
         `;
 
         // Click to preview
@@ -1875,8 +1882,8 @@ window.showReasonTooltip = function(element) {
     tooltip.innerHTML = `
         <div class="tooltip-header" style="font-weight:600; margin-bottom:10px; padding:18px 20px 14px; border-bottom:1px solid var(--border-color); font-size:18px; display: flex; justify-content: space-between; align-items: center;">
             <span>风险详情</span>
-            <span style="cursor:pointer; color:var(--text-muted); width: 30px; height: 30px; background: var(--bg-tertiary); border-radius: 50%; display: flex; align-items: center; justify-content: center;" onclick="hideTooltip()">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            <span class="close-circle-btn" style="width: 30px; height: 30px;" onclick="hideTooltip()">
+                ${UI_CLOSE_SVG.replace('<svg', '<svg width="18" height="18"')}
             </span>
         </div>
         <div style="padding: 20px 24px 40px;">

@@ -385,43 +385,54 @@ body {
     display: none;
 }
 
+.input-area-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-secondary);
+    border: 1.5px solid var(--border-color);
+    border-radius: 20px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    transition: all var(--transition-fast);
+    overflow: hidden;
+}
+
 textarea.mobile-input {
     width: 100%;
     outline: none !important;
-    /* Task 2: Outer shadow (Softened and theme-aware) */
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12) !important; 
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
     resize: none;
     font-size: 18px;
     line-height: 1.6;
-    background: var(--bg-secondary); /* Use secondary for better depth on main background */
-    border: 1px solid var(--border-color) !important; /* Visible border for better readability */
-    border-radius: 20px; /* Slightly smoother radius to match unit */
-    padding: 14px 16px 60px 16px; /* Optimized padding */
+    background: transparent !important;
+    border: none !important;
+    padding: 12px 16px 50px 16px;
     color: var(--text-primary);
-    min-height: 130px; /* Slightly reduced height as requested */
-    margin: 0; 
     flex: 1;
-    overflow-y: auto; 
+    overflow-y: auto;
     -webkit-tap-highlight-color: transparent;
-    transition: all var(--transition-fast) !important;
+    transition: none !important;
+    box-shadow: none !important;
 }
 
-textarea.mobile-input:focus {
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3) !important;
+.input-area-wrapper:focus-within {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2) !important;
+    border-color: var(--primary-color) !important;
+}
+
+.input-card.fullscreen .input-area-wrapper {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
 }
 
 .input-card.fullscreen textarea.mobile-input {
-    background: transparent !important;
     padding: 0 0 60px 0 !important;
     margin: 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
-    outline: none !important;
-    transition: none !important; /* Disable transition when entering fullscreen */
 }
 
 .word-indicator {
@@ -437,6 +448,35 @@ textarea.mobile-input:focus {
     -webkit-backdrop-filter: blur(12px) saturate(180%);
     border: 1px solid var(--glass-border);
     transition: background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+/* Reusable Close Circle Button (Tooltip style) */
+.close-circle-btn {
+    cursor: pointer;
+    color: var(--text-muted) !important; 
+    width: 20px;
+    height: 20px;
+    background: var(--bg-tertiary) !important; 
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    padding: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+.close-circle-btn:active {
+    background: var(--border-color) !important;
+    transform: scale(0.9);
+}
+.close-circle-btn svg {
+    width: 12px;
+    height: 12px;
+    display: block;
+    margin: 0;
+    padding: 0;
 }
 
 .toolbar-container {
@@ -914,7 +954,7 @@ textarea.mobile-input:focus {
 }
 .history-search-input:focus {
     border-color: var(--primary-color);
-    background: var(--bg-primary);
+    background: var(--bg-glass);
 }
 .search-clear-btn {
     position: absolute;
@@ -923,7 +963,7 @@ textarea.mobile-input:focus {
     transform: translateY(-50%);
     width: 24px;
     height: 24px;
-    background: var(--bg-tertiary);
+    background: var(--bg-glass);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -1007,139 +1047,131 @@ textarea.mobile-input:focus {
 .preview-images {
     display: flex;
     gap: 12px;
-    overflow-x: auto;
-    padding: 8px 4px 8px 4px; /* Increased top/bottom padding to prevent button clipping */
-    align-items: center;
-    margin-bottom: -4px; /* Move closer to text input */
+    padding: 12px 14px 4px 14px; 
+    align-items: flex-start;
+    flex-wrap: wrap;
+    overflow: visible; /* Prevent internal scrollbars */
 }
 .preview-img-wrapper {
     position: relative;
-    width: 72px; /* Reduced from 80px */
-    height: 72px; /* Reduced from 80px */
+    width: 72px; 
+    height: 72px; 
     flex-shrink: 0;
 }
 .preview-img-wrapper img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 12px; /* More rounded to match card style */
+    border-radius: 12px; 
+}
+.remove-img-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    z-index: 10;
 }
 
-/* Document Card in Preview Area */
+/* Document Card in Preview Area - Yuanbao Style */
 .preview-doc-card {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    background: var(--bg-secondary);
-    border-radius: 14px;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg-tertiary);
+    border-radius: 12px;
     min-width: 160px;
-    max-width: 220px;
+    max-width: 260px;
     height: 72px; 
     flex-shrink: 0;
-    border: 1px solid var(--border-color);
+    border: 1.5px solid var(--border-color);
     position: relative;
     box-sizing: border-box;
+    transition: all 0.2s;
 }
 
 .preview-doc-card.is-alone {
-    width: 100%;
     max-width: none;
     flex: 1;
 }
 
 .doc-icon {
-    width: 38px;
-    height: 38px;
-    background: var(--primary-light);
-    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    background: var(--bg-primary);
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
 .doc-info {
     flex: 1;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .doc-title {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    line-height: 1.4;
+}
+
+.doc-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 1px;
 }
 
 .doc-ext {
     font-size: 11px;
-    color: var(--primary-color);
-    font-weight: bold;
-    margin-top: 2px;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
 }
 
-.doc-right-actions {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
-    margin-left: auto;
+.doc-divider {
+    font-size: 10px;
+    color: var(--border-color);
 }
 
-.doc-size-label {
+.doc-size {
     font-size: 11px;
     color: var(--text-muted);
-    font-weight: 500;
+}
+
+.doc-right {
+    display: flex;
+    align-items: center;
+    margin-left: 4px;
 }
 
 .remove-doc-btn {
     position: absolute;
-    top: -8px;
-    right: -8px;
-    background: var(--danger-color);
-    color: white;
-    border-radius: 50%;
-    width: 22px;
-    height: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    border: 2px solid white;
-    z-index: 10;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    top: 6px;
+    right: 6px;
+    display: flex !important;
+}
+
+.doc-right {
+    display: block; /* Ensure container doesn't hide the absolute child */
 }
 
 .preview-doc-card.is-alone .remove-doc-btn {
-    position: static;
-    background: transparent;
-    color: var(--text-muted);
-    border: none;
-    width: 32px;
-    height: 32px;
-    box-shadow: none;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    /* Styles handled by .close-circle-btn */
 }
 
 .remove-img-btn {
     position: absolute;
-    top: -8px;
-    right: -8px;
-    background: var(--danger-color);
-    color: white;
-    border-radius: 50%;
-    width: 22px;
-    height: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    top: 4px;
+    right: 4px;
     z-index: 10;
 }
