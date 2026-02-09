@@ -1557,7 +1557,7 @@ function renderHistoryList() {
         if (item.url) {
             let hostname = item.url;
             try { hostname = new URL(item.url).hostname; } catch(e) {}
-            urlDisplay = `<div style="color:#4361ee; font-size:12px; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+            urlDisplay = `<div style="color:var(--primary-color); font-size:12px; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
                 <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
                 <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(hostname)}</span>
             </div>`;
@@ -1706,11 +1706,11 @@ function showResult(result, originalText, originalImages, sourceUrl) {
             let iconClass = point.status === 'negative' ? 'negative' : (point.status === 'warning' ? 'warning' : 'positive');
             let iconSvg = '';
             if (point.status === 'negative') {
-                iconSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>`;
+                iconSvg = '✕';
             } else if (point.status === 'warning') {
-                iconSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 3.45L19.53 19H4.47L12 5.45zM11 16h2v2h-2v-2zm0-5h2v4h-2v-4z"/></svg>`;
+                iconSvg = '!';
             } else {
-                iconSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
+                iconSvg = '✓';
             }
             div.innerHTML = `
                 <div class="analysis-icon ${iconClass}">${iconSvg}</div>

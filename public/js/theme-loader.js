@@ -103,30 +103,45 @@
         }
     };
 
+    let isFetching = false;
+    let fetchPromise = null;
+
     window.applyDynamicTheme = async function(force = false) {
+        if (isFetching) return fetchPromise;
+        
         try {
-            if (!force) {
-                const cachedData = localStorage.getItem('dynamic_theme_cache');
-                if (cachedData) {
-                    const { theme, timestamp } = JSON.parse(cachedData);
-                    renderTheme(theme);
-                    // Cache for 2 minutes to keep it relatively fresh but avoid spam
-                    if (Date.now() - timestamp < 120 * 1000) return;
-                }
+            const cachedData = localStorage.getItem('dynamic_theme_cache');
+            if (cachedData) {
+                const { theme, timestamp } = JSON.parse(cachedData);
+                renderTheme(theme);
+                
+                // If it's a force call from theme toggle, we just needed to re-render with the new mode.
+                // We don't need to hit the server unless the cache is actually expired.
+                if (force && (Date.now() - timestamp < 300 * 1000)) return; 
+                if (!force && (Date.now() - timestamp < 120 * 1000)) return;
             }
 
-            const response = await fetch('/api/public/theme');
-            const data = await response.json();
+            isFetching = true;
+            fetchPromise = (async () => {
+                const response = await fetch('/api/public/theme');
+                const data = await response.json();
+                
+                if (data.status !== 'fail' && data.theme) {
+                    localStorage.setItem('dynamic_theme_cache', JSON.stringify({
+                        theme: data.theme,
+                        timestamp: Date.now()
+                    }));
+                    renderTheme(data.theme);
+                }
+                isFetching = false;
+                fetchPromise = null;
+            })();
             
-            if (data.status !== 'fail' && data.theme) {
-                localStorage.setItem('dynamic_theme_cache', JSON.stringify({
-                    theme: data.theme,
-                    timestamp: Date.now()
-                }));
-                renderTheme(data.theme);
-            }
+            return fetchPromise;
         } catch (e) {
             console.error('Failed to apply dynamic theme:', e);
+            isFetching = false;
+            fetchPromise = null;
         }
     }
 

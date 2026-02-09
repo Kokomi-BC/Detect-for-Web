@@ -106,23 +106,42 @@ app.get('/api/public/theme', (req, res) => {
     res.json({ status: 'success', theme: themeConfig });
 });
 
-// Static Pages and Access Control
-const checkCookieAuth = (req, res, next) => {
+// --- Security Policy ---
+// Enforce that unauthenticated users can only access the Login page and essential assets.
+app.use((req, res, next) => {
+    // 1. Allow essential public assets and icons
+    const publicPrefixes = ['/js/', '/css/', '/ico/', '/assets/'];
+    if (publicPrefixes.some(p => req.path.startsWith(p)) || req.path === '/favicon.ico') {
+        return next();
+    }
+    
+    // 2. Allow API and Auth endpoints (they implement their own authentication)
+    if (req.path.startsWith('/api/') || req.path.startsWith('/auth/')) {
+        return next();
+    }
+
+    // 3. Enforce access control for all pages
     const token = req.cookies.token;
+    const isLoginPage = req.path === '/Login' || req.path === '/Login.html';
+
     if (!token) {
-        if (req.path === '/Login' || req.path === '/Login.html') return next();
+        if (isLoginPage) return next();
         return res.redirect('/Login');
     }
+
     try {
         jwt.verify(token, SECRET_KEY);
-        if (req.path === '/Login' || req.path === '/Login.html') return res.redirect('/Welcome');
+        // Authenticated users are redirected from Login to Welcome
+        if (isLoginPage) return res.redirect('/Welcome');
         next();
     } catch (err) {
         res.clearCookie('token');
+        if (isLoginPage) return next();
         return res.redirect('/Login');
     }
-};
+});
 
+// Access Control Helpers
 const checkAdminAuth = async (req, res, next) => {
     const token = req.cookies.token;
     if (!token) return res.redirect('/Login');
@@ -176,17 +195,17 @@ app.get('/Admin', checkAdminAuth, (req, res) => {
     res.sendFile(path.join(__dirname, '../dist/Admin.html'));
 });
 
-app.get('/Main', checkCookieAuth, (req, res) => {
+app.get('/Main', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.sendFile(path.join(__dirname, '../dist/Main.html'));
 });
 
-app.get('/Welcome', checkCookieAuth, (req, res) => {
+app.get('/Welcome', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.sendFile(path.join(__dirname, '../dist/Welcome.html'));
 });
 
-app.get('/Mobile', checkCookieAuth, (req, res) => {
+app.get('/Mobile', (req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.sendFile(path.join(__dirname, '../dist/Mobile.html')); 
 });
