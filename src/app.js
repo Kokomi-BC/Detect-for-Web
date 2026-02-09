@@ -3,6 +3,8 @@ const path = require('path');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const { getUserPreferencesPath } = require('./utils/fsUtils');
 
 const loggerMiddleware = require('./middleware/logger');
 const { authenticate, SECRET_KEY } = require('./middleware/auth');
@@ -41,7 +43,6 @@ app.use('/auth', authRouter);
 app.use('/api', apiRouter(services, state));
 
 // Public Theme Config
-const fs = require('fs');
 app.get('/api/public/theme', (req, res) => {
     // 1. Get Global Config (Default)
     const configPath = path.join(__dirname, '../data/config.json');
@@ -59,7 +60,7 @@ app.get('/api/public/theme', (req, res) => {
         try {
             const decoded = jwt.verify(token, SECRET_KEY);
             const userId = decoded.userId;
-            const userPrefsPath = path.join(__dirname, '../data/users', String(userId), 'preferences.json');
+            const userPrefsPath = getUserPreferencesPath(userId);
             
             if (fs.existsSync(userPrefsPath)) {
                 const prefs = JSON.parse(fs.readFileSync(userPrefsPath, 'utf8'));

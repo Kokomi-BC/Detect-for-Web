@@ -1,8 +1,6 @@
 const fsPromises = require('fs').promises;
 const path = require('path');
-const USERS_DATA_DIR = path.join(__dirname, '../../data/users');
-
-const getUserHistoryPath = (userId) => path.join(USERS_DATA_DIR, String(userId), 'history.json');
+const { getUserHistoryPath } = require('../utils/fsUtils');
 
 async function handleGetHistory(req, args) {
     const historyPath = getUserHistoryPath(req.userId);
@@ -10,15 +8,28 @@ async function handleGetHistory(req, args) {
         const data = await fsPromises.readFile(historyPath, 'utf8');
         let history = JSON.parse(data);
         
-        const page = parseInt(args[0]?.page) || 1;
-        const limit = parseInt(args[0]?.limit) || 20;
+        const params = args[0] || {};
+        const page = parseInt(params.page) || 1;
+        const limit = parseInt(params.limit) || 20;
+        const query = params.query ? params.query.toLowerCase().trim() : '';
+
+        // Apply filtering if query exists
+        if (query) {
+            history = history.filter(item => {
+                const title = (item.result?.title || item.title || '').toLowerCase();
+                const content = (item.content || '').toLowerCase();
+                const url = (item.url || '').toLowerCase();
+                return title.includes(query) || content.includes(query) || url.includes(query);
+            });
+        }
+        
         const startIndex = (page - 1) * limit;
         const endIndex = page * limit;
         
         const hasMore = history.length > endIndex;
         let pageResult = history.slice(startIndex, endIndex);
 
-        if (args && args[0] && args[0].metadataOnly) {
+        if (params.metadataOnly) {
             pageResult = pageResult.map(item => {
                 let preview = '';
                 if (item.content) {

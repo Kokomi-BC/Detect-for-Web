@@ -28,6 +28,8 @@ let pendingConflict = null;
 let historyPage = 1;
 let historyLoading = false;
 let hasMoreHistory = true;
+let historySearchQuery = '';
+let searchTimeout = null;
 const historyLimit = 20;
 
 // --- Elements ---
@@ -51,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initInputLogic();
     initActionSheet();
     initHistory();
+    initThemeToggle();
     initUser();
     loadHistory();
     initSSE(); // Ensure SSE is initialized for real-time status
@@ -1331,6 +1334,90 @@ function initHistory() {
             }
         }
     });
+
+    // Search Logic
+    const searchInput = document.getElementById('historySearchInput');
+    const clearSearchBtn = document.getElementById('clearHistorySearch');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            historySearchQuery = val;
+            
+            // Toggle clear button
+            if (clearSearchBtn) {
+                clearSearchBtn.style.display = val ? 'flex' : 'none';
+            }
+
+            if (searchTimeout) clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadHistory(false);
+            }, 400);
+        });
+
+        // Hide keyboard on Enter
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchInput.blur();
+            }
+        });
+    }
+
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            historySearchQuery = '';
+            clearSearchBtn.style.display = 'none';
+            searchInput.focus();
+            loadHistory(false);
+        });
+    }
+}
+
+// --- Theme Logic ---
+function initThemeToggle() {
+    const themeBtn = document.getElementById('themeToggleBtn');
+    if (!themeBtn) return;
+
+    // Initial icon state
+    updateThemeIcon();
+
+    themeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const currentTheme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('theme') || 'light';
+        const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        applyTheme(nextTheme);
+    });
+}
+
+async function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    updateThemeIcon();
+    
+    // Trigger renderTheme from theme-loader.js if it exists
+    if (typeof window.applyDynamicTheme === 'function') {
+        await window.applyDynamicTheme(true); // Force re-render with new mode
+    }
+}
+
+function updateThemeIcon() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('theme') || 'light';
+    const sunIcon = document.querySelector('.sun-icon');
+    const moonIcon = document.querySelector('.moon-icon');
+    
+    if (!sunIcon || !moonIcon) return;
+
+    if (currentTheme === 'dark') {
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+        document.getElementById('themeToggleBtn').style.color = '#ffcf40'; // Warm yellow for sun
+    } else {
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+        document.getElementById('themeToggleBtn').style.color = '#6366f1'; // Indigo for moon
+    }
 }
 
 window.toggleHistory = function(show) {
@@ -1372,13 +1459,15 @@ async function loadHistory(isLoadMore = false) {
     } else {
         historyPage = 1;
         hasMoreHistory = true;
+        list.scrollTop = 0;
     }
 
     try {
         const result = await window.api.invoke('get-history', { 
             metadataOnly: true,
             page: historyPage,
-            limit: historyLimit
+            limit: historyLimit,
+            query: historySearchQuery
         });
         
         const data = result.data || [];
@@ -1407,7 +1496,8 @@ function renderHistoryList() {
     list.innerHTML = '';
     
     if (allHistory.length === 0) {
-        list.innerHTML = '<div style="text-align:center; color:var(--text-secondary); padding:20px;">暂无历史记录</div>';
+        const emptyMsg = historySearchQuery ? '未找到相关记录' : '暂无历史记录';
+        list.innerHTML = `<div style="text-align:center; color:var(--text-secondary); padding:20px;">${emptyMsg}</div>`;
         return;
     }
     

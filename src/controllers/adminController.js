@@ -3,7 +3,8 @@ const {
     USERS_DATA_DIR, 
     ANOMALIES_DIR,
     getFolderSize, 
-    clearFolderContents 
+    clearFolderContents,
+    getUserHistoryPath
 } = require('../utils/fsUtils');
 const fs = require('fs');
 const fsPromises = require('fs').promises;
@@ -97,7 +98,7 @@ async function handleAdminHistories(pool, query) {
     const userMap = users.reduce((acc, u) => { acc[u.id] = u.username; return acc; }, {});
 
     for (const userId of userDirs) {
-        const hPath = path.join(USERS_DATA_DIR, userId, 'history.json');
+        const hPath = getUserHistoryPath(userId);
         try {
             if (!fs.existsSync(hPath)) continue;
             const data = await fsPromises.readFile(hPath, 'utf8');

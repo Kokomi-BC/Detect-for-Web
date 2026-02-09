@@ -15,10 +15,14 @@ const {
     IMG_CACHE_DIR, 
     USERS_DATA_DIR, 
     PRESETS_DIR, 
+    ANOMALIES_DIR,
     getUserHistoryPath, 
+    getUserPreferencesPath,
     findAvatarFile, 
     deleteCachedImages, 
-    ensureUserDir 
+    ensureUserDir,
+    sanitizeId,
+    isPathSafe
 } = require('../utils/fsUtils');
 const historyController = require('../controllers/historyController');
 const adminController = require('../controllers/adminController');
@@ -302,24 +306,30 @@ module.exports = function(services, state) {
 
     router.get('/admin/anomalies/view', authenticate, authenticateAdmin, async (req, res) => {
         try {
-            const id = req.query.id;
-            const anomaliesDir = path.join(__dirname, '../../data/anomalies');
-            const dumpPath = path.join(anomaliesDir, `${id}.html`);
-            if (fs.existsSync(dumpPath)) res.sendFile(dumpPath);
-            else return res.status(404).json({
-            "status": "fail",
-            "code": 404,
-            "message": 'Snapshot not found',
-            "data": {},
-            "error": {}
-        });
-        } catch (err) { return res.status(500).json({
-            "status": "fail",
-            "code": 500,
-            "message": 'Error',
-            "data": {},
-            "error": {}
-        }); }
+            const id = sanitizeId(req.query.id);
+            if (!id) return res.status(400).json({ status: 'fail', message: 'Invalid ID' });
+
+            const dumpPath = path.join(ANOMALIES_DIR, `${id}.html`);
+            if (isPathSafe(ANOMALIES_DIR, dumpPath) && fs.existsSync(dumpPath)) {
+                res.sendFile(dumpPath);
+            } else {
+                return res.status(404).json({
+                    "status": "fail",
+                    "code": 404,
+                    "message": 'Snapshot not found',
+                    "data": {},
+                    "error": {}
+                });
+            }
+        } catch (err) {
+            return res.status(500).json({
+                "status": "fail",
+                "code": 500,
+                "message": 'Error',
+                "data": {},
+                "error": {}
+            });
+        }
     });
 
     router.get('/admin/ip-logs', authenticate, authenticateAdmin, async (req, res) => {
@@ -554,7 +564,10 @@ module.exports = function(services, state) {
         });
             }
             await pool.query('DELETE FROM users WHERE id = ?', [userId]);
-            await fsPromises.rm(path.join(USERS_DATA_DIR, userId.toString()), { recursive: true, force: true }).catch(() => {});
+            const userDir = path.join(USERS_DATA_DIR, sanitizeId(userId));
+            if (isPathSafe(USERS_DATA_DIR, userDir)) {
+                await fsPromises.rm(userDir, { recursive: true, force: true }).catch(() => {});
+            }
             return res.json({ status: 'success' });
         } catch (err) { return res.status(500).json({
             "status": "fail",
@@ -765,7 +778,7 @@ module.exports = function(services, state) {
 
     router.get('/user/preferences', authenticate, async (req, res) => {
         try { 
-            const p = path.join(USERS_DATA_DIR, String(req.userId), 'preferences.json'); 
+            const p = getUserPreferencesPath(req.userId); 
             return res.json({ status: 'success', preferences: fs.existsSync(p) ? JSON.parse(await fsPromises.readFile(p, 'utf8')) : { themeId: null } }); 
         } catch (e) { return res.status(500).json({
             "status": "fail",
@@ -779,7 +792,7 @@ module.exports = function(services, state) {
     router.post('/user/preferences', authenticate, async (req, res) => {
         try { 
             await ensureUserDir(req.userId); 
-            const p = path.join(USERS_DATA_DIR, String(req.userId), 'preferences.json'); 
+            const p = getUserPreferencesPath(req.userId); 
             let cur = fs.existsSync(p) ? JSON.parse(await fsPromises.readFile(p, 'utf8')) : {}; 
             await fsPromises.writeFile(p, JSON.stringify({ ...cur, ...req.body }, null, 2)); 
             return res.json({ status: 'success' }); 

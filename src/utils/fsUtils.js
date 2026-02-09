@@ -17,12 +17,40 @@ const ANOMALIES_DIR = path.join(DATA_DIR, 'anomalies');
     }
 });
 
+/**
+ * Validates if a target path is safely contained within a base directory.
+ * @param {string} base The intended parent directory (must be absolute)
+ * @param {string} target The constructed target path
+ * @returns {boolean}
+ */
+function isPathSafe(base, target) {
+    const resolvedBase = path.resolve(base);
+    const resolvedTarget = path.resolve(target);
+    return resolvedTarget.startsWith(resolvedBase);
+}
+
+/**
+ * Sanitizes a string to be used as a filename or directory name.
+ * @param {string|number} input 
+ * @returns {string}
+ */
+function sanitizeId(input) {
+    return String(input).replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
 function getUserHistoryPath(userId) {
-    return path.join(USERS_DATA_DIR, String(userId), 'history.json');
+    const safeId = sanitizeId(userId);
+    return path.join(USERS_DATA_DIR, safeId, 'history.json');
+}
+
+function getUserPreferencesPath(userId) {
+    const safeId = sanitizeId(userId);
+    return path.join(USERS_DATA_DIR, safeId, 'preferences.json');
 }
 
 function getUserAvatarDir(userId) {
-    return path.join(USERS_DATA_DIR, String(userId));
+    const safeId = sanitizeId(userId);
+    return path.join(USERS_DATA_DIR, safeId);
 }
 
 async function ensureUserDir(userId) {
@@ -34,11 +62,13 @@ async function ensureUserDir(userId) {
 
 async function findAvatarFile(userId) {
     const dir = getUserAvatarDir(userId);
-    if (!fs.existsSync(dir)) return null;
+    if (!isPathSafe(USERS_DATA_DIR, dir) || !fs.existsSync(dir)) return null;
     try {
         const files = await fsPromises.readdir(dir);
         const avatarFile = files.find(f => f.startsWith('avatar.'));
-        return avatarFile ? path.join(dir, avatarFile) : null;
+        if (!avatarFile) return null;
+        const fullPath = path.join(dir, avatarFile);
+        return isPathSafe(dir, fullPath) ? fullPath : null;
     } catch (e) {
         return null;
     }
@@ -106,7 +136,11 @@ module.exports = {
     USERS_DATA_DIR,
     PRESETS_DIR,
     UPLOADS_DIR,
+    ANOMALIES_DIR,
+    isPathSafe,
+    sanitizeId,
     getUserHistoryPath,
+    getUserPreferencesPath,
     getUserAvatarDir,
     ensureUserDir,
     findAvatarFile,

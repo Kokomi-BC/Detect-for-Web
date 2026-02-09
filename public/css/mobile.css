@@ -135,6 +135,7 @@ body {
     font-weight: 900;
     color: var(--text-primary);
     letter-spacing: -1.5px;
+    transition: none !important; /* Prevent gray/black flash during theme transition */
 }
 .brand-sub {
     font-size: 14px;
@@ -142,6 +143,7 @@ body {
     letter-spacing: 4px;
     text-transform: uppercase;
     margin-top: 4px;
+    transition: none !important; /* Prevent transition delay */
 }
 
 @keyframes fadeInDown {
@@ -224,20 +226,20 @@ body {
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 10px 18px; /* Added horizontal padding to increase outer margin */
+    padding: 10px 20px; 
     box-sizing: border-box;
 }
 
 .branding-spacer {
-    flex: 0.4 !important; /* Increased from 0.2 to push branding down and balance ratio */
+    flex: 0.5 !important; /* Slightly adjusted to balance vertical space */
 }
 
 /* Input Card */
 .input-card {
-    background: var(--bg-primary);
+    background: transparent !important; /* Task: Remove the "gray" background card */
     border-radius: 24px;
-    padding: 12px 16px; 
-    box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+    padding: 0; /* Remove padding to eliminate the gap/border look */
+    box-shadow: none !important; /* Remove card shadow in favor of input shadow */
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
     z-index: 10;
@@ -246,6 +248,8 @@ body {
     min-height: 140px; 
     flex: 1.6; 
     margin: 4px 0; 
+    border: none !important; 
+    outline: none !important;
 }
 
 /* Loading Toast - Dynamic Island Style */
@@ -255,17 +259,17 @@ body {
     left: 50%;
     transform: translateX(-50%) translateY(-150%);
     z-index: 9999;
-    background: rgba(255, 255, 255, 0.94);
+    background: var(--bg-menu); /* Use theme variable for dark mode support */
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
     padding: 0 24px;
     border-radius: 100px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.2);
     transition: 
         transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
         width 0.4s cubic-bezier(0.16, 1, 0.3, 1),
         opacity 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    border: 1px solid var(--glass-border);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -326,7 +330,8 @@ body {
     display: flex;
     flex-direction: column;
     box-shadow: none;
-    background: #ffffff !important; /* Ensure solid white */
+    background: var(--bg-secondary) !important; /* Task: use secondary background for fullscreen */
+    transition: none !important; /* Disable transition when entering fullscreen */
     overflow-y: auto;
 }
 
@@ -338,21 +343,32 @@ body {
 .exit-edit-btn {
     position: fixed !important;
     top: 15px;
-    left: 15px;
+    left: 20px; 
     display: none;
     align-items: center;
-    gap: 4px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    background: rgba(243, 244, 246, 0.9);
-    backdrop-filter: blur(8px);
-    padding: 8px 16px;
-    border-radius: 100px;
-    border: 1px solid rgba(0,0,0,0.05);
-    z-index: 2005; /* Higher than card */
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+    justify-content: center;
+    width: 34px; /* Same height as word-count-capsule */
+    height: 34px;
+    color: var(--text-primary);
+    background: var(--bg-glass) !important;
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    border-radius: 50%; /* Circle for icon-only button */
+    padding: 0;
+    z-index: 2005; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1); /* Consistency with word-count-capsule */
+    transition: all 0.2s; 
     transform: translateZ(0); 
+}
+
+.exit-edit-btn span {
+    display: none; /* Hide text as requested */
+}
+
+.exit-edit-btn:active {
+    transform: scale(0.9);
+    opacity: 0.7;
 }
 
 /* Hide elements in fullscreen according to request */
@@ -367,18 +383,41 @@ body {
 
 textarea.mobile-input {
     width: 100%;
-    border: none;
-    outline: none;
+    outline: none !important;
+    /* Task 2: Outer shadow (Softened and theme-aware) */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12) !important; 
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
     resize: none;
     font-size: 18px;
     line-height: 1.6;
-    background: transparent;
+    background: var(--bg-secondary); /* Use secondary for better depth on main background */
+    border: 1px solid var(--border-color) !important; /* Visible border for better readability */
+    border-radius: 20px; /* Slightly smoother radius to match unit */
+    padding: 14px 16px 60px 16px; /* Optimized padding */
     color: var(--text-primary);
-    min-height: 100px;
-    margin-top: 4px; /* Reduced from 12px for more compact initial state */
-    margin-bottom: 2px;
-    padding-bottom: 50px; /* Space for absolute floating toolbar */
+    min-height: 130px; /* Slightly reduced height as requested */
+    margin: 0; 
     flex: 1;
+    overflow-y: auto; 
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.3s ease !important;
+}
+
+textarea.mobile-input:focus {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3) !important;
+}
+
+.input-card.fullscreen textarea.mobile-input {
+    background: transparent !important;
+    padding: 0 0 60px 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
+    transition: none !important; /* Disable transition when entering fullscreen */
 }
 
 .word-indicator {
@@ -389,16 +428,16 @@ textarea.mobile-input {
 }
 
 .bg-glass {
-    background: rgba(255, 255, 255, 0.7) !important;
-    backdrop-filter: blur(10px) saturate(180%);
-    -webkit-backdrop-filter: blur(10px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: var(--bg-glass) !important;
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid var(--glass-border);
 }
 
 .toolbar-container {
     position: absolute;
-    left: 8px; /* Reduced from 16px to stay at same screen position as card narrows */
-    right: 8px; /* Reduced from 16px to stay at same screen position as card narrows */
+    left: 8px; 
+    right: 8px; 
     bottom: 12px;
     display: flex;
     align-items: center;
@@ -409,27 +448,27 @@ textarea.mobile-input {
 }
 
 .word-count-capsule {
-    height: 36px;
+    height: 34px;
     display: flex;
     align-items: center;
-    border-radius: 100px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+    border-radius: 17px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     pointer-events: auto;
     padding-right: 2px;
 }
 
 .circle-btn-flat {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     pointer-events: auto;
-    color: var(--text-secondary);
-    background: none;
+    color: var(--text-primary);
+    background: var(--bg-glass);
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -441,8 +480,9 @@ textarea.mobile-input {
 
 .toolbar-divider {
     width: 1px;
-    height: 14px;
-    background: rgba(0,0,0,0.08);
+    height: 12px;
+    background: var(--border-color);
+    opacity: 0.5;
     margin: 0 4px;
 }
 
@@ -454,7 +494,7 @@ textarea.mobile-input {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     cursor: pointer;
 }
 
@@ -845,15 +885,58 @@ textarea.mobile-input {
 }
 
 .drawer-header {
-    padding: 20px;
-    border-bottom: 1px solid var(--border-color);
+    padding: 16px 20px;
     font-weight: 600;
-    font-size: 18px;
+    font-size: 17px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.history-search-container {
+    padding: 0 15px 12px;
+}
+.history-search-input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    border: 1.5px solid var(--border-color);
+    background: var(--bg-secondary); /* Match history items */
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+.history-search-input:focus {
+    border-color: var(--primary-color);
+    background: var(--bg-primary);
+}
+.search-clear-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    background: var(--bg-tertiary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.search-clear-btn:active {
+    transform: translateY(-50%) scale(0.9);
+    background: var(--border-color);
 }
 .history-list {
     padding: 10px;
     overflow-y: auto;
-    height: calc(100% - 70px);
+    height: calc(100% - 110px); /* Adjusted for more compact header + search */
 }
 .history-item {
     padding: 12px;
