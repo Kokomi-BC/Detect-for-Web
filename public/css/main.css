@@ -194,6 +194,9 @@
             height: 26px;
             object-fit: cover;
             border-radius: 50%;
+            user-select: none;
+            -webkit-user-drag: none;
+            cursor: pointer;
         }
 
         .toolbar-btn:hover #topBarAvatar {

@@ -210,6 +210,9 @@
     #welcomeAvatar {
         width: 100px !important;
         height: 100px !important;
+        user-select: none;
+        -webkit-user-drag: none;
+        cursor: pointer;
     }
 
     .arrow-circle {

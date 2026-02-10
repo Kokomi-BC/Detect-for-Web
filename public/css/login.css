@@ -7,6 +7,22 @@ body {
     padding: 20px;
     position: relative;
     overflow-x: hidden;
+    user-select: none; /* Task: Make elements non-selectable */
+}
+
+/* Task: Allow input selection */
+input, textarea {
+    user-select: text;
+}
+
+/* Task: Prevent dragging for all elements */
+* {
+    -webkit-user-drag: none;
+}
+
+/* Task: Allow dragging if needed for inputs (though usually not for text inputs) */
+input, textarea {
+    -webkit-user-drag: auto;
 }
 
 body::before {

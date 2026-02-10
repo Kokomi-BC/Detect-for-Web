@@ -3,10 +3,6 @@
     --input-card-padding: 20px;
 }
 
-* {
-    -webkit-tap-highlight-color: transparent;
-}
-
 body {
     margin: 0;
     padding: 0;
@@ -19,13 +15,18 @@ body {
     overflow: hidden;
     user-select: none; /* Prevent accidental selection */
     -webkit-user-select: none;
-    -webkit-tap-highlight-color: transparent; /* Remove the blue tap highlight mask */
 }
 
 /* Allow selection in specific areas */
 #textInput, .parsed-text, .tooltip-reason, .tooltip-quote, .analysis-text {
     user-select: text !important;
     -webkit-user-select: text !important;
+}
+
+#topBarAvatar {
+    user-select: none;
+    -webkit-user-drag: none;
+    cursor: pointer;
 }
 
 /* Header */
@@ -431,7 +432,6 @@ textarea.mobile-input {
     color: var(--text-primary);
     flex: 1;
     overflow-y: auto;
-    -webkit-tap-highlight-color: transparent;
     transition: 
         padding 0.5s cubic-bezier(0.16, 1, 0.3, 1), 
         font-size 0.5s cubic-bezier(0.16, 1, 0.3, 1),
@@ -1018,7 +1018,6 @@ textarea.mobile-input {
     font-size: 14px;
     cursor: pointer;
     transition: transform 0.1s, opacity 0.1s, background-color var(--transition-fast);
-    -webkit-tap-highlight-color: transparent;
 }
 .history-item:active {
     transform: scale(0.98);
@@ -1047,7 +1046,6 @@ textarea.mobile-input {
 .parsed-image-item {
     transition: transform 0.2s;
     cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
 }
 .parsed-image-item:active {
     transform: scale(0.95);
