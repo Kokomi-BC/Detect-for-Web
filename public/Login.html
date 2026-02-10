@@ -15,13 +15,14 @@
         </button>
 
         <div class="header" id="form-header">
-            <img src="/ico/Detect.ico" alt="App Icon" class="app-icon" loading="lazy" onerror="this.style.display='none'">
+            <img src="/ico/Detect.ico" alt="App Icon" class="app-icon" onerror="this.style.display='none'">
             <h2 id="form-title">登录</h2>
             <p id="form-subtitle">欢迎回来，请登录您的账户</p>
         </div>
 
         <form id="auth-form" novalidate>
             <div class="form-group" id="username-group">
+                <label for="username" class="sr-only">用户名</label>
                 <div class="input-wrapper">
                     <input type="text" id="username" placeholder="请输入用户名" autocomplete="username" minlength="3" maxlength="20" required>
                     <!-- 用户图标 SVG -->
@@ -31,6 +32,7 @@
             </div>
 
             <div class="form-group" id="password-group">
+                <label for="password" class="sr-only">密码</label>
                 <div class="input-wrapper">
                     <input type="password" id="password" placeholder="请输入密码" autocomplete="current-password" minlength="6" maxlength="32" required>
                     <!-- 锁图标 SVG -->

@@ -26,7 +26,6 @@ module.exports = {
       './public/js/theme-loader.js',
       './public/js/user-editor.js',
       './public/js/export-manager.js',
-      './public/js/mobile.js',
       './public/css/variables.css',
       './public/css/common.css',
       './public/css/main.css'

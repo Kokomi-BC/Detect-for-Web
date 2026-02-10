@@ -9,7 +9,7 @@ class UserEditorAdmin extends UserEditorCore {
         const roleContainer = document.getElementById('user-edit-role-container');
         if (roleContainer) {
             roleContainer.innerHTML = `
-                <label>用户角色</label>
+                <label for="user-edit-role">用户角色</label>
                 <select id="user-edit-role">
                     <option value="user">普通用户</option>
                     <option value="admin">管理员</option>

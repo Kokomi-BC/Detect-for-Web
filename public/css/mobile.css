@@ -315,7 +315,6 @@ body {
 
 
 
-/* Fullscreen Input Mode */
 .input-card.fullscreen {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -324,13 +323,27 @@ body {
     border-radius: 0;
     margin: 0;
     z-index: 2000; /* Max z-index */
-    padding: 70px 20px 20px 20px; /* Space for exit button at top */
+    padding: 60px 18px 20px 18px; /* Final state padding */
     display: flex;
     flex-direction: column;
     box-shadow: none;
-    background: var(--bg-secondary) !important; /* Task: use secondary background for fullscreen */
-    transition: none !important; /* Disable transition when entering fullscreen */
+    background: var(--bg-main) !important; 
+    animation: fullscreen-elegant-enter 0.5s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+    transform-origin: center top;
     overflow-y: auto;
+    will-change: transform, opacity;
+    transition: none !important; /* Prevent padding/layout properties from transitioning slowly */
+}
+
+@keyframes fullscreen-elegant-enter {
+    from {
+        opacity: 0;
+        transform: translateY(100px); /* Start from lower down */
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .input-card.fullscreen .bottom-action-area {
@@ -394,8 +407,13 @@ body {
     border: 1.5px solid var(--border-color);
     border-radius: 20px;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    transition: all var(--transition-fast);
+    transition: 
+        border-color var(--transition-fast),
+        background-color var(--transition-fast),
+        border-radius 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow var(--transition-fast);
     overflow: hidden;
+    will-change: transform, opacity, border-color;
 }
 
 textarea.mobile-input {
@@ -414,25 +432,36 @@ textarea.mobile-input {
     flex: 1;
     overflow-y: auto;
     -webkit-tap-highlight-color: transparent;
-    transition: none !important;
+    transition: 
+        padding 0.5s cubic-bezier(0.16, 1, 0.3, 1), 
+        font-size 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+        color var(--transition-fast);
     box-shadow: none !important;
 }
 
 .input-area-wrapper:focus-within {
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2) !important;
-    border-color: var(--primary-color) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+    border-color: var(--primary-color);
 }
 
 .input-card.fullscreen .input-area-wrapper {
     background: transparent !important;
-    border: none !important;
+    border: 1.5px solid transparent !important;
     box-shadow: none !important;
     border-radius: 0 !important;
+    transition: none !important; /* Forces immediate removal of focus borders */
+}
+
+.input-card.fullscreen .input-area-wrapper:focus-within {
+    border-color: transparent !important;
+    box-shadow: none !important;
 }
 
 .input-card.fullscreen textarea.mobile-input {
-    padding: 0 0 60px 0 !important;
+    padding: 0 4px 60px 4px !important; /* Move text closer to edges in fullscreen */
     margin: 0 !important;
+    font-size: 19px; /* Slightly larger in fullscreen for reading comfort */
+    transition: font-size 0.5s cubic-bezier(0.16, 1, 0.3, 1), color var(--transition-fast) !important;
 }
 
 .word-indicator {
@@ -456,13 +485,13 @@ textarea.mobile-input {
     color: var(--text-muted) !important; 
     width: 20px;
     height: 20px;
-    background: var(--bg-tertiary) !important; 
+    background: var(--bg-glass) !important; 
     border: none;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
     padding: 0;
     box-sizing: border-box;
     overflow: hidden;
@@ -472,8 +501,6 @@ textarea.mobile-input {
     transform: scale(0.9);
 }
 .close-circle-btn svg {
-    width: 12px;
-    height: 12px;
     display: block;
     margin: 0;
     padding: 0;

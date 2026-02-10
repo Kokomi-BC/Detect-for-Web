@@ -711,7 +711,9 @@
             background: var(--bg-primary);
             min-width: 0 !important; /* Force min-width 0 to allow full collapse */
             max-width: none; /* Removed max-width limit */
-            transition: background-color var(--transition-fast), flex 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), 
+                        flex 400ms cubic-bezier(0.4, 0, 0.2, 1),
+                        opacity 400ms cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden; /* Ensure content doesn't force width */
         }
@@ -734,7 +736,7 @@
             align-items: stretch; /* Keep stretch for both states to avoid jumps */
             padding: 16px 4px 0 4px; /* Default sidebar width is 48px, so content area is 40px */
             flex-shrink: 0;
-            transition: background-color var(--transition-fast), width 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s, margin 0.4s;
+            transition: background-color var(--transition-fast), width 400ms cubic-bezier(0.4, 0, 0.2, 1), padding 400ms cubic-bezier(0.4, 0, 0.2, 1), opacity 400ms, margin 400ms;
             box-shadow: none;
             overflow: hidden; /* Clip content when collapsed */
         }
@@ -868,7 +870,7 @@
             color: var(--text-secondary);
             border-radius: var(--radius-sm);
             cursor: pointer;
-            transition: background-color var(--transition-fast), color var(--transition-fast), padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s, box-shadow 0.2s, width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), color var(--transition-fast), padding 400ms cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s, box-shadow 0.2s, width 400ms cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
             flex-shrink: 0;
@@ -995,7 +997,7 @@
         .history-item {
             padding: 10px 12px;
             background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
+            border: none;
             border-radius: var(--radius-md);
             cursor: pointer;
             transition: all var(--transition-fast) ease;
@@ -1006,7 +1008,6 @@
 
         .history-item:hover {
             background: var(--accent-light);
-            border-color: var(--accent-color);
             transform: translateX(4px);
         }
 
@@ -1120,7 +1121,7 @@
             display: flex;
             align-items: center;
             will-change: transform, opacity;
-            transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), background-color var(--transition-fast), border-color var(--transition-fast);
+            transition: opacity 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), background-color var(--transition-fast), border-color var(--transition-fast);
         }
 
         body.edit-mode .edit-options {
@@ -1196,24 +1197,28 @@
             max-width: 100%;
             flex: 1 0 100% !important; /* Force full width */
             z-index: 100;
+            transition: none !important;
         }
         
+        body.edit-mode .right-panel {
+            flex: 0 0 0 !important;
+            min-width: 0 !important;
+            opacity: 0;
+            overflow: hidden;
+            transition: none !important;
+        }
+
         .right-panel, .resizer, .toolbar, .bottom-area, .image-preview-container {
-            transition: var(--transition);
+            /* Remove global transition here to avoid conflicts with 400ms panel transitions */
             opacity: 1;
             transform: translateY(0);
         }
-
-        body.edit-mode .right-panel {
-            flex: 0 0 0 !important;
-            min-width: 0;
-            opacity: 0;
-            overflow: hidden;
-            transform: translateX(20px);
-        }
         
         body.edit-mode .resizer {
-            display: none;
+            width: 0 !important;
+            opacity: 0;
+            pointer-events: none;
+            transition: none !important;
         }
 
         body.edit-mode .toolbar {
@@ -1524,7 +1529,7 @@
             gap: 12px;
             min-width: 320px; 
             width: 100%;
-            transition: background-color var(--transition-fast), color var(--transition-fast), padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), color var(--transition-fast), padding 400ms cubic-bezier(0.4, 0, 0.2, 1), transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .editor-status-bar {
@@ -1553,7 +1558,7 @@
             background: var(--bg-secondary);
             /* backdrop-filter: blur(8px); */
             /* -webkit-backdrop-filter: blur(8px); */
-            border: 2px solid var(--input-border); 
+            border: 2px solid transparent; 
             border-radius:  var(--radius-lg);
             box-shadow: var(--shadow-sm);
             overflow: hidden; /* Clip children */
@@ -1562,12 +1567,11 @@
         }
 
         [data-theme="dark"] .text-container {
-            border-color: var(--input-border);
+            border-color: transparent;
         }
 
         .text-container:focus-within {
             border-color: var(--accent-color);
-            box-shadow: none;
             background: var(--bg-secondary);
         }
 
@@ -1587,30 +1591,9 @@
             word-wrap: break-word;
             overflow-wrap: break-word;
             white-space: pre-wrap;
-            transition: font-size 0.4s cubic-bezier(0.4, 0, 0.2, 1), line-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: font-size 400ms cubic-bezier(0.4, 0, 0.2, 1), line-height 400ms cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* Optimization: Disable heavy paints during edit mode transition */
-        body.edit-mode-transitioning .content-area {
-            mask-image: none !important;
-            -webkit-mask-image: none !important;
-        }
-
-        body.edit-mode-transitioning .editor-status-bar {
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-            background: var(--bg-secondary) !important;
-            opacity: 0 !important; /* Temporarily hide status bar */
-        }
-        
-        body.edit-mode-transitioning .text-input {
-            transition: none !important; /* CRITICAL: Prevent expensive font-size re-layout animation */
-        }
-
-        body.edit-mode-transitioning * {
-             pointer-events: none !important; /* Prevent interactions during transition */
-        }
-        
         /* Edit Mode Overrides */
         body.edit-mode .content-area {
             overflow-y: auto; /* Enable scroll on container */
@@ -1620,7 +1603,7 @@
             /* Add mask to fade out text at the very top */
             mask-image: linear-gradient(to bottom, transparent 0px, black 80px, black 100%);
             -webkit-mask-image: linear-gradient(to bottom, transparent 0px, black 80px, black 100%);
-            transition: background-color var(--transition-fast), color var(--transition-fast), padding 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), color var(--transition-fast), padding 400ms cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         body.edit-mode .text-container {
@@ -1658,7 +1641,7 @@
             padding-top: 20px; /* Reduced padding as images now push text down */
             padding-bottom: 20px;
             overflow: visible; /* No internal scroll */
-            transition: font-size 0.4s cubic-bezier(0.4, 0, 0.2, 1), line-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: font-size 400ms cubic-bezier(0.4, 0, 0.2, 1), line-height 400ms cubic-bezier(0.4, 0, 0.2, 1);
             animation: editModeTextIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
@@ -1801,30 +1784,36 @@
 
         /* Resizer */
         .resizer {
-            width: 4px;
-            background: var(--divider-color);
+            width: 6px;
+            background: rgba(120, 120, 120, 0.1);
             cursor: col-resize;
             position: relative;
             z-index: 10;
-            transition: all var(--transition-fast);
+            transition: width 400ms cubic-bezier(0.4, 0, 0.2, 1),
+                        background-color 400ms cubic-bezier(0.4, 0, 0.2, 1),
+                        opacity 400ms cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .resizer::after {
             content: '';
-            width: 2px;
+            width: 3px;
             height: 32px;
-            background: var(--primary-color);
-            border-radius: 2px;
-            opacity: 0.4;
-            transition: all var(--transition-fast);
+            background: rgba(120, 120, 120, 0.3);
+            border-radius: 4px;
+            opacity: 0.8;
+            transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .resizer:hover {
-            background: var(--accent-hover);
+        .resizer:hover,
+        body.resizing .resizer {
+            width: 8px;
+            background: rgba(120, 120, 120, 0.2);
         }
-        .resizer:hover::after {
-            background: var(--accent-color);
+        .resizer:hover::after,
+        body.resizing .resizer::after {
+            width: 6px;
+            background: rgba(120, 120, 120, 0.5);
             opacity: 1;
             height: 48px;
         }
@@ -1843,7 +1832,10 @@
             flex-direction: column;
             background: var(--bg-primary);
             min-width: 300px;
-            transition: background-color var(--transition-fast), flex 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), 
+                        flex 400ms cubic-bezier(0.4, 0, 0.2, 1),
+                        min-width 400ms cubic-bezier(0.4, 0, 0.2, 1),
+                        opacity 400ms cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .result-header {
@@ -2061,10 +2053,10 @@
             gap: 16px;
             margin-bottom: 12px;
             padding: 16px;
-            background: var(--bg-soft-layer);
+            background: var(--bg-card);
             border-radius: var(--radius-md);
             transition: var(--transition);
-            border: 1px solid var(--border-color);
+            border: 1px solid transparent;
             position: relative;
             overflow: hidden;
         }
@@ -2083,6 +2075,7 @@
         .analysis-item:hover {
             transform: translateX(4px);
             box-shadow: var(--shadow-sm);
+            border-color: var(--border-color);
         }
 
         .analysis-icon {
@@ -2611,10 +2604,10 @@
             align-items: flex-start;
             margin-bottom: 12px;
             padding: 12px;
-            background: var(--bg-soft-layer);
+            background: var(--bg-card);
             border-radius: 8px;
             transition: var(--transition);
-            border: 1px solid var(--border-color);
+            border: 1px solid transparent;
             position: relative;
             overflow: hidden;
         }
@@ -2632,7 +2625,7 @@
 
         .analysis-item:hover {
             transform: translateX(4px);
-            background: var(--bg-tertiary);
+            border-color: var(--border-color);
         }
 
         .analysis-icon {
@@ -2869,7 +2862,7 @@
             font-weight: 600;
             z-index: 10000;
             opacity: 0;
-            transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+            transition: opacity 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
             pointer-events: none;
             box-shadow: var(--shadow-lg);
             border: 1px solid transparent;
@@ -2932,7 +2925,7 @@
             opacity: 0;
             overflow: hidden;
             /* transform: translateX(-20px);  Removed - handled by content push */
-            transition: background-color var(--transition-fast), color var(--transition-fast), opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), flex 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), color var(--transition-fast), opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), flex 400ms cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         /* 
@@ -2980,7 +2973,7 @@
             pointer-events: none;
             transform: translateX(-10px) scale(0.9) rotate(-90deg);
             transform-origin: center center;
-            transition: background-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), opacity 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: background-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), opacity 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
             color: var(--accent-color);
             box-shadow: var(--shadow-sm);
             box-sizing: border-box;
@@ -3093,7 +3086,7 @@
             white-space: nowrap;
             opacity: 0;
             overflow: hidden;
-            transition: max-width 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s, margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: max-width 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s, margin-left 0.15s cubic-bezier(0.4, 0, 0.2, 1);
             transition-delay: 0s;
         }
 
@@ -3107,7 +3100,7 @@
         .left-sidebar.expanded .toolbar-btn {
             padding-left: 12px; /* Content area is wider, so we give more breathing room */
             border-radius: var(--radius-md);
-            transition: background-color var(--transition-fast), color var(--transition-fast), padding 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s, box-shadow 0.2s, width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background-color var(--transition-fast), color var(--transition-fast), padding 400ms cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s, box-shadow 0.2s, width 400ms cubic-bezier(0.4, 0, 0.2, 1);
             transition-delay: 0s;
         }
 

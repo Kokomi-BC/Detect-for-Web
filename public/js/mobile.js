@@ -76,24 +76,46 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupNavigation() {
-    // 【计数器拦截系统 - 终极防御版】
     let exitCount = 0;
     let exitTimer = null;
 
     // 状态恢复函数：确保始终处于 home 运行态
     const resetToHomeState = () => {
         if (!window.history.state || window.history.state.page !== 'home') {
-            window.history.pushState({ page: 'home' }, '');
+            window.history.pushState({ page: 'home', initialized: true }, '');
         }
     };
 
-    // 初始化三级历史栈：[base, stable, home]
-    // 这种结构可以抵御甚至连续三次极速点击
-    window.history.replaceState({ page: 'base' }, '');
-    window.history.pushState({ page: 'stable' }, '');
-    window.history.pushState({ page: 'home' }, '');
+    // 初始状态：仅标记当前页，不增加深度以避免 "Session History Item Has Been Marked Skippable" 警告
+    // 该警告是因为在用户交互前进行了多次 pushState
+    if (!window.history.state || !window.history.state.page) {
+        window.history.replaceState({ page: 'home' }, '');
+    }
+
+    // 延迟初始化：仅在用户首次点击或触摸后扩展历史栈深度
+    const initNavigationStack = () => {
+        if (window.history.state && window.history.state.initialized) return;
+        
+        try {
+            window.history.replaceState({ page: 'base', initialized: true }, '');
+            window.history.pushState({ page: 'stable', initialized: true }, '');
+            window.history.pushState({ page: 'home', initialized: true }, '');
+            console.log('Navigation stack initialized after user interaction');
+        } catch (e) {
+            console.warn('Failed to initialized navigation stack:', e);
+        }
+        
+        window.removeEventListener('touchstart', initNavigationStack);
+        window.removeEventListener('mousedown', initNavigationStack);
+    };
+
+    window.addEventListener('touchstart', initNavigationStack, { passive: true });
+    window.addEventListener('mousedown', initNavigationStack, { passive: true });
 
     window.addEventListener('popstate', (event) => {
+        // 如果从未初始化过（即用户未进行任何交互就点击返回），允许浏览器正常跳转回上一页面
+        if (!window.history.state || !window.history.state.initialized) return;
+
         // 关键逻辑：只要被监测到离开 home 态，不论是回到 stable 还是 base，都视为一次返回尝试
         if (!event.state || event.state.page !== 'home') {
             
@@ -1883,7 +1905,7 @@ window.showReasonTooltip = function(element) {
         <div class="tooltip-header" style="font-weight:600; margin-bottom:10px; padding:18px 20px 14px; border-bottom:1px solid var(--border-color); font-size:18px; display: flex; justify-content: space-between; align-items: center;">
             <span>风险详情</span>
             <span class="close-circle-btn" style="width: 30px; height: 30px;" onclick="hideTooltip()">
-                ${UI_CLOSE_SVG.replace('<svg', '<svg width="18" height="18"')}
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
             </span>
         </div>
         <div style="padding: 20px 24px 40px;">

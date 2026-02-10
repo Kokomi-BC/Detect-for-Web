@@ -34,7 +34,7 @@ class UserEditorCore {
                     </div>
 
                     <div class="form-group">
-                        <label>用户名</label>
+                        <label for="user-edit-username">用户名</label>
                         <input type="text" id="user-edit-username" minlength="3" maxlength="20">
                     </div>
                     
@@ -43,12 +43,12 @@ class UserEditorCore {
                     </div>
 
                     <div class="form-group">
-                        <label>新密码 (留空不修改)</label>
+                        <label for="user-edit-password">新密码 (留空不修改)</label>
                         <input type="password" id="user-edit-password" placeholder="输入新密码" minlength="6" maxlength="32">
                     </div>
                     
                     <div class="form-group" id="user-edit-confirm-group">
-                        <label>确认新密码</label>
+                        <label for="user-edit-password-confirm">确认新密码</label>
                         <input type="password" id="user-edit-password-confirm" placeholder="请再次输入新密码">
                     </div>
                     

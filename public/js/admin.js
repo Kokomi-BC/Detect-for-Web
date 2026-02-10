@@ -975,51 +975,43 @@
             lbm = lbm || 'rgba(255, 255, 255, 0.95)';
             dbm = dbm || 'rgba(25, 25, 26, 0.95)';
 
-            document.getElementById('light-primary').value = lp;
-            document.getElementById('light-primary-text').value = lp;
-            document.getElementById('light-bg').value = lb;
-            document.getElementById('light-bg-text').value = lb;
-            document.getElementById('dark-primary').value = dp;
-            document.getElementById('dark-primary-text').value = dp;
-            document.getElementById('dark-bg').value = db;
-            document.getElementById('dark-bg-text').value = db;
+            const setVal = (colorId, textId, val) => {
+                const cEl = document.getElementById(colorId);
+                const tEl = document.getElementById(textId);
+                if (tEl) tEl.value = val;
+                if (cEl) {
+                    if (/^#[0-9A-F]{6}$/i.test(val)) {
+                        cEl.value = val;
+                    } else if (val.startsWith('rgba')) {
+                        const hex = rgbaToHex(val);
+                        if (hex) cEl.value = hex;
+                    }
+                }
+            };
+
+            setVal('light-primary', 'light-primary-text', lp);
+            setVal('light-bg', 'light-bg-text', lb);
+            setVal('dark-primary', 'dark-primary-text', dp);
+            setVal('dark-bg', 'dark-bg-text', db);
             
-            document.getElementById('light-secondary').value = ls;
-            document.getElementById('light-secondary-text').value = ls;
-            document.getElementById('dark-secondary').value = ds;
-            document.getElementById('dark-secondary-text').value = ds;
-            document.getElementById('light-card').value = lc;
-            document.getElementById('light-card-text').value = lc;
-            document.getElementById('dark-card').value = dc;
-            document.getElementById('dark-card-text').value = dc;
-            document.getElementById('light-bg-sec').value = lbs;
-            document.getElementById('light-bg-sec-text').value = lbs;
-            document.getElementById('dark-bg-sec').value = dbs;
-            document.getElementById('dark-bg-sec-text').value = dbs;
-            document.getElementById('light-border').value = lbdr;
-            document.getElementById('light-border-text').value = lbdr;
-            document.getElementById('dark-border').value = dbdr;
-            document.getElementById('dark-border-text').value = dbdr;
-            document.getElementById('light-glass-border').value = lgb;
-            document.getElementById('light-glass-border-text').value = lgb;
-            document.getElementById('dark-glass-border').value = dgb;
-            document.getElementById('dark-glass-border-text').value = dgb;
-            document.getElementById('light-text-main').value = ltm;
-            document.getElementById('light-text-main-text').value = ltm;
-            document.getElementById('dark-text-main').value = dtm;
-            document.getElementById('dark-text-main-text').value = dtm;
-            document.getElementById('light-text-muted').value = ltm_muted;
-            document.getElementById('light-text-muted-text').value = ltm_muted;
-            document.getElementById('dark-text-muted').value = dtm_muted;
-            document.getElementById('dark-text-muted-text').value = dtm_muted;
-            document.getElementById('light-bg-tertiary').value = lbt;
-            document.getElementById('light-bg-tertiary-text').value = lbt;
-            document.getElementById('dark-bg-tertiary').value = dbt;
-            document.getElementById('dark-bg-tertiary-text').value = dbt;
-            document.getElementById('light-bg-menu').value = lbm;
-            document.getElementById('light-bg-menu-text').value = lbm;
-            document.getElementById('dark-bg-menu').value = dbm;
-            document.getElementById('dark-bg-menu-text').value = dbm;
+            setVal('light-secondary', 'light-secondary-text', ls);
+            setVal('dark-secondary', 'dark-secondary-text', ds);
+            setVal('light-card', 'light-card-text', lc);
+            setVal('dark-card', 'dark-card-text', dc);
+            setVal('light-bg-sec', 'light-bg-sec-text', lbs);
+            setVal('dark-bg-sec', 'dark-bg-sec-text', dbs);
+            setVal('light-border', 'light-border-text', lbdr);
+            setVal('dark-border', 'dark-border-text', dbdr);
+            setVal('light-glass-border', 'light-glass-border-text', lgb);
+            setVal('dark-glass-border', 'dark-glass-border-text', dgb);
+            setVal('light-text-main', 'light-text-main-text', ltm);
+            setVal('dark-text-main', 'dark-text-main-text', dtm);
+            setVal('light-text-muted', 'light-text-muted-text', ltm_muted);
+            setVal('dark-text-muted', 'dark-text-muted-text', dtm_muted);
+            setVal('light-bg-tertiary', 'light-bg-tertiary-text', lbt);
+            setVal('dark-bg-tertiary', 'dark-bg-tertiary-text', dbt);
+            setVal('light-bg-menu', 'light-bg-menu-text', lbm);
+            setVal('dark-bg-menu', 'dark-bg-menu-text', dbm);
 
             // 自动触发表格/背景的预览更新
             if (typeof previewTheme === 'function') {
@@ -1200,6 +1192,18 @@
         }
 
         // --- 同步颜色选择器和文本框 ---
+        function rgbaToHex(rgba) {
+            if (!rgba || typeof rgba !== 'string') return null;
+            const match = rgba.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)$/);
+            if (match) {
+                const r = Math.min(255, parseInt(match[1])).toString(16).padStart(2, '0');
+                const g = Math.min(255, parseInt(match[2])).toString(16).padStart(2, '0');
+                const b = Math.min(255, parseInt(match[3])).toString(16).padStart(2, '0');
+                return `#${r}${g}${b}`;
+            }
+            return null;
+        }
+
         const syncColor = (colorId, textId) => {
             const colorEl = document.getElementById(colorId);
             const textEl = document.getElementById(textId);
@@ -1211,10 +1215,14 @@
                 previewTheme(); 
             };
             textEl.oninput = (e) => {
-                if (/^#[0-9A-F]{6,8}$/i.test(e.target.value) || e.target.value.startsWith('rgba')) {
-                    colorEl.value = e.target.value;
-                    previewTheme(); 
+                const val = e.target.value;
+                if (/^#[0-9A-F]{6}$/i.test(val)) {
+                    colorEl.value = val;
+                } else if (val.startsWith('rgba')) {
+                    const hex = rgbaToHex(val);
+                    if (hex) colorEl.value = hex;
                 }
+                previewTheme(); 
             };
         };
 
@@ -1407,19 +1415,28 @@ Object.assign(window, {
     deleteUser,
     approveUser,
     openEdit,
+    fetchUsers,
     deleteHistoryItem,
     fetchHistory,
+    fetchAnomalies,
+    viewSnapshot,
+    openProxy,
+    deleteAnomaly,
     handleSearchInput,
     clearSearchInput,
     clearCache,
     clearAnomalies,
     clearIPLogs,
     fetchIPLogs,
+    fetchHistoryLogPage,
+    fetchTodayLogPage,
     quickBan,
     openAddBlacklistModal,
     addBlacklist,
     removeBlacklist,
+    fetchBlacklist,
     saveCrawlerSettings,
+    fetchCrawlerLogs,
     clearCrawlerLogs,
     saveConfig,
     setLlmMethod,

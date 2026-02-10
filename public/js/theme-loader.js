@@ -111,14 +111,18 @@
         
         try {
             const cachedData = localStorage.getItem('dynamic_theme_cache');
-            if (cachedData) {
+            if (cachedData && !force) {
                 const { theme, timestamp } = JSON.parse(cachedData);
                 renderTheme(theme);
                 
-                // If it's a force call from theme toggle, we just needed to re-render with the new mode.
-                // We don't need to hit the server unless the cache is actually expired.
-                if (force && (Date.now() - timestamp < 300 * 1000)) return; 
-                if (!force && (Date.now() - timestamp < 120 * 1000)) return;
+                // If it's NOT a force call, we can use cache if it's fresh enough (2 minutes)
+                if (Date.now() - timestamp < 120 * 1000) return;
+            }
+
+            // If forced, we still render the cached theme first for immediate visual feedback (if mode changed)
+            if (force && cachedData) {
+                const { theme } = JSON.parse(cachedData);
+                renderTheme(theme);
             }
 
             isFetching = true;

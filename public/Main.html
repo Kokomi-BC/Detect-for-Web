@@ -882,8 +882,6 @@
         </div>
     </div>
 
-    <script src="/js/user-editor.js"></script>
-    <script src="/js/export-manager.js"></script>
     <script>
         // API Bridge for Web compatibility (Migration)
         window.api = {
@@ -1771,12 +1769,6 @@
 
             // Toggle Edit Mode
             function toggleEditMode(active) {
-                // Performance Optimization: Add transitioning class
-                document.body.classList.add('edit-mode-transitioning');
-                setTimeout(() => {
-                    document.body.classList.remove('edit-mode-transitioning');
-                }, 400); // Match transition duration
-
                 // Preserve scroll positions
                 const textScrollBefore = textInput.scrollTop;
                 const contentScrollBefore = contentArea.scrollTop;
@@ -1792,7 +1784,7 @@
                     if (batchToggle) batchToggle.classList.add('disabled');
                     textInput.focus();
 
-                    // In edit mode the container scrolls; align it with the previous text scroll
+                    // 文字移动动画
                     requestAnimationFrame(() => {
                         contentArea.scrollTop = textScrollBefore;
                         textInput.scrollTop = textScrollBefore;
@@ -1802,19 +1794,19 @@
                     editBtn.classList.remove('active');
                     if (batchToggle) batchToggle.classList.remove('disabled');
 
-                    // Reset divider to middle
+                    // Reset divider positions (Restore to 50/50)
                     if (leftPanel && rightPanel) {
-                        leftPanel.style.flex = '0 0 50%';
-                        rightPanel.style.flex = '0 0 50%';
-                        // Reset internal state if accessible, or just rely on UI update
+                        leftPanel.style.flex = '1';
+                        rightPanel.style.flex = '1';
+                        
                         if (toolbar) {
                             toolbar.classList.remove('hidden');
-                            toolbar.style.setProperty('--toolbar-gap', '12px'); // Reset gap
+                            toolbar.style.setProperty('--toolbar-gap', '12px'); 
                         }
                         if (collapsedIndicator) collapsedIndicator.classList.remove('visible');
                     }
 
-                    // Restore the original text scroll after leaving edit mode
+                    // Restore the original text scroll
                     requestAnimationFrame(() => {
                         textInput.scrollTop = contentScrollBefore;
                         contentArea.scrollTop = 0;
