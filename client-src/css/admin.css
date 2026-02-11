@@ -234,15 +234,15 @@ body {
 @media (max-width: 1024px) {
     .mobile-menu-toggle {
         display: flex;
-        margin-right: -4px; /* 抵消一些间距，使其更靠近左侧 */
+        margin-right: -4px;
     }
 
     .sidebar {
         position: fixed;
         left: 0;
         top: 0;
-        z-index: 1000;
-        box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+        z-index: 2100; /* 高于大部分 UI，包括 overlay */
+        box-shadow: 4px 0 15px rgba(0,0,0,0.2);
         transform: translateX(0);
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s;
     }
@@ -260,13 +260,10 @@ body {
         left: 0;
         width: 100vw;
         height: 100vh;
-        background: rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(2px);
-        z-index: 999; /* 稍微低于 sidebar */
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(4px);
+        z-index: 2050; /* 低于 sidebar，高于 header */
     }
-
-    /* 当宽度小于 1024 且侧边栏显示时，通过 JS 控制 .sidebar-overlay 的 display 或在此定义规则 */
-    /* 修正：移除 :has 规则，改用更稳定的方式或在 JS 中控制 */
     
     .main-content {
         margin-left: 0 !important;
@@ -274,8 +271,50 @@ body {
         min-width: 0;
     }
 
+    /* 优化右上角用户区域，移除卡片背景和角色文字 */
+    .user-profile {
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        padding: 4px !important;
+    }
+
+    #user-role-label {
+        display: none !important;
+    }
+
+    .user-profile div {
+        display: flex !important; /* 确保用户名 div 仍然可见 */
+        justify-content: center;
+    }
+
+    .user-profile svg:last-child {
+        display: none !important; /* 隐藏下拉箭头 */
+    }
+    
+    .user-profile img {
+        width: 34px;
+        height: 34px;
+        margin: 0;
+        border: 2px solid var(--primary-color);
+    }
+
     .admin-layout {
         min-width: 100vw;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .user-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .user-table {
+        min-width: 850px;
     }
 
     .top-header > div:first-child {
@@ -602,10 +641,12 @@ body {
     margin-top: 15px;
     border-radius: 12px;
     border: 1px solid var(--border-color);
+    -webkit-overflow-scrolling: touch; /* 优化移动端滚动 */
 }
 
 table {
     width: 100%;
+    min-width: 850px; /* 增加最小宽度，防止在窄屏下挤压文字 */
     border-collapse: collapse;
 }
 
@@ -613,6 +654,13 @@ th, td {
     text-align: left;
     padding: 12px 15px;
     border-bottom: 1px solid var(--border-color);
+    white-space: nowrap; /* 默认不换行，防止文字竖向显示 */
+}
+
+/* 允许某些列换行，例如日志详情或描述 */
+td.allow-wrap {
+    white-space: normal;
+    min-width: 200px;
 }
 
 th { 
@@ -640,7 +688,7 @@ tr:hover { background-color: var(--accent-light); }
 /* --- Stats Grid --- */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 20px;
     margin-bottom: 24px;
 }
@@ -654,6 +702,23 @@ tr:hover { background-color: var(--accent-light); }
     box-shadow: var(--shadow-sm);
     transition: var(--transition-fast);
     min-width: 250px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.stat-title {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    white-space: nowrap;
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-main);
+    line-height: 1.2;
 }
 
 .stat-card:hover {
@@ -1204,3 +1269,4 @@ input:checked + .ui-slider:before {
     flex-shrink: 0;
     color: var(--primary-color);
 }
+

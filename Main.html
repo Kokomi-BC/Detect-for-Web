@@ -1022,11 +1022,14 @@
                 const meData = await meRes.json();
                 if (meData.status !== 'fail') {
                     try {
-                        const module = await import('/client-src/js/user-editor.js');
-                        const userEditor = module.default;
+                        const module = await import('./client-src/js/user-editor.js');
+                        const userEditor = module.default || module.userEditor;
                         userEditor.open({
                             userId: meData.user.id,
                             username: meData.user.username,
+                            role: meData.user.role,
+                            is_online: true,
+                            isSelf: true,
                             isAdminContext: false,
                             onSuccess: () => location.reload()
                         });
@@ -1112,12 +1115,16 @@
 
         async function loadHeicScript() {
             if (typeof heic2any !== 'undefined') return;
-            try {
-                // Using absolute-style path for Vite to resolve better
-                await import('/client-src/js/heic2any.min.js');
-            } catch (err) {
-                console.error("Failed to load HEIC script", err);
-            }
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = '/client-src/js/heic2any.min.js'; // 移动后的稳定路径
+                script.onload = () => {
+                    if (typeof heic2any !== 'undefined') resolve();
+                    else reject(new Error('heic2any still undefined after script load'));
+                };
+                script.onerror = () => reject(new Error('Failed to load heic2any script via tag'));
+                document.head.appendChild(script);
+            });
         }
 
         // 初始化

@@ -250,7 +250,7 @@ module.exports = function(services, state) {
 
     router.get('/admin/users', authenticate, authenticateAdmin, async (req, res) => {
         try { 
-            const result = await adminController.handleListUsers(pool, req.query);
+            const result = await adminController.handleListUsers(pool, req.query, state);
             return res.json({ status: 'success', ...result }); 
         }
         catch (err) { return res.status(500).json({

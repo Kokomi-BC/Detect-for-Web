@@ -1,3 +1,5 @@
+import { userEditor } from './user-editor.js';
+
 // Mobile Logic for AI Detective
 
 // --- API Mock ---
@@ -1267,7 +1269,7 @@ function renderImages() {
         const title = data.title || (isDoc ? '解析文件' : '检测网页');
         const metaLine = isDoc 
             ? `<span class="doc-ext">${data.format || 'DOC'}</span>${data.size ? `<span class="doc-divider">|</span><span class="doc-size">${formatFileSize(data.size)}</span>` : ''}`
-            : `<span class="doc-ext" style="color:var(--text-muted); font-size:11px;">${data.pendingExtraction ? '正在解析...' : '内容已就绪'}</span>`;
+            : `<span class="doc-ext" style="color:var(--text-muted); font-size:11px;">${data.pendingExtraction ? '等待解析...' : '内容已就绪'}</span>`;
 
         mediaDiv.innerHTML = `
             <div class="doc-icon">
@@ -2088,7 +2090,16 @@ async function processAndAddImages(files) {
 
                 // Dynamically load heic2any if not already loaded
                 if (typeof heic2any === 'undefined') {
-                    await import('./heic2any.min.js');
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = '/client-src/js/heic2any.min.js';
+                        script.onload = () => {
+                            if (typeof heic2any !== 'undefined') resolve();
+                            else reject(new Error('heic2any not found after script load'));
+                        };
+                        script.onerror = () => reject(new Error('Script tag load failed'));
+                        document.head.appendChild(script);
+                    });
                 }
 
                 const blob = await heic2any({
@@ -2230,13 +2241,14 @@ function showUserActionSheet() {
 
 async function openMobileUserEditor() {
     try {
-        const module = await import('./user-editor.js');
-        const userEditor = module.default;
-        
         if (userEditor && currentUser) {
             userEditor.open({
                 userId: currentUser.id,
                 username: currentUser.username,
+                role: currentUser.role,
+                is_online: true,
+                isSelf: true,
+                isAdminContext: false,
                 onSuccess: (data) => {
                     // The editor returns { userId, username, avatarTimestamp }
                     if (currentUser.id === data.userId) {
@@ -2247,7 +2259,7 @@ async function openMobileUserEditor() {
             });
         }
     } catch (error) {
-        console.error('Failed to load user editor:', error);
+        console.error('Failed to open user editor:', error);
     }
     closeActionSheet();
 }

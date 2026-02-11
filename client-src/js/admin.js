@@ -1,3 +1,5 @@
+import { userEditor } from './user-editor.js';
+
 // --- API Bridge for Web compatibility (Migration) ---
 window.api = {
     invoke: async (channel, ...args) => {
@@ -97,7 +99,7 @@ async function fetchAdminInfo() {
         const nameEl = document.getElementById('user-display-name');
         const roleEl = document.getElementById('user-role-label');
         if (nameEl) nameEl.innerText = u.username;
-        if (roleEl) roleEl.innerText = u.role === 'admin' ? '超级管理员' : '普通用户';
+        if (roleEl) roleEl.innerText = u.role === 'admin' ? '管理员' : '普通用户';
         
         const avatarImg = document.getElementById('user-avatar');
         if (avatarImg) {
@@ -164,11 +166,11 @@ document.addEventListener('DOMContentLoaded', () => {
     bind('edit-self-btn', 'click', () => {
         toggleUserMenu();
         if (currentAdminId) {
-            openEdit(currentAdminId, currentAdminUsername, currentAdminRole);
+            openEdit(currentAdminId, currentAdminUsername, currentAdminRole, true);
         } else {
             // Fallback: try to fetch info if for some reason it's missing
             fetchAdminInfo().then(() => {
-                if (currentAdminId) openEdit(currentAdminId, currentAdminUsername, currentAdminRole);
+                if (currentAdminId) openEdit(currentAdminId, currentAdminUsername, currentAdminRole, true);
             });
         }
     });
@@ -211,10 +213,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     window.addEventListener('resize', handleResize);
     handleResize(); 
-});
+    
+    // Initialize SSE connection ASAP
+    initSSE();
 
-        // 全局点击监听，用于关闭用户菜单
-        window.addEventListener('click', function(e) {
+    // 全局点击监听，用于关闭用户菜单
+    window.addEventListener('click', function(e) {
             if (!e.target.closest('.user-menu-container')) {
                 const dropdown = document.getElementById('user-dropdown');
                 if (dropdown) dropdown.classList.remove('show');
@@ -239,6 +243,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             users.forEach(u => {
                 const tr = document.createElement('tr');
+                const roleText = u.role === 'admin' ? '管理员' : '普通用户';
+                // 解决当前登录用户可能因为 SSE 连接未立刻建立而显示为离线的问题
+                const isOnline = u.is_online || (u.id == currentAdminId);
+                const statusDotColor = isOnline ? 'var(--success-color)' : '#9ca3af'; 
+                const statusText = isOnline ? '在线' : '离线';
+                
                 tr.innerHTML = `
                     <td>${u.id}</td>
                     <td style="font-weight:600; color:var(--text-main);">
@@ -247,8 +257,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${u.username}
                         </div>
                     </td>
-                    <td><code style="background:var(--bg-color); padding:2px 6px; border-radius:4px;">${u.role}</code></td>
-                    <td><span class="status-${u.status}">${u.status === 'active' ? '正常' : '待审核'}</span></td>
+                    <td><code style="background:var(--bg-tertiary); color:var(--text-main); padding:2px 8px; border-radius:6px; font-size:12px;">${roleText}</code></td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:8px;" title="${statusText}">
+                            <span style="width:8px; height:8px; border-radius:50%; background:${statusDotColor}; display:inline-block; box-shadow: 0 0 0 2px ${isOnline ? 'var(--success-light)' : '#9ca3af33'};"></span>
+                            <span style="font-size:13px; color:${isOnline ? 'var(--success-color)' : 'var(--text-muted)'}">${statusText}</span>
+                        </div>
+                    </td>
                     <td style="font-size:12px; font-family:monospace;">${u.last_login_ip || '-'}</td>
                     <td style="font-size:11px; color:var(--text-muted)">${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '-'}</td>
                     <td>
@@ -268,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (approveBtn) approveBtn.onclick = () => approveUser(u.id);
                 
                 const editBtn = tr.querySelector('.edit-btn');
-                if (editBtn) editBtn.onclick = () => openEdit(u.id, u.username, u.role);
+                if (editBtn) editBtn.onclick = () => openEdit(u.id, u.username, u.role, isOnline);
                 
                 const deleteBtn = tr.querySelector('.delete-btn');
                 if (deleteBtn) deleteBtn.onclick = () => deleteUser(u.id);
@@ -289,28 +304,27 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchUsers();
         }
 
-async function openEdit(id, username, role) {
-    try {
-        const module = await import('./user-editor.js');
-        const userEditor = module.default;
-        userEditor.open({
-            userId: id,
-            username: username,
-            role: role,
-            isAdminContext: true,
-            isSelf: id == currentAdminId,
-            onSuccess: (data) => {
-                if (data && data.avatarTimestamp) avatarTimestamp = data.avatarTimestamp;
-                fetchUsers();
-                // If editing self, also update top bar
-                if (id == currentAdminId) fetchAdminInfo();
+        async function openEdit(id, username, role, is_online = false) {
+            try {
+                userEditor.open({
+                    userId: id,
+                    username: username,
+                    role: role,
+                    is_online: is_online,
+                    isAdminContext: true,
+                    isSelf: id == currentAdminId,
+                    onSuccess: (data) => {
+                        if (data && data.avatarTimestamp) avatarTimestamp = data.avatarTimestamp;
+                        fetchUsers();
+                        // If editing self, also update top bar
+                        if (id == currentAdminId) fetchAdminInfo();
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to open user editor:', error);
+                alert('无法打开用户编辑器');
             }
-        });
-    } catch (error) {
-        console.error('Failed to load user editor:', error);
-        alert('无法加载用户编辑器，请检查网络连接');
-    }
-}
+        }
 
 function openAddModal() {
     const fields = {
@@ -1606,4 +1620,18 @@ function closeModal() {
                 fetchTodayStats();
             }
         }, 3000);
+});
+
+function initSSE() {
+    const eventSource = new EventSource('/api/events');
+    
+    eventSource.onerror = (err) => {
+        console.warn('SSE connection error/closed, reconnecting...', err);
+    };
+
+    // Keep connection alive
+    window.addEventListener('beforeunload', () => {
+        eventSource.close();
+    });
+}
 

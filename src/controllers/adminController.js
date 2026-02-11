@@ -31,13 +31,21 @@ async function getAdminStats(pool) {
     }
 }
 
-async function handleListUsers(pool, query) {
+async function handleListUsers(pool, query, state) {
     const page = parseInt(query.page) || 1;
     const limit = parseInt(query.limit) || 10;
     const offset = (page - 1) * limit;
     const [[{total}]] = await pool.query('SELECT COUNT(*) as total FROM users');
     const [rows] = await pool.query('SELECT id, username, role, status, last_login_at, last_login_ip FROM users ORDER BY id DESC LIMIT ? OFFSET ?', [limit, offset]);
-    return { success: true, data: rows, total, page, limit };
+    
+    // Add online status based on active SSE connections
+    const { sseClients } = state || { sseClients: new Map() };
+    const data = rows.map(r => ({
+        ...r,
+        is_online: sseClients.has(String(r.id)) || sseClients.has(Number(r.id))
+    }));
+
+    return { success: true, data, total, page, limit };
 }
 
 async function addUser(pool, userData) {
