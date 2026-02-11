@@ -904,7 +904,7 @@ textarea.mobile-input {
     transform: translateY(100%);
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
     margin: 0 !important;
-    box-shadow: 0 -8px 30px rgba(0,0,0,0.15) !important;
+    box-shadow: 0 -12px 40px rgba(0,0,0,0.3) !important;
     z-index: 9999 !important;
     padding-bottom: env(safe-area-inset-bottom, 30px) !important; 
     color: var(--text-primary) !important;
@@ -919,11 +919,12 @@ textarea.mobile-input {
 .drawer-backdrop {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 100; /* Increased to be above main content */
+    background: rgba(0,0,0,0.6); /* Slightly darker for better "shadow" effect */
+    z-index: 1000; /* High enough to cover main content */
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.3s;
+    transition: opacity 0.3s ease;
+    backdrop-filter: blur(2px); /* Add a slight blur for more depth */
 }
 .drawer-backdrop.active {
     opacity: 1;
@@ -938,22 +939,29 @@ textarea.mobile-input {
     max-width: 300px;
     height: 100%;
     background: var(--bg-primary);
-    z-index: 101; /* Above backdrop */
+    z-index: 1001; /* Above backdrop */
     transform: translateX(-100%);
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color var(--transition-fast);
-    box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+    box-shadow: 4px 0 20px rgba(0,0,0,0.15);
 }
 
 /* Action Sheet should be higher than Side Drawer */
 #actionSheetBackdrop {
-    z-index: 200;
+    z-index: 2000;
 }
 #actionSheet {
-    z-index: 201;
+    z-index: 2001;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.25); /* Better shadow for bottom sheet */
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color var(--transition-fast);
 }
 
 .drawer-panel.active {
     transform: translateX(0);
+}
+
+/* Ensure bottom sheet uses vertical transform even with active class */
+#actionSheet.active {
+    transform: translateY(0) !important;
 }
 
 .drawer-header {

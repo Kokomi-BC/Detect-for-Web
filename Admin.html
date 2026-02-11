@@ -5,10 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>后台管理 - 假新闻检测系统</title>
     <link rel="icon" href="/ico/Detect.ico">
+    <link rel="stylesheet" href="/client-src/css/variables.css">
+    <link rel="stylesheet" href="/client-src/css/common.css">
+    <link rel="stylesheet" href="/client-src/css/admin.css">
+    <script type="module" src="/client-src/js/theme-loader.js"></script>
+    <script type="module" src="/client-src/js/admin.js"></script>
 </head><body>
     <div class="admin-layout">
         <!-- 侧边栏遮罩面罩 (窄屏模式) -->
-        <div id="sidebar-overlay" class="sidebar-overlay" onclick="toggleSidebar(false)"></div>
+        <div id="sidebar-overlay" class="sidebar-overlay"></div>
         
         <!-- 左侧边栏 -->
         <aside class="sidebar">
@@ -29,11 +34,11 @@
             <nav class="sidebar-nav">
                 <div class="nav-group">
                     <div class="nav-group-title">仪表盘</div>
-                    <div id="tab-workbench" class="nav-item active" onclick="switchTab('workbench')">
+                    <div id="tab-workbench" class="nav-item active">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                         <span>工作台</span>
                     </div>
-                    <div id="tab-users" class="nav-item" onclick="switchTab('users')">
+                    <div id="tab-users" class="nav-item">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                         <span>用户管理</span>
                     </div>
@@ -41,11 +46,11 @@
 
                 <div class="nav-group">
                     <div class="nav-group-title">内容监控</div>
-                    <div id="tab-history" class="nav-item" onclick="switchTab('history')">
+                    <div id="tab-history" class="nav-item">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         <span>历史记录</span>
                     </div>
-                    <div id="tab-anomalies" class="nav-item" onclick="switchTab('anomalies')">
+                    <div id="tab-anomalies" class="nav-item">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                         <span>采集异常日志</span>
                     </div>
@@ -53,15 +58,15 @@
 
                 <div class="nav-group">
                     <div class="nav-group-title">安全中心</div>
-                    <div id="tab-ip-logs" class="nav-item" onclick="switchTab('ip-logs')">
+                    <div id="tab-ip-logs" class="nav-item">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                         <span>IP 访问日志</span>
                     </div>
-                    <div id="tab-blacklist" class="nav-item" onclick="switchTab('blacklist')">
+                    <div id="tab-blacklist" class="nav-item">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
                         <span>IP 黑名单</span>
                     </div>
-                    <div id="tab-crawler-defense" class="nav-item" onclick="switchTab('crawler-defense')">
+                    <div id="tab-crawler-defense" class="nav-item">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
                         <span>防火墙</span>
                     </div>
@@ -69,11 +74,11 @@
 
                 <div class="nav-group">
                     <div class="nav-group-title">系统运维</div>
-                    <div id="tab-system" class="nav-item" onclick="switchTab('system')">
+                    <div id="tab-system" class="nav-item">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
                         <span>资源管理</span>
                     </div>
-                    <div id="tab-config" class="nav-item" onclick="switchTab('config')">
+                    <div id="tab-config" class="nav-item">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                         <span>API 配置</span>
                     </div>
@@ -81,7 +86,7 @@
 
                 <div class="nav-group">
                     <div class="nav-group-title">界面定制</div>
-                    <div id="tab-appearance" class="nav-item" onclick="switchTab('appearance')">
+                    <div id="tab-appearance" class="nav-item">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
                         <span>外观设置</span>
                     </div>
@@ -93,19 +98,19 @@
         <main class="main-content">
             <header class="top-header">
                 <div style="display: flex; align-items: center; gap: 16px;">
-                    <button class="icon-btn mobile-menu-toggle" onclick="toggleSidebar()" title="显示菜单">
+                    <button id="mobile-menu-toggle" class="icon-btn mobile-menu-toggle" title="显示菜单">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                     </button>
                     <div class="breadcrumb">
                         <span id="breadcrumb-parent">仪表盘</span> / <span id="current-tab-title">工作台</span>
                     </div>
-                    <button class="icon-btn" onclick="refreshCurrentTab()" title="刷新数据" style="margin-left: -8px;">
+                    <button id="refresh-btn" class="icon-btn" title="刷新数据" style="margin-left: -8px;">
                         <svg width="22" height="22" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 4.5a7.5 7.5 0 1 0 7.419 6.392c-.067-.454.265-.892.724-.892.37 0 .696.256.752.623A9 9 0 1 1 18 5.292V4.25a.75.75 0 0 1 1.5 0v3a.75.75 0 0 1-.75.75h-3a.75.75 0 0 1 0-1.5h1.35a7.474 7.474 0 0 0-5.1-2Z" fill="currentColor"/></svg>
                     </button>
                 </div>
 
                 <div class="header-actions">
-                    <button class="icon-btn" onclick="window.location.href='/Welcome'" title="返回前台主页">
+                    <button id="back-to-home" class="icon-btn" title="返回前台主页">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                     </button>
 
@@ -113,7 +118,7 @@
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
                     </button>
 
-                    <button class="icon-btn" onclick="toggleTheme()" title="切换深色模式" id="theme-toggle">
+                    <button class="icon-btn" title="切换深色模式" id="theme-toggle">
                         <svg id="sun-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
                         <svg id="moon-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
                     </button>
@@ -121,7 +126,7 @@
                     <div style="width: 1px; height: 18px; background: var(--border-color); margin: 0 4px;"></div>
                     
                     <div class="user-menu-container">
-                        <div class="user-profile" onclick="toggleUserMenu()">
+                        <div id="user-profile" class="user-profile">
                             <img id="user-avatar" src="/api/public/avatar/0" style="width: 32px; height: 32px; border-radius: 50%; background: var(--border-color); object-fit: cover;">
                             <div style="display: flex; flex-direction: column; line-height: 1.2;">
                                 <span style="font-size: 13px; font-weight: 600;" id="user-display-name">Admin</span>
@@ -130,11 +135,12 @@
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                         </div>
                         <div id="user-dropdown" class="user-dropdown">
-                            <div class="dropdown-info">
-                                <div id="user-ip-display" style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">登录 IP: 加载中...</div>
+                            <div id="edit-self-btn" class="dropdown-item">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                修改个人信息
                             </div>
                             <div class="dropdown-divider"></div>
-                            <div class="dropdown-item danger" onclick="logout()">
+                            <div id="logout-btn" class="dropdown-item danger">
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                                 退出登录
                             </div>
@@ -305,7 +311,7 @@
                     <template>
             <div class="section-header">
                 <h2>用户列表</h2>
-                <button class="filled-btn" onclick="openAddModal()" style="height: 40px; display: flex; align-items: center; justify-content: center;">
+                <button id="add-user-btn" class="filled-btn" style="height: 40px; display: flex; align-items: center; justify-content: center;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     新增用户
                 </button>
@@ -336,15 +342,15 @@
             <div class="section-header">
                 <h2>所有用户历史记录</h2>
                 <div class="section-actions">
-                    <button class="icon-btn primary" onclick="fetchHistory()" style="width: 40px; height: 40px;" title="刷新记录">
+                    <button id="refresh-history-btn" class="icon-btn primary" style="width: 40px; height: 40px;" title="刷新记录">
                         <svg width="22" height="22" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 4.5a7.5 7.5 0 1 0 7.419 6.392c-.067-.454.265-.892.724-.892.37 0 .696.256.752.623A9 9 0 1 1 18 5.292V4.25a.75.75 0 0 1 1.5 0v3a.75.75 0 0 1-.75.75h-3a.75.75 0 0 1 0-1.5h1.35a7.474 7.474 0 0 0-5.1-2Z" fill="currentColor"/></svg>
                     </button>
                     <div class="search-group">
                         <div class="search-wrapper">
-                            <input type="text" id="history-search" placeholder="搜索标题或内容..." style="width: 250px;" oninput="handleSearchInput(this)">
-                            <span class="clear-icon" onclick="clearSearchInput(this, 'history-search', fetchHistory)">&times;</span>
+                            <input type="text" id="history-search" placeholder="搜索标题或内容..." style="width: 250px;" >
+                            <span id="clear-history-search" class="clear-icon">&times;</span>
                         </div>
-                        <button class="search-btn" onclick="fetchHistory()" title="搜索">
+                        <button id="search-history-btn" class="search-btn" title="搜索">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"></circle><line x1="22" y1="22" x2="17.65" y2="17.65"></line></svg>
                         </button>
                     </div>
@@ -386,7 +392,7 @@
                             <div style="font-size:24px; font-weight:bold; color:var(--text-main);" id="cache-size">Loading...</div>
                             <div style="font-size:14px; color:var(--text-muted);" id="cache-count">Loading...</div>
                         </div>
-                        <button class="filled-btn" style="background:var(--danger-color)" onclick="clearCache()">
+                        <button id="clear-cache-btn" class="filled-btn" style="background:var(--danger-color)">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                             清除缓存
                         </button>
@@ -423,7 +429,7 @@
             <template>
             <div class="section-header">
                 <h2>IP 访问日志</h2>
-                <button class="filled-btn secondary" onclick="clearIPLogs()">清空记录</button>
+                <button id="clear-ip-logs-btn" class="filled-btn secondary">清空记录</button>
             </div>
             
             <div style="margin-top:20px;">
@@ -449,10 +455,10 @@
                     <h3 style="margin:0;">历史访问记录 (去重 IP+UA)</h3>
                     <div class="search-group">
                         <div class="search-wrapper">
-                            <input type="text" id="ip-history-search" placeholder="搜索 IP 或 地理位置..." style="width: 220px;" oninput="handleSearchInput(this)">
-                            <span class="clear-icon" onclick="clearSearchInput(this, 'ip-history-search', fetchIPLogs)">&times;</span>
+                            <input type="text" id="ip-history-search" placeholder="搜索 IP 或 地理位置..." style="width: 220px;" >
+                            <span id="clear-ip-search" class="clear-icon">&times;</span>
                         </div>
-                        <button class="search-btn" onclick="fetchIPLogs(1, null)" title="搜索">
+                        <button id="search-ip-btn" class="search-btn" title="搜索">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"></circle><line x1="22" y1="22" x2="17.65" y2="17.65"></line></svg>
                         </button>
                     </div>
@@ -481,7 +487,7 @@
             <template>
             <div class="section-header">
                 <h2>IP 黑名单管理</h2>
-                <button class="filled-btn" onclick="openAddBlacklistModal()">+ 新增封禁 IP</button>
+                <button id="add-blacklist-ip-btn" class="filled-btn">+ 新增封禁 IP</button>
             </div>
             <div class="table-container">
                 <table id="blacklist-table">
@@ -505,7 +511,7 @@
             <template>
             <div class="section-header">
                 <h2>抓取异常记录 (可能已被拦截)</h2>
-                <button class="filled-btn secondary" onclick="clearAnomalies()">清空记录</button>
+                <button id="clear-anomalies-btn" class="filled-btn secondary">清空记录</button>
             </div>
             <div class="table-container">
                 <table id="anomalies-table">
@@ -544,7 +550,7 @@
                         </div>
                     </div>
                     <div style="margin-top: 20px; text-align: right;">
-                        <button class="icon-btn primary" onclick="saveCrawlerSettings()" style="width: 40px; height: 40px;" title="保存防御配置">
+                        <button id="save-crawler-settings-btn" class="icon-btn primary" style="width: 40px; height: 40px;" title="保存防御配置">
                             <svg width="22" height="22" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 5.75A2.75 2.75 0 0 1 5.75 3h9.964a3.25 3.25 0 0 1 2.299.952l2.035 2.035c.61.61.952 1.437.952 2.299v9.964A2.75 2.75 0 0 1 18.25 21H5.75A2.75 2.75 0 0 1 3 18.25V5.75ZM5.75 4.5c-.69 0-1.25.56-1.25 1.25v12.5c0 .69.56 1.25 1.25 1.25H6v-5.25A2.25 2.25 0 0 1 8.25 12h7.5A2.25 2.25 0 0 1 18 14.25v5.25h.25c.69 0 1.25-.56 1.25-1.25V8.286c0-.465-.184-.91-.513-1.238l-2.035-2.035a1.75 1.75 0 0 0-.952-.49V7.25a2.25 2.25 0 0 1-2.25 2.25h-4.5A2.25 2.25 0 0 1 7 7.25V4.5H5.75Zm10.75 15v-5.25a.75.75 0 0 0-.75-.75h-7.5a.75.75 0 0 0-.75.75v5.25h9Zm-8-15v2.75c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75V4.5h-6Z" fill="currentColor"/></svg>
                         </button>
                     </div>
@@ -554,13 +560,13 @@
             <div class="section-header">
                 <h2>全局拦截日志 (爬虫/黑名单)</h2>
                 <div class="section-actions">
-                    <button class="filled-btn danger" onclick="clearCrawlerLogs()" style="height: 40px;">清空记录</button>
+                    <button id="clear-crawler-logs-btn" class="filled-btn danger" style="height: 40px;">清空记录</button>
                     <div class="search-group">
                         <div class="search-wrapper">
-                            <input type="text" id="crawler-log-search" placeholder="搜索 IP/地区/UA..." style="width: 220px;" oninput="handleSearchInput(this)">
-                            <span class="clear-icon" onclick="clearSearchInput(this, 'crawler-log-search', fetchCrawlerLogs)">&times;</span>
+                            <input type="text" id="crawler-log-search" placeholder="搜索 IP/地区/UA..." style="width: 220px;" >
+                            <span id="clear-crawler-search" class="clear-icon">&times;</span>
                         </div>
-                        <button class="search-btn" onclick="fetchCrawlerLogs(1)" title="搜索">
+                        <button id="search-crawler-btn" class="search-btn" title="搜索">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"></circle><line x1="22" y1="22" x2="17.65" y2="17.65"></line></svg>
                         </button>
                     </div>
@@ -596,8 +602,8 @@
                 <div class="method-tabs-container">
                     <div class="method-tabs">
                         <div class="method-slider" id="method-slider"></div>
-                        <button type="button" class="method-tab active" id="tab-sdk" onclick="setLlmMethod('sdk')">OpenAI SDK</button>
-                        <button type="button" class="method-tab" id="tab-curl" onclick="setLlmMethod('curl')">Curl API</button>
+                        <button type="button" class="method-tab active" id="tab-sdk">OpenAI SDK</button>
+                        <button type="button" class="method-tab" id="tab-curl">Curl API</button>
                     </div>
                     <input type="hidden" id="config-llm-method" value="sdk">
                 </div>
@@ -643,7 +649,7 @@
 
                 <div class="form-actions">
                     <span id="save-status" class="save-status-text">已保存生效 ✓</span>
-                    <button class="filled-btn btn-config-save" onclick="saveConfig()" id="save-config-btn">
+                    <button class="filled-btn btn-config-save" id="save-config-btn">
                         保存配置
                     </button>
                 </div>
@@ -861,8 +867,8 @@
                 </div>
 
                 <div style="margin-top:40px; display:flex; gap:15px; justify-content: flex-end;">
-                    <button class="filled-btn secondary" onclick="resetTheme()">恢复默认</button>
-                    <button class="filled-btn" onclick="saveTheme()" style="height: 40px; padding: 0 20px;">应用并保存</button>
+                    <button id="reset-theme-btn" class="filled-btn secondary">恢复默认</button>
+                    <button id="save-theme-btn" class="filled-btn" style="height: 40px; padding: 0 20px;">应用并保存</button>
                 </div>
             </div>
             </template>
@@ -884,8 +890,8 @@
                 <input type="text" id="blacklist-reason" placeholder="e.g. 恶意扫描">
             </div>
             <div class="modal-actions">
-                <button class="filled-btn secondary" onclick="closeModal()">取消</button>
-                <button class="filled-btn danger" onclick="addBlacklist()">确认封禁</button>
+                <button class="filled-btn secondary close-modal-btn">取消</button>
+                <button id="confirm-blacklist-btn" class="filled-btn danger">确认封禁</button>
             </div>
         </div>
     </div>
@@ -917,8 +923,8 @@
                 </select>
             </div>
             <div class="modal-actions">
-                <button class="filled-btn secondary" onclick="closeModal()">取消</button>
-                <button class="filled-btn" onclick="createUser()">创建用户</button>
+                <button class="filled-btn secondary close-modal-btn">取消</button>
+                <button id="confirm-create-user-btn" class="filled-btn">创建用户</button>
             </div>
         </div>
     </div>

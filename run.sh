@@ -12,7 +12,7 @@ done
 
 if [ "$SKIP_BUILD" = false ]; then
     echo "Building project (Full build)..."
-    npm run build:renderer
+    npm run build
 else
     echo "Skipping build (Quick restart)..."
 fi

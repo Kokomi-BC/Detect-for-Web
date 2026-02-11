@@ -1,3 +1,4 @@
+
 class UserEditorCore {
     constructor() {
         this.userId = null;
@@ -10,7 +11,10 @@ class UserEditorCore {
     }
 
     render() {
-        if (document.getElementById('user-edit-modal')) return;
+        if (document.getElementById('user-edit-modal')) {
+            this.modal = document.getElementById('user-edit-modal');
+            return;
+        }
 
         const modalHtml = `
             <div id="user-edit-modal" class="modal">
@@ -63,7 +67,6 @@ class UserEditorCore {
         document.body.insertAdjacentHTML('beforeend', modalHtml);
         this.modal = document.getElementById('user-edit-modal');
 
-        // Bind events
         document.getElementById('user-edit-avatar-upload-btn').onclick = () => document.getElementById('user-edit-avatar-input').click();
         document.getElementById('user-edit-avatar-delete-btn').onclick = () => this.handleAvatarDelete();
         document.getElementById('user-edit-avatar-input').onchange = (e) => this.handleAvatarChange(e);
@@ -92,9 +95,7 @@ class UserEditorCore {
         this.modal.style.display = 'flex';
     }
 
-    close() {
-        this.modal.style.display = 'none';
-    }
+    close() { this.modal.style.display = 'none'; }
 
     async handleAvatarChange(e) {
         if (!e.target.files || !e.target.files[0]) return;
@@ -112,9 +113,7 @@ class UserEditorCore {
                     const finalBlob = Array.isArray(blob) ? blob[0] : blob;
                     file = new File([finalBlob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
                 }
-            } catch (err) {
-                console.error('Avatar HEIC conversion failed', err);
-            }
+            } catch (err) { console.error('Avatar HEIC conversion failed', err); }
         }
 
         this.pendingAvatarFile = file;
@@ -148,7 +147,6 @@ class UserEditorCore {
         const saveBtn = document.getElementById('user-edit-save');
 
         if (username.length < 3 || username.length > 20) return alert('用户名长度需在3-20之间');
-        
         if (password) {
             if (password.length < 6 || password.length > 32) return alert('密码长度需在6-32位之间');
             if (password !== confirmPassword) return alert('两次输入的密码不一致');
@@ -158,7 +156,6 @@ class UserEditorCore {
         saveBtn.innerText = '保存中...';
 
         try {
-            // 1. Handle Avatar
             if (this.pendingAvatarAction) {
                 const avatarEndpoint = this.getAvatarEndpoint();
                 if (this.pendingAvatarAction === 'delete') {
@@ -173,7 +170,6 @@ class UserEditorCore {
                 this.avatarTimestamp = Date.now();
             }
 
-            // 2. Handle Info
             const infoEndpoint = this.getUpdateEndpoint();
             const payload = { username };
             this.augmentPayload(payload);
@@ -190,11 +186,7 @@ class UserEditorCore {
 
             alert('修改成功！');
             this.close();
-            if (this.onSuccess) this.onSuccess({ 
-                userId: this.userId, 
-                username, 
-                avatarTimestamp: this.avatarTimestamp 
-            });
+            if (this.onSuccess) this.onSuccess({ userId: this.userId, username, avatarTimestamp: this.avatarTimestamp });
         } catch (error) {
             console.error('Update failed:', error);
             alert('错误: ' + error.message);
@@ -205,4 +197,70 @@ class UserEditorCore {
     }
 }
 
-window.UserEditorCore = UserEditorCore;
+class UserEditorUser extends UserEditorCore {
+    constructor() { super(); }
+}
+
+class UserEditorAdmin extends UserEditorCore {
+    constructor() { super(); }
+    render() {
+        super.render();
+        const roleContainer = document.getElementById('user-edit-role-container');
+        if (roleContainer) {
+            roleContainer.innerHTML = `
+                <label for="user-edit-role">用户角色</label>
+                <select id="user-edit-role">
+                    <option value="user">普通用户</option>
+                    <option value="admin">管理员</option>
+                </select>
+            `;
+            roleContainer.style.display = 'block';
+        }
+    }
+    open(options) {
+        super.open(options);
+        const roleContainer = document.getElementById('user-edit-role-container');
+        if (roleContainer) {
+            if (options.isSelf) {
+                roleContainer.style.display = 'none';
+            } else {
+                roleContainer.style.display = 'block';
+                const roleSelect = document.getElementById('user-edit-role');
+                if (roleSelect) roleSelect.value = options.role || 'user';
+            }
+        }
+    }
+    getAvatarEndpoint() { return `/api/admin/user/avatar/${this.userId}`; }
+    getUpdateEndpoint() { return `/api/admin/user/update`; }
+    augmentPayload(payload) {
+        payload.userId = this.userId;
+        const roleContainer = document.getElementById('user-edit-role-container');
+        const roleSelect = document.getElementById('user-edit-role');
+        if (roleSelect && roleContainer && roleContainer.style.display !== 'none') {
+            payload.role = roleSelect.value;
+        }
+    }
+}
+
+const userEditor = {
+    _instance: null,
+    open(options = {}) {
+        const isAdmin = options.isAdminContext || (options.role !== undefined);
+        if (isAdmin && !(this._instance instanceof UserEditorAdmin)) {
+            this._instance = new UserEditorAdmin();
+        } else if (!isAdmin && !(this._instance instanceof UserEditorUser)) {
+            this._instance = new UserEditorUser();
+        }
+        this._instance.open(options);
+    },
+    close() { if (this._instance) this._instance.close(); },
+    save() { if (this._instance) this._instance.save(); },
+    handleAvatarDelete() { if (this._instance) this._instance.handleAvatarDelete(); },
+    handleAvatarChange(e) { if (this._instance) this._instance.handleAvatarChange(e); }
+};
+
+// 后向兼容
+window.userEditor = userEditor;
+
+export default userEditor;
+export { userEditor, UserEditorCore, UserEditorUser, UserEditorAdmin };

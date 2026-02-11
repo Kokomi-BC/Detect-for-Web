@@ -21,59 +21,33 @@ Detect 是一款基于网页端的假新闻检测应用，由 Electron 版本迁
 
     - 爬虫异常记录：data/anomalies.json（异常元数据）及 data/anomalies/*.html（异常页面快照文件）。
 
-前端流程（public/ 与 dist/ 目录）
+前端流程（client-src/、public/ 与 dist/ 目录）
 
 - 核心页面：
-
-  - public/Main.html：桌面端核心检测界面（基于原生 JS 开发）。
-
-  - public/Mobile.html：移动端优化检测界面，包含“灵动岛”（Dynamic Island）风格交互。
-
-  - public/Login.html：用户身份认证入口（登录页面）。
-
-  - public/Welcome.html：应用欢迎界面（过渡页面）。
-
-- 样式管理：public/css/ 目录，实现样式集中化、模块化管理。
-        
-
-  - variables.css：全局主题变量及配色方案定义。
-
-  - common.css：通用样式重置及全局组件样式（如按钮、输入框）。
-
-  - main.css、mobile.css、admin.css：分别对应桌面端、移动端、管理员页面的专属样式。
-
-- 客户端逻辑：public/js/ 目录，负责前端交互及请求处理。
-        
-
-  - mobile.js：移动端核心逻辑，包含加载提示（Toast）的管理与控制。
-
-  - theme-loader.js：动态主题切换逻辑（支持深色/浅色模式）。
-
-  - user-editor.js：用户个人资料编辑相关逻辑。
-
-- Electron API 兼容层：前端内置 window.electronAPI 模拟层，将旧版本 Electron 的 ipcRenderer.invoke 调用，转换为对 /api/invoke 接口的 REST API fetch 请求，实现从 Electron 到网页端的平滑迁移。
+  - 项目根目录下的 Main.html、Mobile.html、Login.html、Welcome.html、Admin.html 作为 Vite 指定的多页面入口。
+- 源码管理：client-src/ 目录，包含前端逻辑与样式源码。
+  - client-src/css/：
+    - variables.css：全局主题变量及配色方案定义。
+    - common.css：通用样式重置及全局组件样式。
+    - main.css、mobile.css、admin.css：各页面专属样式。
+  - client-src/js/：
+    - mobile.js：移动端核心逻辑及 Toast 管理。
+    - theme-loader.js：动态主题切换逻辑。
+    - user-editor.js：用户资料编辑逻辑。
+- 静态资源：public/ 目录，存放图标（如 /ico/Detect.ico）等静态文件，构建时将直接复制到 dist/ 根目录。
+- Electron API 兼容层：前端内置 window.electronAPI 模拟层，将旧版本 Electron 的 ipcRenderer.invoke 调用，转换为 /api/invoke 的 fetch 请求。
 
 部署与开发规范
 
 核心命令
 
-- 启动服务器：npm start 或 pm2 start ecosystem.config.js
-        
-
-  - 启动 src/server.js 作为服务入口。
-
-  - 通过 PM2 进行进程管理，进程名称为 fake-news-detector。
-
-  - 默认监听地址为 https://0.0.0.0:443。
-
-  - 可通过 pm2 logs 命令查看服务运行日志。
-
-- 前端构建：npm run build:dev（开发环境构建） / npm run build:renderer（生产环境构建）
-        
-
-  - 通过 Webpack 处理 HTML 及相关资源，构建产物输出至 dist/ 目录。
-
-- 依赖安装：推荐使用 cnpm install 命令，提升依赖安装速度。
+- 启动服务器：npm run server 或 pm2 start ecosystem.config.js
+  - 启动 src/server.js，通过 PM2 管理。
+- 前端开发：npm run dev
+  - 启动 Vite 开发服务器。
+- 前端构建：npm run build
+  - 使用 Vite 进行多页面构建与压缩，产物输出至 dist/ 目录。
+- 依赖安装：推荐使用 cnpm install。
 
 管理员功能
 

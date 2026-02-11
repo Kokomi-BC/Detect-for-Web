@@ -11,7 +11,7 @@ echo "Installing dependencies..."
 cnpm install
 
 echo "Building project..."
-npm run build:renderer
+npm run build
 
 # Restart the process if it exists, otherwise start it
 if pm2 describe fake-news-detector > /dev/null; then

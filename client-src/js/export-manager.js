@@ -2,9 +2,9 @@
 class ExportManager {
     constructor() {
         this.cssFiles = [
-            '/css/variables.css',
-            '/css/common.css',
-            '/css/main.css'
+            '/client-src/css/variables.css',
+            '/client-src/css/common.css',
+            '/client-src/css/main.css'
         ];
     }
 
@@ -46,21 +46,9 @@ class ExportManager {
 
         if (format === 'pdf') {
             try {
-                const response = await fetch('/api/invoke', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify({
-                        channel: 'export-pdf',
-                        args: [{ html }]
-                    })
-                });
+                const data = await window.api.invoke('export-pdf', { html });
 
-                if (!response.ok) throw new Error('PDF 导出失败');
-
-                const blob = await response.blob();
+                const blob = new Blob([data], { type: 'application/pdf' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -181,10 +169,20 @@ class ExportManager {
     async getAllCssContent() {
         let styles = '';
         
-        // Fetch external CSS files
+        // Find all <link rel="stylesheet"> tags
+        const linkTags = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
+        const urls = linkTags.map(link => link.getAttribute('href')).filter(url => url);
+        
+        // Add hardcoded files if not already in URL list (backward compatibility / fallback)
         for (const url of this.cssFiles) {
+            if (!urls.includes(url)) urls.push(url);
+        }
+
+        // Fetch all CSS content
+        for (const url of urls) {
             try {
                 const response = await fetch(url);
+                if (!response.ok) continue;
                 const text = await response.text();
                 styles += `<style>\n/* Source: ${url} */\n${text}\n</style>\n`;
             } catch (e) {

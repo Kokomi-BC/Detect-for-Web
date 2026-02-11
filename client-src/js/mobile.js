@@ -3,17 +3,36 @@
 // --- API Mock ---
 window.api = {
     invoke: async (channel, ...args) => {
-        const response = await fetch('/api/invoke', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ channel, args })
-        });
-        const result = await response.json();
-        // Standard API Logic
-        if (result.status === 'fail') throw new Error(result.message || result.error || 'Request failed');
-        // Handle direct data return or nested data property depending on backend
-        // Backend returns: { success: true, data: ... }
-        return result.data; 
+        try {
+            const response = await fetch('/api/invoke', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channel: channel, args })
+            });
+            
+            if (response.status === 401) {
+                window.location.href = '/Login';
+                return;
+            }
+
+            // Handle binary responses (e.g., PDF)
+            const contentType = response.headers.get('Content-Type');
+            if (contentType && contentType.includes('application/pdf')) {
+                return await response.arrayBuffer();
+            }
+
+            const result = await response.json();
+            // Standard API Logic
+            if (result.status === 'fail') {
+                throw new Error(result.message || result.error || 'Request failed');
+            }
+            // Handle direct data return or nested data property depending on backend
+            // Backend returns: { success: true, data: ... }
+            return result.data;
+        } catch (err) {
+            console.error(`API Invoke Error (${channel}):`, err);
+            throw err;
+        }
     }
 };
 
@@ -28,6 +47,13 @@ let allHistory = [];
 let lastBackPress = 0;
 let pendingConflict = null;
 
+let mobileStatusTimeout = null;
+let searchStartTime = 0;
+let _abortController = null;
+let currentAnalysisStatus = 'initializing';
+let isExtracting = false;
+let currentUser = null;
+
 let historyPage = 1;
 let historyLoading = false;
 let hasMoreHistory = true;
@@ -36,33 +62,86 @@ let searchTimeout = null;
 const historyLimit = 20;
 
 // --- Elements ---
-const textInput = document.getElementById('textInput');
-const detectBtn = document.getElementById('detectBtn');
-const plusBtn = document.getElementById('plusBtn');
-const fileInput = document.getElementById('fileInput');
-const docInput = document.getElementById('docInput');
-const previewImages = document.getElementById('previewImages');
-const historyBtn = document.getElementById('historyBtn');
-const userBtn = document.getElementById('userBtn');
-const exitEditBtn = document.getElementById('exitEditBtnInside');
-const exitResultBtn = document.getElementById('exitResultBtn');
-const headerTitle = document.getElementById('headerTitle');
-const inputCard = document.getElementById('inputCard');
-const extractedContentArea = document.getElementById('extractedContentArea');
-const startBranding = document.getElementById('startBranding');
+let textInput, detectBtn, plusBtn, fileInput, docInput, previewImages, historyBtn, userBtn, exitEditBtn, exitResultBtn, headerTitle, inputCard, extractedContentArea, startBranding, clearBtn;
+
+function initElements() {
+    textInput = document.getElementById('textInput');
+    detectBtn = document.getElementById('detectBtn');
+    plusBtn = document.getElementById('plusBtn');
+    fileInput = document.getElementById('fileInput');
+    docInput = document.getElementById('docInput');
+    previewImages = document.getElementById('previewImages');
+    historyBtn = document.getElementById('historyBtn');
+    userBtn = document.getElementById('userBtn');
+    exitEditBtn = document.getElementById('exitEditBtnInside');
+    exitResultBtn = document.getElementById('exitResultBtn');
+    headerTitle = document.getElementById('headerTitle');
+    inputCard = document.getElementById('inputCard');
+    extractedContentArea = document.getElementById('extractedContentArea');
+    startBranding = document.getElementById('startBranding');
+    clearBtn = document.getElementById('clearBtn');
+}
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
+    initElements();
     initInputLogic();
     initActionSheet();
     initHistory();
     initThemeToggle();
     initUser();
+    initFileInputs();
     loadHistory();
     initSSE(); // Ensure SSE is initialized for real-time status
     setupNavigation();
     renderImages(); // Ensure initial UI state is correct
     
+    // Bind static elements for Mobile.html
+    const bind = (id, fn) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', fn);
+    };
+
+    bind('closeActionSheetBtn', closeActionSheet);
+    bind('actionSheetBackdrop', closeActionSheet);
+    bind('historyDrawerBackdrop', () => toggleHistory(false));
+
+    // Bind Exit Buttons
+    if (exitEditBtn) exitEditBtn.addEventListener('click', exitFullscreenInput);
+    if (exitResultBtn) exitResultBtn.addEventListener('click', showInputView);
+    
+    // Bind Clear Button
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            if (textInput.value.trim() || uploadedImages.length > 0 || currentExtractedData) {
+                showConfirm('清空内容', '确定要清空当前所有内容吗？此操作不可恢复。', () => {
+                    executeClear();
+                });
+            } else {
+                executeClear();
+            }
+        });
+    }
+
+    bind('imageModal', (e) => {
+        e.currentTarget.style.display = 'none';
+    });
+    bind('keepLinkBtn', () => resolveConflict('link'));
+    bind('keepImagesBtn', () => resolveConflict('images'));
+    bind('closeConflictBtn', closeConflictModal);
+    bind('closeConfirmBtn', closeConfirmModal);
+
+    // Event Delegation for fake-highlights
+    const parsedText = document.getElementById('parsedText');
+    if (parsedText) {
+        parsedText.addEventListener('click', (e) => {
+            const highlight = e.target.closest('.fake-highlight');
+            if (highlight) {
+                showReasonTooltip(highlight);
+            }
+        });
+    }
+
     // Add global click listener for tooltips
     document.addEventListener('click', (e) => {
         const tooltip = document.getElementById('customTooltip');
@@ -221,9 +300,9 @@ function updateStatusUI(status, data) {
     if (!summaryDescText) return;
 
     // Clear any existing search timer
-    if (window.mobileStatusTimeout) {
-        clearTimeout(window.mobileStatusTimeout);
-        window.mobileStatusTimeout = null;
+    if (mobileStatusTimeout) {
+        clearTimeout(mobileStatusTimeout);
+        mobileStatusTimeout = null;
     }
 
     const applyMessage = (msg) => {
@@ -251,11 +330,11 @@ function updateStatusUI(status, data) {
             applyMessage(message);
             break;
         case 'searching':
-            window.searchStartTime = Date.now();
+            searchStartTime = Date.now();
             message = `正在联网搜索: ${data?.query || ''}`;
             applyMessage(message);
             // Limit search word display to max 5 seconds
-            window.mobileStatusTimeout = setTimeout(() => {
+            mobileStatusTimeout = setTimeout(() => {
                 updateStatusUI('deep-analysis', null);
             }, 5000);
             break;
@@ -264,13 +343,13 @@ function updateStatusUI(status, data) {
             applyMessage(message);
             break;
         case 'deep-analysis':
-            const elapsed = Date.now() - (window.searchStartTime || 0);
+            const elapsed = Date.now() - (searchStartTime || 0);
             const minDisplay = 4000;
             message = '正在进行深度分析...';
 
-            if (elapsed < minDisplay && window.searchStartTime) {
+            if (elapsed < minDisplay && searchStartTime) {
                 // Keep the search keyword visible for at least 4 seconds
-                window.mobileStatusTimeout = setTimeout(() => {
+                mobileStatusTimeout = setTimeout(() => {
                     applyMessage(message);
                 }, minDisplay - elapsed);
             } else {
@@ -310,9 +389,9 @@ function hideLoadingToast() {
     const loadingToast = document.getElementById('loadingToast');
     
     // Clear any lingering status update timeouts
-    if (window.mobileStatusTimeout) {
-        clearTimeout(window.mobileStatusTimeout);
-        window.mobileStatusTimeout = null;
+    if (mobileStatusTimeout) {
+        clearTimeout(mobileStatusTimeout);
+        mobileStatusTimeout = null;
     }
 
     if (!loadingToast) return;
@@ -457,15 +536,6 @@ function showInputView() {
     }
 }
 
-// Exit Buttons Logic
-exitEditBtn.addEventListener('click', () => {
-    exitFullscreenInput();
-});
-
-exitResultBtn.addEventListener('click', () => {
-    showInputView();
-});
-
 // --- Confirmation Modal Logic ---
 let confirmCallback = null;
 
@@ -490,27 +560,13 @@ function showConfirm(title, message, onConfirm) {
     setTimeout(() => modal.classList.add('active'), 10);
 }
 
-window.closeConfirmModal = function() {
+function closeConfirmModal() {
     const modal = document.getElementById('confirmModal');
     if (modal) {
         modal.classList.remove('active');
         setTimeout(() => { modal.style.display = 'none'; }, 300);
     }
     confirmCallback = null;
-}
-
-// Clear Button Logic
-const clearBtn = document.getElementById('clearBtn');
-if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-        if (textInput.value.trim() || uploadedImages.length > 0 || currentExtractedData) {
-            showConfirm('清空内容', '确定要清空当前所有内容吗？此操作不可恢复。', () => {
-                executeClear();
-            });
-        } else {
-            executeClear();
-        }
-    });
 }
 
 function executeClear() {
@@ -658,48 +714,17 @@ function renderExtractedUrlCard() {
     if (!currentExtractedData) {
         extractedContentArea.style.display = 'none';
         extractedContentArea.innerHTML = '';
-        renderImages(); // Refresh to remove doc from previewImages if it was deleted
+        renderImages(); // Refresh to remove doc/url from previewImages if it was deleted
         return;
     }
 
-    // Docs are now rendered inside previewImages (Unified Media Area)
-    if (currentExtractedData.type === 'doc') {
-        extractedContentArea.style.display = 'none';
-        extractedContentArea.innerHTML = '';
-        renderImages();
-        return;
-    }
-
-    extractedContentArea.style.display = 'block';
-    
-    const isPending = currentExtractedData.pendingExtraction;
-    const faviconUrl = getFaviconUrl(currentExtractedData.url);
-    const iconContent = faviconUrl 
-        ? `<img src="${faviconUrl}" style="width:20px; height:20px; object-fit:contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-           <svg viewBox="0 0 24 24" width="24" height="24" fill="#4361ee" style="display:none;">
-               <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
-           </svg>`
-        : `<svg viewBox="0 0 24 24" width="24" height="24" fill="#4361ee">
-               <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
-           </svg>`;
-    
-    extractedContentArea.innerHTML = `
-        <div class="extracted-url-card ${isPending ? 'pending-style' : ''}">
-            <div class="url-card-icon">
-                ${iconContent}
-            </div>
-            <div class="url-card-info">
-                <div class="url-card-title">${currentExtractedData.title || '检测网页'}</div>
-                <div class="url-card-tag">${isPending ? '等待系统提取正文...' : '内容已就绪'}</div>
-            </div>
-            <div class="url-card-remove" onclick="removeExtractedUrl()">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-            </div>
-        </div>
-    `;
+    // Both Docs and URLs are now rendered inside previewImages (Unified Media Area)
+    extractedContentArea.style.display = 'none';
+    extractedContentArea.innerHTML = '';
+    renderImages();
 }
 
-window.removeExtractedUrl = function() {
+function removeExtractedUrl() {
     if (currentExtractedData) {
         const typeName = currentExtractedData.type === 'doc' ? '解析文件' : '解析链接';
         showConfirm('移除内容', `确定要移除已加载的${typeName}吗？${currentExtractedData.type === 'doc' ? '移除后将同时清空输入框。' : ''}`, () => {
@@ -752,7 +777,7 @@ async function performRealExtraction(progressCallback) {
         
         clearInterval(extInterval);
 
-        if (window._abortController && window._abortController.signal.aborted) {
+        if (_abortController && _abortController.signal.aborted) {
             throw new Error('Aborted');
         }
 
@@ -783,14 +808,14 @@ async function performRealExtraction(progressCallback) {
     return true;
 }
 
-window._abortController = null;
-window.currentAnalysisStatus = 'initializing'; // Global state for SSE updates
+_abortController = null;
+currentAnalysisStatus = 'initializing'; // Global state for SSE updates
 
 async function runDetection() {
     if (detectBtn.classList.contains('is-stop')) {
         // Handle Cancel
-        if (window._abortController) {
-            window._abortController.abort();
+        if (_abortController) {
+            _abortController.abort();
         }
         return;
     }
@@ -808,8 +833,8 @@ async function runDetection() {
     const originalText = '开始检测';
     detectBtn.classList.add('is-stop');
     detectBtn.innerHTML = '停止检测';
-    window._abortController = new AbortController();
-    window.currentAnalysisStatus = 'initializing';
+    _abortController = new AbortController();
+    currentAnalysisStatus = 'initializing';
     
     const progressBar = document.getElementById('progressBar');
     const progressContainer = document.getElementById('progressBarContainer');
@@ -833,7 +858,7 @@ async function runDetection() {
         // Let's implement the Main.html "Analysis" curve logic here primarily.
         // If we are extracting, we might manually set progress.
         
-        if (window.isExtracting) {
+        if (isExtracting) {
             // Handled by extraction callback mostly, but we can ensure it doesn't stall
             return; 
         }
@@ -842,16 +867,16 @@ async function runDetection() {
         statusTimer += 80;
         
         // Simulating status changes
-        if (statusTimer > 3000 && window.currentAnalysisStatus === 'initializing') {
-            window.currentAnalysisStatus = 'searching';
+        if (statusTimer > 3000 && currentAnalysisStatus === 'initializing') {
+            currentAnalysisStatus = 'searching';
         }
-        if (statusTimer > 8000 && window.currentAnalysisStatus === 'searching') {
-            window.currentAnalysisStatus = 'deep-analysis';
+        if (statusTimer > 8000 && currentAnalysisStatus === 'searching') {
+            currentAnalysisStatus = 'deep-analysis';
         }
 
         let targetMax = 40; 
-        if (window.currentAnalysisStatus === 'searching') targetMax = 70;
-        else if (window.currentAnalysisStatus === 'deep-analysis') targetMax = 91;
+        if (currentAnalysisStatus === 'searching') targetMax = 70;
+        else if (currentAnalysisStatus === 'deep-analysis') targetMax = 91;
 
             if (progress < targetMax) {
                 // Speed Control
@@ -866,21 +891,21 @@ async function runDetection() {
     try {
         // 1. Check if we need to extract content FIRST
         if (currentExtractedData && currentExtractedData.pendingExtraction) {
-             window.isExtracting = true;
+             isExtracting = true;
              // Manually drive progress for extraction phase (0-40%)
              await performRealExtraction((val, msg) => {
                  progress = val;
                  progressBar.style.width = progress + '%';
                  setToastText(msg);
              });
-             window.isExtracting = false;
+             isExtracting = false;
              // Extraction done. We are at ~40%.
              // Reset status timer for analysis phase to start smoothly from here
              statusTimer = 3000; // Skip to searching phase logic roughly
-             window.currentAnalysisStatus = 'searching';
+             currentAnalysisStatus = 'searching';
         }
 
-        if (window._abortController.signal.aborted) throw new Error('Aborted');
+        if (_abortController.signal.aborted) throw new Error('Aborted');
 
         // 2. Run Analysis
         const analysisText = (currentExtractedData && currentExtractedData.content) ? currentExtractedData.content : text;
@@ -901,7 +926,7 @@ async function runDetection() {
             url: analysisUrl
         });
 
-        if (window._abortController.signal.aborted) throw new Error('Aborted');
+        if (_abortController.signal.aborted) throw new Error('Aborted');
         
         // Finish Progress
         clearInterval(progressInterval);
@@ -940,7 +965,7 @@ async function runDetection() {
     } finally {
         // Cleanup
         clearInterval(progressInterval);
-        window.isExtracting = false;
+        isExtracting = false;
         detectBtn.classList.remove('is-stop'); // BUG FIX: Ensure is-stop is removed
         detectBtn.disabled = false;
         detectBtn.textContent = originalText;
@@ -952,7 +977,7 @@ async function runDetection() {
             }, 300);
         }
         updateButtonState();
-        window._abortController = null;
+        _abortController = null;
     }
 }
 
@@ -1009,31 +1034,37 @@ function initActionSheet() {
         // Restore Default Upload Menu
         const content = document.getElementById('actionSheetContent');
         content.innerHTML = `
-             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="triggerImageUpload()">添加图片</div>
-             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="triggerFileUpload()">上传文件</div> 
+             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="uploadImageBtn">添加图片</div>
+             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="uploadDocBtn">上传文件</div> 
         `;
         
+        // Re-bind events since innerHTML was reset
+        document.getElementById('uploadImageBtn').addEventListener('click', triggerImageUpload);
+        document.getElementById('uploadDocBtn').addEventListener('click', triggerFileUpload);
+
         document.getElementById('actionSheetBackdrop').classList.add('active');
         document.getElementById('actionSheet').classList.add('active'); // CSS translate
         document.getElementById('actionSheet').style.transform = 'translateY(0)';
     });
 }
 
-window.closeActionSheet = function() {
+function closeActionSheet() {
     document.getElementById('actionSheetBackdrop').classList.remove('active');
     const actionSheet = document.getElementById('actionSheet');
     if (actionSheet) {
         actionSheet.classList.remove('active');
         actionSheet.style.transform = 'translateY(100%)';
     }
+    // Also hide tooltips if any
+    hideTooltip();
 }
 
-window.triggerImageUpload = function() {
+function triggerImageUpload() {
     fileInput.click();
     closeActionSheet();
 }
 
-window.triggerFileUpload = function() {
+function triggerFileUpload() {
     // Overwrite Check: If there's content, ask the user first
     const hasText = textInput.value.trim().length > 0;
     const hasImages = uploadedImages.length > 0;
@@ -1050,56 +1081,84 @@ window.triggerFileUpload = function() {
     }
 }
 
-docInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+function initFileInputs() {
+    if (docInput) {
+        docInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
 
-    // Type validation
-    const docExtensions = ['.doc', '.docx', '.pdf', '.txt', '.md'];
-    const imgExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'];
-    const fileName = file.name.toLowerCase();
-    
-    const isDoc = docExtensions.some(ext => fileName.endsWith(ext));
-    const isImg = imgExtensions.some(ext => fileName.endsWith(ext));
-    
-    if (!isDoc && !isImg) {
-        showToast('暂不支持此文件', 'error');
-        docInput.value = '';
-        return;
+            // Type validation
+            const docExtensions = ['.doc', '.docx', '.pdf', '.txt', '.md'];
+            const imgExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'];
+            const fileName = file.name.toLowerCase();
+            
+            const isDoc = docExtensions.some(ext => fileName.endsWith(ext));
+            const isImg = imgExtensions.some(ext => fileName.endsWith(ext));
+            
+            if (!isDoc && !isImg) {
+                showToast('暂不支持此文件', 'error');
+                docInput.value = '';
+                return;
+            }
+
+            // Size limit: 15MB
+            const maxSize = 15 * 1024 * 1024;
+            if (file.size > maxSize) {
+                showToast('超过文件大小限制 (最大 15MB)', 'warning');
+                docInput.value = '';
+                return;
+            }
+
+            // If it's an image, redirect to image logic
+            if (isImg) {
+                if (!!currentExtractedData && currentExtractedData.type === 'link') {
+                    pendingConflict = { type: 'images', data: [file] };
+                    showConflictModal();
+                } else {
+                    await processAndAddImages([file]);
+                }
+                docInput.value = '';
+                return;
+            }
+
+            // Conflict Check for Documents: Only conflict with links
+            if (currentExtractedData && currentExtractedData.type === 'link') {
+                pendingConflict = { type: 'doc', data: file };
+                showConflictModal();
+                docInput.value = '';
+                return;
+            }
+
+            await handleDocParsing(file);
+            docInput.value = '';
+        });
     }
 
-    // Size limit: 15MB
-    const maxSize = 15 * 1024 * 1024;
-    if (file.size > maxSize) {
-        showToast('超过文件大小限制 (最大 15MB)', 'warning');
-        docInput.value = '';
-        return;
-    }
+    if (fileInput) {
+        fileInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            
+            // Conflict Check: Only conflict with links
+            if (currentExtractedData && currentExtractedData.type === 'link') {
+                pendingConflict = { type: 'images', data: files };
+                showConflictModal();
+                fileInput.value = '';
+                return;
+            }
 
-    // If it's an image, redirect to image logic
-    if (isImg) {
-        // Allow images to coexist with documents, only conflict with links
-        if (!!currentExtractedData && currentExtractedData.type === 'link') {
-            pendingConflict = { type: 'images', data: [file] };
-            showConflictModal();
-        } else {
-            await processAndAddImages([file]);
-        }
-        docInput.value = '';
-        return;
+            // Check total images limit (max 4)
+            if (uploadedImages.length + files.length > 4) {
+                showToast('最多仅支持上传4张图片', 'warning');
+                fileInput.value = '';
+                return;
+            }
+            
+            await processAndAddImages(files);
+            fileInput.value = '';
+        });
     }
-
-    // Conflict Check for Documents: Only conflict with links
-    if (currentExtractedData && currentExtractedData.type === 'link') {
-        pendingConflict = { type: 'doc', data: file };
-        showConflictModal();
-        docInput.value = '';
-        return;
-    }
-
-    await handleDocParsing(file);
-    docInput.value = '';
-});
+}
 
 async function handleDocParsing(file) {
     const reader = new FileReader();
@@ -1166,59 +1225,55 @@ async function handleDocParsing(file) {
     }
 }
 
-fileInput.addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-    
-    // Conflict Check: Only conflict with links
-    if (currentExtractedData && currentExtractedData.type === 'link') {
-        pendingConflict = { type: 'images', data: files };
-        showConflictModal();
-        fileInput.value = '';
-        return;
-    }
-
-    // Check total images limit (max 4)
-    if (uploadedImages.length + files.length > 4) {
-        showToast('最多仅支持上传4张图片', 'warning');
-        fileInput.value = '';
-        return;
-    }
-    
-    await processAndAddImages(files);
-    fileInput.value = '';
-});
-
 function renderImages() {
     previewImages.innerHTML = '';
     
-    const hasDoc = currentExtractedData && currentExtractedData.type === 'doc';
+    const hasMedia = currentExtractedData; // Could be doc or url
     const hasImages = uploadedImages.length > 0;
 
     // Use shared SVG constant
     const closeSvg = UI_CLOSE_SVG.replace('<svg', '<svg width="12" height="12"');
 
-    // Handle Document Card
-    if (hasDoc) {
+    // Handle Media Card (Document or URL)
+    if (hasMedia) {
         const isAlone = !hasImages;
-        const ext = currentExtractedData.format || 'DOC';
-        const docDiv = document.createElement('div');
-        // Added bg-glass class
-        docDiv.className = `preview-doc-card bg-glass ${isAlone ? 'is-alone' : ''}`;
+        const data = currentExtractedData;
+        const isDoc = data.type === 'doc';
         
-        const sizeStr = currentExtractedData.size ? formatFileSize(currentExtractedData.size) : '';
+        const mediaDiv = document.createElement('div');
+        mediaDiv.className = `preview-doc-card bg-glass ${isAlone ? 'is-alone' : ''}`;
+        
+        // Icon logic
+        let iconContent = '';
+        if (isDoc) {
+            iconContent = `<svg viewBox="0 0 24 24" width="22" height="22" fill="var(--primary-color)">
+                <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+            </svg>`;
+        } else {
+            const faviconUrl = getFaviconUrl(data.url);
+            iconContent = faviconUrl 
+                ? `<img src="${faviconUrl}" style="width:22px; height:22px; object-fit:contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                   <svg viewBox="0 0 24 24" width="22" height="22" fill="var(--primary-color)" style="display:none;">
+                       <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+                   </svg>`
+                : `<svg viewBox="0 0 24 24" width="22" height="22" fill="var(--primary-color)">
+                       <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+                   </svg>`;
+        }
 
-        docDiv.innerHTML = `
+        const title = data.title || (isDoc ? '解析文件' : '检测网页');
+        const metaLine = isDoc 
+            ? `<span class="doc-ext">${data.format || 'DOC'}</span>${data.size ? `<span class="doc-divider">|</span><span class="doc-size">${formatFileSize(data.size)}</span>` : ''}`
+            : `<span class="doc-ext" style="color:var(--text-muted); font-size:11px;">${data.pendingExtraction ? '正在解析...' : '内容已就绪'}</span>`;
+
+        mediaDiv.innerHTML = `
             <div class="doc-icon">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="var(--primary-color)">
-                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
-                </svg>
+                ${iconContent}
             </div>
             <div class="doc-info">
-                <div class="doc-title">${escapeHTML(currentExtractedData.title)}</div>
+                <div class="doc-title">${escapeHTML(title)}</div>
                 <div class="doc-meta">
-                    <span class="doc-ext">${ext}</span>
-                    ${sizeStr ? `<span class="doc-divider">|</span><span class="doc-size">${sizeStr}</span>` : ''}
+                    ${metaLine}
                 </div>
             </div>
             <div class="doc-right">
@@ -1229,24 +1284,25 @@ function renderImages() {
         `;
 
         // Direct click removal
-        const removeBtn = docDiv.querySelector('.remove-doc-btn');
+        const removeBtn = mediaDiv.querySelector('.remove-doc-btn');
         removeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             removeExtractedUrl();
         });
 
-        // Long press for doc
+        // Long press for media
         let pressTimer;
-        docDiv.addEventListener('touchstart', (e) => {
+        mediaDiv.addEventListener('touchstart', (e) => {
             pressTimer = setTimeout(() => {
                 if (navigator.vibrate) navigator.vibrate(50);
-                showFileContext();
+                if (isDoc) showFileContext();
+                else showActionSheetForUrl(); // Might need a new helper
             }, 600);
         });
-        docDiv.addEventListener('touchend', () => clearTimeout(pressTimer));
-        docDiv.addEventListener('touchmove', () => clearTimeout(pressTimer));
+        mediaDiv.addEventListener('touchend', () => clearTimeout(pressTimer));
+        mediaDiv.addEventListener('touchmove', () => clearTimeout(pressTimer));
 
-        previewImages.appendChild(docDiv);
+        previewImages.appendChild(mediaDiv);
     }
 
     // Handle Images
@@ -1293,38 +1349,59 @@ function renderImages() {
     }
 }
 
-window.showFileContext = function() {
+function showFileContext() {
     const backdrop = document.getElementById('actionSheetBackdrop');
     const sheet = document.getElementById('actionSheet');
     const content = document.getElementById('actionSheetContent');
 
+    const isDoc = currentExtractedData && currentExtractedData.type === 'doc';
+
     content.innerHTML = `
-        <div style="padding:15px; font-weight:bold; border-bottom:1px solid var(--bg-tertiary); color:var(--text-secondary); font-size:14px;">文件操作</div>
-        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); color:#ff4d4f; font-size:16px;" onclick="removeExtractedUrl(); closeActionSheet();">删除该文件</div>
+        <div style="padding:15px; font-weight:bold; border-bottom:1px solid var(--bg-tertiary); color:var(--text-secondary); font-size:14px;">${isDoc ? '文件' : '链接'}操作</div>
+        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); color:#ff4d4f; font-size:16px;" id="removeDocBtnSheet">移除${isDoc ? '文件' : '链接'}</div>
     `;
+
+    document.getElementById('removeDocBtnSheet').addEventListener('click', () => {
+        removeExtractedUrl();
+        closeActionSheet();
+    });
 
     backdrop.classList.add('active');
     sheet.classList.add('active');
     sheet.style.transform = 'translateY(0)';
 }
 
-window.showImageContext = function(imgUrl, index) {
+function showActionSheetForUrl() {
+    showFileContext();
+}
+
+function showImageContext(imgUrl, index) {
     const backdrop = document.getElementById('actionSheetBackdrop');
     const sheet = document.getElementById('actionSheet');
     const content = document.getElementById('actionSheetContent');
 
     content.innerHTML = `
         <div style="padding:15px; font-weight:bold; border-bottom:1px solid var(--bg-tertiary); color:var(--text-secondary); font-size:14px;">图片操作</div>
-        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); color:#ff4d4f; font-size:16px;" onclick="removeImage(${index}); closeActionSheet();">删除该图片</div>
-        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="previewImage('${imgUrl}'); closeActionSheet();">预览图片</div>
+        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); color:#ff4d4f; font-size:16px;" id="removeImgBtnSheet">删除该图片</div>
+        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="previewImgBtnSheet">预览图片</div>
     `;
+
+    document.getElementById('removeImgBtnSheet').addEventListener('click', () => {
+        removeImage(index);
+        closeActionSheet();
+    });
+
+    document.getElementById('previewImgBtnSheet').addEventListener('click', () => {
+        previewImage(imgUrl);
+        closeActionSheet();
+    });
 
     backdrop.classList.add('active');
     sheet.classList.add('active');
     sheet.style.transform = 'translateY(0)';
 }
 
-window.previewImage = function(url) {
+function previewImage(url) {
     const modal = document.getElementById('imageModal');
     const img = document.getElementById('modalImage');
     if (modal && img) {
@@ -1341,7 +1418,7 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-window.removeImage = function(index) {
+function removeImage(index) {
     uploadedImages.splice(index, 1);
     renderImages();
     updateButtonState();
@@ -1449,7 +1526,7 @@ function updateThemeIcon() {
     }
 }
 
-window.toggleHistory = function(show) {
+function toggleHistory(show) {
     const backdrop = document.getElementById('historyDrawerBackdrop');
     const drawer = document.getElementById('historyDrawer');
     if (show) {
@@ -1498,6 +1575,8 @@ async function loadHistory(isLoadMore = false) {
             limit: historyLimit,
             query: historySearchQuery
         });
+        
+        if (!result) return;
         
         const data = result.data || [];
         hasMoreHistory = result.hasMore;
@@ -1610,16 +1689,26 @@ function showHistoryContext(item, index, e) {
 
     content.innerHTML = `
         <div style="padding:15px; font-weight:bold; border-bottom:1px solid var(--bg-tertiary); color:var(--text-secondary); font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(displayTitle)}</div>
-        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); color:#ff4d4f; font-size:16px;" onclick="deleteHistoryItem(${index})">删除此条记录</div>
-        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="showResultFromHistory(${index})">查看详情</div>
+        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); color:#ff4d4f; font-size:16px;" id="deleteHistoryItemBtn">删除此条记录</div>
+        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="showHistoryItemBtn">查看详情</div>
     `;
+
+    document.getElementById('deleteHistoryItemBtn').addEventListener('click', () => {
+        deleteHistoryItem(index);
+        closeActionSheet();
+    });
+
+    document.getElementById('showHistoryItemBtn').addEventListener('click', () => {
+        showResultFromHistory(index);
+        closeActionSheet();
+    });
 
     backdrop.classList.add('active');
     sheet.classList.add('active');
     sheet.style.transform = 'translateY(0)';
 }
 
-window.showResultFromHistory = async function(index) {
+async function showResultFromHistory(index) {
     let item = allHistory[index];
     
     // If info is not full, load it now
@@ -1652,7 +1741,7 @@ window.showResultFromHistory = async function(index) {
     toggleHistory(false);
 }
 
-window.deleteHistoryItem = async function(index) {
+async function deleteHistoryItem(index) {
     showConfirm('删除记录', '确定要删除这条历史记录吗？', async () => {
         const item = allHistory[index];
         try {
@@ -1816,7 +1905,7 @@ function showResult(result, originalText, originalImages, sourceUrl) {
                     d: part.reason || ''
                 };
                 const reasonStr = JSON.stringify(reasonObj).replace(/"/g, '&quot;');
-                const span = `<span class="fake-highlight" data-reason="${reasonStr}" onclick="showReasonTooltip(this)">${safePart}</span>`; // Added onclick for mobile
+                const span = `<span class="fake-highlight" data-reason="${reasonStr}">${safePart}</span>`; // Removed onclick for delegation
                 
                 safeText = safeText.replace(safePart, span);
            }
@@ -1876,7 +1965,7 @@ function showResult(result, originalText, originalImages, sourceUrl) {
     }
 }
 
-window.openImageModal = function(src) {
+function openImageModal(src) {
     const modal = document.getElementById('imageModal');
     const modalImg = document.getElementById('modalImage');
     modalImg.src = src;
@@ -1884,7 +1973,7 @@ window.openImageModal = function(src) {
 }
 
 // --- Tooltip ---
-window.showReasonTooltip = function(element) {
+function showReasonTooltip(element) {
     const tooltip = document.getElementById('customTooltip');
     const reasonAttr = element.getAttribute('data-reason');
     if (!reasonAttr) return;
@@ -1904,7 +1993,7 @@ window.showReasonTooltip = function(element) {
     tooltip.innerHTML = `
         <div class="tooltip-header" style="font-weight:600; margin-bottom:10px; padding:18px 20px 14px; border-bottom:1px solid var(--border-color); font-size:18px; display: flex; justify-content: space-between; align-items: center;">
             <span>风险详情</span>
-            <span class="close-circle-btn" style="width: 30px; height: 30px;" onclick="hideTooltip()">
+            <span class="close-circle-btn" style="width: 30px; height: 30px;" id="closeTooltipBtn">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
             </span>
         </div>
@@ -1923,11 +2012,20 @@ window.showReasonTooltip = function(element) {
             </div>
         </div>
     `;
+
+    const backdrop = document.getElementById('actionSheetBackdrop');
+    backdrop.classList.add('active');
+    
+    // For tooltips, clicking backdrop should also hide it
+    // We can manually override the backdrop behavior or just let it close everything
+    
+    document.getElementById('closeTooltipBtn').addEventListener('click', hideTooltip);
     tooltip.classList.add('active');
 }
 
-window.hideTooltip = function() {
+function hideTooltip() {
     document.getElementById('customTooltip').classList.remove('active');
+    document.getElementById('actionSheetBackdrop').classList.remove('active');
 }
 
 // --- Conflict Modal Logic ---
@@ -1936,23 +2034,23 @@ function showConflictModal() {
     if (modal) {
         // Adjust text if it's a link conflict vs image conflict
         const desc = modal.querySelector('div[style*="font-size: 14px"]');
-        const keepLinkBtn = modal.querySelector('button[onclick*="link"]');
+        const keepLinkBtn = document.getElementById('keepLinkBtn');
         
         if (pendingConflict.type === 'link') {
             desc.textContent = '检测网页链接时，无法同时分析已上传的本地图片。是否清空图片并继续提取链接？';
-            keepLinkBtn.textContent = '保留网页链接';
+            if (keepLinkBtn) keepLinkBtn.textContent = '保留网页链接';
         } else if (pendingConflict.type === 'doc') {
             desc.textContent = '解析文档文件时，无法同时分析已上传的本地图片。是否清空图片并继续解析？';
-            keepLinkBtn.textContent = '保留文档文件';
+            if (keepLinkBtn) keepLinkBtn.textContent = '保留文档文件';
         } else {
             desc.textContent = '检测图片内容时，无法同时分析检测到的网页或文件。是否移除它们并继续上传图片？';
-            keepLinkBtn.textContent = '保留网页/文件';
+            if (keepLinkBtn) keepLinkBtn.textContent = '保留网页/文件';
         }
         modal.style.display = 'flex';
     }
 }
 
-window.closeConflictModal = function() {
+function closeConflictModal() {
     const modal = document.getElementById('conflictModal');
     if (modal) modal.style.display = 'none';
     pendingConflict = null;
@@ -1980,13 +2078,7 @@ async function processAndAddImages(files) {
 
                 // Dynamically load heic2any if not already loaded
                 if (typeof heic2any === 'undefined') {
-                    await new Promise((resolve, reject) => {
-                        const script = document.createElement('script');
-                        script.src = '/js/heic2any.min.js';
-                        script.onload = resolve;
-                        script.onerror = reject;
-                        document.head.appendChild(script);
-                    });
+                    await import('./heic2any.min.js');
                 }
 
                 const blob = await heic2any({
@@ -2022,11 +2114,11 @@ async function processAndAddImages(files) {
     updateButtonState();
 }
 
-window.resolveConflict = async function(choice) {
+async function resolveConflict(choice) {
     if (!pendingConflict) return;
 
     const modal = document.getElementById('conflictModal');
-    const keepLinkBtn = modal.querySelector('button[onclick*="link"]');
+    const keepLinkBtn = document.getElementById('keepLinkBtn');
 
     if (choice === 'link') {
         // Keep Link/Doc: Remove existing images and proceed
@@ -2063,9 +2155,13 @@ async function initUser() {
 
     try {
         const res = await fetch('/auth/me');
+        if (res.status === 401) {
+            window.location.href = '/Login';
+            return;
+        }
         const data = await res.json();
         if (data.status !== "fail") {
-            window.currentUser = data.user;
+            currentUser = data.user;
             updateAvatar(data.user);
         }
     } catch (err) {
@@ -2093,60 +2189,78 @@ function updateAvatar(user) {
 }
 
 function showUserActionSheet() {
-    const user = window.currentUser;
+    const user = currentUser;
     if (!user) return;
 
     const actionSheet = document.getElementById('actionSheet');
     const backdrop = document.getElementById('actionSheetBackdrop');
     const content = document.getElementById('actionSheetContent');
 
-    let html = `
+    content.innerHTML = `
         <div style="padding:15px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-weight:600; color:var(--text-primary); font-size: 16px;">
             ${user.username}${user.role === 'admin' ? ' (管理员)' : ''}
         </div>
-        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="openMobileUserEditor()">修改用户信息</div>
+        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="mobileEditUserBtn">修改用户信息</div>
+        ${user.role === 'admin' ? '<div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="mobileAdminBtn">进入后台管理</div>' : ''}
+        <div style="padding:20px; text-align:center; font-size:16px; color:var(--danger-color);" id="mobileLogoutBtn">退出登录</div>
     `;
 
+    document.getElementById('mobileEditUserBtn').addEventListener('click', openMobileUserEditor);
     if (user.role === 'admin') {
-        html += `<div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="location.href='/Admin'">进入后台管理</div>`;
-    }
-
-    html += `<div style="padding:20px; text-align:center; font-size:16px; color:var(--danger-color);" onclick="handleLogout()">退出登录</div>`;
-
-    content.innerHTML = html;
-    
-    actionSheet.style.transform = 'translateY(0)';
-    actionSheet.classList.add('active');
-    backdrop.classList.add('active');
-    
-    // Push state for back button handling
-    window.history.pushState({ page: 'user-sheet' }, '');
-}
-
-window.openMobileUserEditor = function() {
-    closeActionSheet();
-    if (window.userEditor) {
-        window.userEditor.open({
-            userId: window.currentUser.id, username: window.currentUser.username, onSuccess: () => location.reload()
+        document.getElementById('mobileAdminBtn').addEventListener('click', () => {
+            location.href = '/Admin';
         });
     }
-};
+    document.getElementById('mobileLogoutBtn').addEventListener('click', handleLogout);
 
-window.handleLogout = async function() {
-    if (confirm('确认退出登录？')) {
-        try {
-            await fetch('/auth/logout', { method: 'POST' });
-            location.href = '/Login';
-        } catch (err) {
-            console.error('Logout failed', err);
+    backdrop.classList.add('active');
+    actionSheet.style.transform = 'translateY(0)';
+    actionSheet.classList.add('active');
+}
+
+async function openMobileUserEditor() {
+    try {
+        const module = await import('./user-editor.js');
+        const userEditor = module.default;
+        
+        if (userEditor && currentUser) {
+            userEditor.open({
+                userId: currentUser.id,
+                username: currentUser.username,
+                onSuccess: (data) => {
+                    // The editor returns { userId, username, avatarTimestamp }
+                    if (currentUser.id === data.userId) {
+                        currentUser.username = data.username;
+                        updateAvatar(currentUser);
+                    }
+                }
+            });
         }
+    } catch (error) {
+        console.error('Failed to load user editor:', error);
     }
-};
+    closeActionSheet();
+}
 
-// --- Utils ---
+async function handleLogout() {
+    try {
+        await fetch('/auth/logout', { method: 'POST' });
+        location.href = '/Login';
+    } catch (err) {
+        showToast('退出失败', 'error');
+    }
+}
+
 function escapeHTML(str) {
     if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    return String(str).replace(/[&<>"']/g, function(m) {
+        switch (m) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&#039;';
+            default: return m;
+        }
+    });
 }

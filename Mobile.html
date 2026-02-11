@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TruthGuard</title>
+    <link rel="icon" href="/ico/Detect.ico">
+    <link rel="stylesheet" href="/client-src/css/variables.css">
+    <link rel="stylesheet" href="/client-src/css/common.css">
+    <link rel="stylesheet" href="/client-src/css/mobile.css">
+    <script type="module" src="/client-src/js/theme-loader.js"></script>
+    <script type="module" src="/client-src/js/mobile.js"></script>
     <script>
         (function() {
             const theme = localStorage.getItem('theme') || 'light';
@@ -11,28 +17,6 @@
         })();
     </script>
     <style>
-        /* Immediate Theme Support */
-        :root {
-            --bg-main: #f3f4f6;
-            --text-primary: #1a1d20;
-            --text-main: #111827;
-            --text-muted: #6b7280;
-            --bg-secondary: #f8f9fa;
-        }
-        [data-theme="dark"] {
-            --bg-main: #0f172a;
-            --text-primary: #e9ecef;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --bg-secondary: #1a1d20;
-        }
-        body {
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            margin: 0;
-            transition: background-color var(--transition-fast), color var(--transition-fast);
-        }
-        
         .tooltip-tag {
             display: inline-block;
             padding: 4px 12px;
@@ -186,16 +170,16 @@
     </div>
 
     <!-- Modals -->
-    <div id="actionSheetBackdrop" class="drawer-backdrop" onclick="closeActionSheet()"></div>
+    <div id="actionSheetBackdrop" class="drawer-backdrop" ></div>
     <div id="actionSheet" class="drawer-panel" style="height:auto; bottom:0; top:auto; width:100%; max-width:100%; transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 20px 20px 0 0; padding-bottom:30px; left:0;">
          <div id="actionSheetContent">
-             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="triggerImageUpload()">添加图片</div>
-             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" onclick="triggerFileUpload()">上传文件 (Word/PDF/TXT/MD)</div> 
+             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="uploadImageBtn">添加图片</div>
+             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="uploadDocBtn">上传文件 (Word/PDF/TXT/MD)</div> 
          </div>
-         <div style="padding:20px; text-align:center; color:var(--text-secondary); font-size:16px;" onclick="closeActionSheet()">取消</div>
+         <div id="closeActionSheetBtn" style="padding:20px; text-align:center; color:var(--text-secondary); font-size:16px; cursor:pointer;" >取消</div>
     </div>
 
-    <div id="historyDrawerBackdrop" class="drawer-backdrop" style="display: none;" onclick="toggleHistory(false)"></div>
+    <div id="historyDrawerBackdrop" class="drawer-backdrop" style="display: none;" ></div>
     <div id="historyDrawer" class="drawer-panel">
          <div class="drawer-header" style="display: flex; justify-content: space-between; align-items: center;">
             <span>历史记录</span>
@@ -221,7 +205,7 @@
     </div>
 
     <!-- Image Modal -->
-    <div class="image-modal" id="imageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center; flex-direction: column;" onclick="this.style.display='none'">
+    <div class="image-modal" id="imageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center; flex-direction: column;" >
         <img id="modalImage" style="max-width: 95%; max-height: 85%; object-fit: contain;">
         <div style="color: white; margin-top: 15px; font-size: 14px;">点击屏幕关闭</div>
     </div>
@@ -234,9 +218,9 @@
             <div style="font-weight: 700; font-size: 18px; margin-bottom: 12px; color: var(--text-primary);">内容不能共存</div>
             <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5;">系统暂不支持同时检测文本链接与本地图片，请选择保留其中一项。</div>
             <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button class="large-detect-btn" style="height: 48px; font-size: 15px;" onclick="resolveConflict('link')">保留网页链接</button>
-                <button class="large-detect-btn" style="height: 48px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); box-shadow: none;" onclick="resolveConflict('images')">保留本地图片</button>
-                <button style="border: none; background: none; color: var(--text-muted); padding: 10px; font-size: 14px;" onclick="closeConflictModal()">取消</button>
+                <button class="large-detect-btn" style="height: 48px; font-size: 15px;" id="keepLinkBtn">保留网页链接</button>
+                <button class="large-detect-btn" style="height: 48px; font-size: 15px; background: var(--bg-tertiary); color: var(--text-primary); box-shadow: none;" id="keepImagesBtn">保留本地图片</button>
+                <button style="border: none; background: none; color: var(--text-muted); padding: 10px; font-size: 14px;" id="closeConflictBtn">取消</button>
             </div>
         </div>
     </div>
@@ -247,7 +231,7 @@
             <div id="confirmTitle" style="font-weight: 700; font-size: 17px; margin-bottom: 8px; color: var(--text-primary);">确认提示</div>
             <div id="confirmMessage" style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6;">确定要执行此操作吗？</div>
             <div style="display: flex; gap: 12px;">
-                <button class="large-detect-btn" style="height: 42px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); box-shadow: none; flex: 1;" onclick="closeConfirmModal()">取消</button>
+                <button class="large-detect-btn" style="height: 42px; font-size: 14px; background: var(--bg-tertiary); color: var(--text-primary); box-shadow: none; flex: 1;" id="closeConfirmBtn">取消</button>
                 <button id="confirmExecuteBtn" class="large-detect-btn" style="height: 42px; font-size: 14px; flex: 1;">确定</button>
             </div>
         </div>

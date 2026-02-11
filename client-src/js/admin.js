@@ -1,153 +1,217 @@
-
-        // --- Global State ---
-        let currentAdminId = null;
-        let avatarTimestamp = Date.now();
-        const getAvatarUrl = (id, thumb = false) => `/api/public/avatar/${id}?t=${avatarTimestamp}${thumb ? '&thumbnail=1' : ''}`;
-
-        // --- Theme Logic ---
-        function applyTheme(theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('theme', theme);
-            const sunIcon = document.getElementById('sun-icon');
-            const moonIcon = document.getElementById('moon-icon');
-            if (sunIcon && moonIcon) {
-                if (theme === 'dark') {
-                    sunIcon.style.display = 'block';
-                    moonIcon.style.display = 'none';
-                } else {
-                    sunIcon.style.display = 'none';
-                    moonIcon.style.display = 'block';
-                }
-            }
-            // Re-apply dynamic custom colors for the new mode
-            if (typeof applyDynamicTheme === 'function') {
-                applyDynamicTheme();
-            }
-            // 额外触发管理页面的预览刷新
-            previewTheme();
-        }
-
-        function toggleTheme() {
-            const current = localStorage.getItem('theme') || 'light';
-            const next = current === 'light' ? 'dark' : 'light';
-            applyTheme(next);
-        }
-
-        // Init Theme
-        applyTheme(localStorage.getItem('theme') || 'light');
-
-        // Centralized fetch with 401 handling
-        async function safeFetch(url, options = {}) {
-            try {
-                const res = await fetch(url, options);
-                if (res.status === 401) {
-                    window.location.href = '/Login';
-                    return null;
-                }
-                return await res.json();
-            } catch (e) {
-                console.error(`Fetch error (${url}):`, e);
-                return {
-            "status": "fail",
-            "code": 400,
-            "message": e.message,
-            "data": {},
-            "error": {}
-        };
-            }
-        }
-
-        async function fetchAdminInfo() {
-            const data = await safeFetch('/auth/me');
-            if (data && data.status !== 'fail') {
-                const u = data.user;
-                currentAdminId = u.id; // 保存当前管理员ID
-                
-                // 更新顶部用户信息
-                document.getElementById('user-display-name').innerText = u.username;
-                document.getElementById('user-role-label').innerText = u.role === 'admin' ? '超级管理员' : '普通用户';
-                
-                const avatarImg = document.getElementById('user-avatar');
-                avatarImg.src = getAvatarUrl(u.id, true);
-                avatarImg.onerror = null;
-
-                document.getElementById('user-ip-display').innerText = `登录 IP: ${u.last_login_ip || '未知'}`;
-
-                document.getElementById('admin-info').innerHTML = `
-                    <div class="user-stats">
-                        <span>管理员: <strong>${u.username}</strong></span>
-                        <span>角色: <strong>${u.role}</strong></span>
-                        <span>登录IP: <strong>${u.last_login_ip || 'N/A'}</strong></span>
-                        <span>登录时间: <strong>${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'N/A'}</strong></span>
-                    </div>
-                `;
-            }
-        }
-
-        function toggleUserMenu() {
-            document.getElementById('user-dropdown').classList.toggle('show');
-        }
-
-        // --- Sidebar Collapse Logic ---
-        function toggleSidebar(customState = null, persist = true) {
-            const sidebar = document.querySelector('.sidebar');
-            const toggleIcon = document.querySelector('#sidebar-toggle svg');
-            const overlay = document.getElementById('sidebar-overlay');
+// --- API Bridge for Web compatibility (Migration) ---
+window.api = {
+    invoke: async (channel, ...args) => {
+        try {
+            const response = await fetch('/api/invoke', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channel: channel, args })
+            });
             
-            const shouldBeCollapsed = customState !== null ? !customState : !sidebar.classList.contains('collapsed');
-            
-            if (!shouldBeCollapsed) {
-                sidebar.classList.remove('collapsed');
-                if (toggleIcon) toggleIcon.style.transform = 'rotate(0deg)';
-                if (persist) localStorage.setItem('sidebar_collapsed', 'false');
-                
-                // 仅在窄屏展开时显示遮罩
-                if (overlay && window.innerWidth < 1024) {
-                    overlay.style.display = 'block';
-                }
-            } else {
-                sidebar.classList.add('collapsed');
-                if (toggleIcon) toggleIcon.style.transform = 'rotate(180deg)';
-                if (persist) localStorage.setItem('sidebar_collapsed', 'true');
-                if (overlay) overlay.style.display = 'none';
+            if (response.status === 401) {
+                window.location.href = '/Login';
+                return;
             }
+
+            // Handle binary responses (e.g., PDF)
+            const contentType = response.headers.get('Content-Type');
+            if (contentType && contentType.includes('application/pdf')) {
+                return await response.arrayBuffer();
+            }
+
+            const result = await response.json();
+            if (result.status !== 'fail') return result.data;
+            throw new Error(result.message || result.error || 'Server Error');
+        } catch (error) {
+            console.error(`API Invoke Error (${channel}):`, error);
+            throw error;
+        }
+    }
+};
+
+// --- Global State ---
+let currentAdminId = null;
+let currentAdminUsername = '';
+let currentAdminRole = '';
+let avatarTimestamp = Date.now();
+const getAvatarUrl = (id, thumb = false) => `/api/public/avatar/${id}?t=${avatarTimestamp}${thumb ? '&thumbnail=1' : ''}`;
+
+// --- Theme Logic ---
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    const sunIcon = document.getElementById('sun-icon');
+    const moonIcon = document.getElementById('moon-icon');
+    if (sunIcon && moonIcon) {
+        if (theme === 'dark') {
+            sunIcon.style.display = 'block';
+            moonIcon.style.display = 'none';
+        } else {
+            sunIcon.style.display = 'none';
+            moonIcon.style.display = 'block';
+        }
+    }
+    // Re-apply dynamic custom colors for the new mode
+    if (typeof applyDynamicTheme === 'function') {
+        applyDynamicTheme();
+    }
+    // 额外触发管理页面的预览刷新
+    if (typeof previewTheme === 'function') {
+        previewTheme();
+    }
+}
+
+function toggleTheme() {
+    const current = localStorage.getItem('theme') || 'light';
+    const next = current === 'light' ? 'dark' : 'light';
+    applyTheme(next);
+}
+
+// Init Theme (Early)
+applyTheme(localStorage.getItem('theme') || 'light');
+
+// Centralized fetch with 401 handling
+async function safeFetch(url, options = {}) {
+    try {
+        const res = await fetch(url, options);
+        if (res.status === 401) {
+            window.location.href = '/Login';
+            return null;
+        }
+        return await res.json();
+    } catch (e) {
+        console.error(`Fetch error (${url}):`, e);
+        return { status: "fail", message: e.message };
+    }
+}
+
+async function fetchAdminInfo() {
+    const data = await safeFetch('/auth/me');
+    if (data && data.status !== 'fail') {
+        const u = data.user;
+        currentAdminId = u.id;
+        currentAdminUsername = u.username;
+        currentAdminRole = u.role;
+        
+        // 更新顶部用户信息
+        const nameEl = document.getElementById('user-display-name');
+        const roleEl = document.getElementById('user-role-label');
+        if (nameEl) nameEl.innerText = u.username;
+        if (roleEl) roleEl.innerText = u.role === 'admin' ? '超级管理员' : '普通用户';
+        
+        const avatarImg = document.getElementById('user-avatar');
+        if (avatarImg) {
+            avatarImg.src = getAvatarUrl(u.id, true);
         }
 
-        // Init Sidebar state
-        document.addEventListener('DOMContentLoaded', () => {
-            const sidebarToggle = document.getElementById('sidebar-toggle');
-            if (sidebarToggle) {
-                sidebarToggle.addEventListener('click', () => toggleSidebar());
-            }
+        const infoEl = document.getElementById('admin-info');
+        if (infoEl) {
+            infoEl.innerHTML = `
+                <div class="user-stats">
+                    <span>管理员: <strong>${u.username}</strong></span>
+                    <span>角色: <strong>${u.role}</strong></span>
+                    <span>登录IP: <strong>${u.last_login_ip || 'N/A'}</strong></span>
+                    <span>登录时间: <strong>${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'N/A'}</strong></span>
+                </div>
+            `;
+        }
+    }
+}
 
-            // Restore state
-            const savedState = localStorage.getItem('sidebar_collapsed');
-            if (savedState === 'true') {
-                toggleSidebar(false, true);
-            }
+function toggleUserMenu() {
+    const dropdown = document.getElementById('user-dropdown');
+    if (dropdown) dropdown.classList.toggle('show');
+}
 
-            const overlay = document.getElementById('sidebar-overlay');
-            if (overlay) {
-                overlay.addEventListener('click', () => toggleSidebar(false));
-            }
+// --- Sidebar Collapse Logic ---
+function toggleSidebar(customState = null, persist = true) {
+    const sidebar = document.querySelector('.sidebar');
+    const toggleIcon = document.querySelector('#sidebar-toggle svg');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (!sidebar) return;
 
-            // Auto-collapse on small screens
-            const handleResize = () => {
-                const sidebar = document.querySelector('.sidebar');
-                if (window.innerWidth < 1024) {
-                    if (!sidebar.classList.contains('collapsed')) {
-                        toggleSidebar(false, false);
-                    }
-                } else {
-                    const savedState = localStorage.getItem('sidebar_collapsed');
-                    if (savedState === 'false' && sidebar.classList.contains('collapsed')) {
-                        toggleSidebar(true, false);
-                    }
-                }
-            };
-            window.addEventListener('resize', handleResize);
-            handleResize(); // Check on init
-        });
+    const shouldBeCollapsed = customState !== null ? !customState : !sidebar.classList.contains('collapsed');
+    
+    if (!shouldBeCollapsed) {
+        sidebar.classList.remove('collapsed');
+        if (toggleIcon) toggleIcon.style.transform = 'rotate(0deg)';
+        if (persist) localStorage.setItem('sidebar_collapsed', 'false');
+        if (overlay && window.innerWidth < 1024) overlay.style.display = 'block';
+    } else {
+        sidebar.classList.add('collapsed');
+        if (toggleIcon) toggleIcon.style.transform = 'rotate(180deg)';
+        if (persist) localStorage.setItem('sidebar_collapsed', 'true');
+        if (overlay) overlay.style.display = 'none';
+    }
+}
+// Init Sidebar state & Bindings
+document.addEventListener('DOMContentLoaded', () => {
+    const bind = (id, event, fn) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener(event, fn);
+    };
+
+    bind('sidebar-toggle', 'click', () => toggleSidebar());
+    bind('mobile-menu-toggle', 'click', () => toggleSidebar());
+    bind('theme-toggle', 'click', () => toggleTheme());
+    bind('refresh-btn', 'click', () => refreshCurrentTab());
+    bind('back-to-home', 'click', () => window.location.href = '/Welcome');
+    bind('user-profile', 'click', (e) => {
+        e.stopPropagation();
+        toggleUserMenu();
+    });
+
+    bind('edit-self-btn', 'click', () => {
+        toggleUserMenu();
+        if (currentAdminId) {
+            openEdit(currentAdminId, currentAdminUsername, currentAdminRole);
+        } else {
+            // Fallback: try to fetch info if for some reason it's missing
+            fetchAdminInfo().then(() => {
+                if (currentAdminId) openEdit(currentAdminId, currentAdminUsername, currentAdminRole);
+            });
+        }
+    });
+
+    bind('logout-btn', 'click', () => logout());
+
+    // Bind Modal close buttons
+    document.querySelectorAll('.close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', () => closeModal());
+    });
+
+    bind('confirm-blacklist-btn', 'click', () => addBlacklist());
+    bind('confirm-create-user-btn', 'click', () => createUser());
+
+    // Bind switchTab for navigation items
+    document.querySelectorAll('.nav-item').forEach(item => {
+        const tabId = item.id.replace('tab-', '');
+        item.addEventListener('click', () => switchTab(tabId));
+    });
+
+    // Restore state
+    if (localStorage.getItem('sidebar_collapsed') === 'true') {
+        toggleSidebar(false, true);
+    }
+
+    const overlay = document.getElementById('sidebar-overlay');
+    if (overlay) overlay.addEventListener('click', () => toggleSidebar(false));
+
+    // Auto-collapse on small screens
+    const handleResize = () => {
+        const sidebar = document.querySelector('.sidebar');
+        if (!sidebar) return;
+        if (window.innerWidth < 1024) {
+            if (!sidebar.classList.contains('collapsed')) toggleSidebar(false, false);
+        } else {
+            if (localStorage.getItem('sidebar_collapsed') === 'false' && sidebar.classList.contains('collapsed')) {
+                toggleSidebar(true, false);
+            }
+        }
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize(); 
+});
 
         // 全局点击监听，用于关闭用户菜单
         window.addEventListener('click', function(e) {
@@ -163,7 +227,7 @@
                 renderTable(json.data);
                 const statUsers = document.getElementById('stat-total-users');
                 if (statUsers) statUsers.innerText = json.total;
-                renderPagination('users', json.total, json.page, json.limit, 'fetchUsers');
+                renderPagination('users', json.total, json.page, json.limit, fetchUsers);
             }
         }
 
@@ -189,16 +253,26 @@
                     <td style="font-size:11px; color:var(--text-muted)">${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : '-'}</td>
                     <td>
                         <div style="display:flex; gap:6px;">
-                            ${u.status === 'pending' ? `<button class="icon-btn primary" onclick="approveUser(${u.id})" title="批准用户"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></button>` : ''}
-                            <button class="icon-btn" onclick="openEdit(${u.id}, '${u.username}', '${u.role}')" title="编辑">
+                            ${u.status === 'pending' ? `<button class="icon-btn primary approve-btn" title="批准用户"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></button>` : ''}
+                            <button class="icon-btn edit-btn" title="编辑">
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21.03 2.97a3.578 3.578 0 0 1 0 5.06L9.062 20a2.25 2.25 0 0 1-.999.58l-5.116 1.395a.75.75 0 0 1-.92-.921l1.395-5.116a2.25 2.25 0 0 1 .58-.999L15.97 2.97a3.578 3.578 0 0 1 5.06 0ZM15 6.06 5.062 16a.75.75 0 0 0-.193.333l-1.05 3.85 3.85-1.05A.75.75 0 0 0 8 18.938L17.94 9 15 6.06Zm2.03-2.03-.97.97L19 7.94l.97-.97a2.079 2.079 0 0 0-2.94-2.94Z"/></svg>
                             </button>
                             ${u.id !== currentAdminId ? `
-                                <button class="icon-btn danger" onclick="deleteUser(${u.id})" title="删除"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" ><path d="M12 1.75a3.25 3.25 0 0 1 3.245 3.066L15.25 5h5.25a.75.75 0 0 1 .102 1.493L20.5 6.5h-.796l-1.28 13.02a2.75 2.75 0 0 1-2.561 2.474l-.176.006H8.313a2.75 2.75 0 0 1-2.714-2.307l-.023-.174L4.295 6.5H3.5a.75.75 0 0 1-.743-.648L2.75 5.75a.75.75 0 0 1 .648-.743L3.5 5h5.25A3.25 3.25 0 0 1 12 1.75Zm6.197 4.75H5.802l1.267 12.872a1.25 1.25 0 0 0 1.117 1.122l.127.006h7.374c.6 0 1.109-.425 1.225-1.002l.02-.126L18.196 6.5ZM13.75 9.25a.75.75 0 0 1 .743.648L14.5 10v7a.75.75 0 0 1-1.493.102L13 17v-7a.75.75 0 0 1 .75-.75Zm-3.5 0a.75.75 0 0 1 .743.648L11 10v7a.75.75 0 0 1-1.493.102L9.5 17v-7a.75.75 0 0 1 .75-.75Zm1.75-6a1.75 1.75 0 0 0-1.744 1.606L10.25 5h3.5A1.75 1.75 0 0 0 12 3.25Z" /></svg></button>
+                                <button class="icon-btn danger delete-btn" title="删除"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" ><path d="M12 1.75a3.25 3.25 0 0 1 3.245 3.066L15.25 5h5.25a.75.75 0 0 1 .102 1.493L20.5 6.5h-.796l-1.28 13.02a2.75 2.75 0 0 1-2.561 2.474l-.176.006H8.313a2.75 2.75 0 0 1-2.714-2.307l-.023-.174L4.295 6.5H3.5a.75.75 0 0 1-.743-.648L2.75 5.75a.75.75 0 0 1 .648-.743L3.5 5h5.25A3.25 3.25 0 0 1 12 1.75Zm6.197 4.75H5.802l1.267 12.872a1.25 1.25 0 0 0 1.117 1.122l.127.006h7.374c.6 0 1.109-.425 1.225-1.002l.02-.126L18.196 6.5ZM13.75 9.25a.75.75 0 0 1 .743.648L14.5 10v7a.75.75 0 0 1-1.493.102L13 17v-7a.75.75 0 0 1 .75-.75Zm-3.5 0a.75.75 0 0 1 .743.648L11 10v7a.75.75 0 0 1-1.493.102L9.5 17v-7a.75.75 0 0 1 .75-.75Zm1.75-6a1.75 1.75 0 0 0-1.744 1.606L10.25 5h3.5A1.75 1.75 0 0 0 12 3.25Z" /></svg></button>
                             ` : ''}
                         </div>
                     </td>
                 `;
+                
+                const approveBtn = tr.querySelector('.approve-btn');
+                if (approveBtn) approveBtn.onclick = () => approveUser(u.id);
+                
+                const editBtn = tr.querySelector('.edit-btn');
+                if (editBtn) editBtn.onclick = () => openEdit(u.id, u.username, u.role);
+                
+                const deleteBtn = tr.querySelector('.delete-btn');
+                if (deleteBtn) deleteBtn.onclick = () => deleteUser(u.id);
+
                 tbody.appendChild(tr);
             });
         }
@@ -215,33 +289,51 @@
             fetchUsers();
         }
 
-        function openEdit(id, username, role) {
-            window.userEditor.open({
-                userId: id,
-                username: username,
-                role: role,
-                isAdminContext: true,
-                onSuccess: (data) => {
-                    if (data && data.avatarTimestamp) avatarTimestamp = data.avatarTimestamp;
-                    fetchUsers();
-                    // If editing self, also update top bar
-                    if (id == currentAdminId) fetchAdminInfo();
-                }
-            });
-        }
+async function openEdit(id, username, role) {
+    try {
+        const module = await import('./user-editor.js');
+        const userEditor = module.default;
+        userEditor.open({
+            userId: id,
+            username: username,
+            role: role,
+            isAdminContext: true,
+            isSelf: id == currentAdminId,
+            onSuccess: (data) => {
+                if (data && data.avatarTimestamp) avatarTimestamp = data.avatarTimestamp;
+                fetchUsers();
+                // If editing self, also update top bar
+                if (id == currentAdminId) fetchAdminInfo();
+            }
+        });
+    } catch (error) {
+        console.error('Failed to load user editor:', error);
+        alert('无法加载用户编辑器，请检查网络连接');
+    }
+}
 
-        function openAddModal() {
-            document.getElementById('add-username').value = '';
-            document.getElementById('add-password').value = '';
-            document.getElementById('add-role').value = 'user';
-            document.getElementById('add-status').value = 'active';
-            document.getElementById('add-modal').style.display = 'flex';
-        }
+function openAddModal() {
+    const fields = {
+        'add-username': '',
+        'add-password': '',
+        'add-role': 'user',
+        'add-status': 'active'
+    };
+    for (const [id, val] of Object.entries(fields)) {
+        const el = document.getElementById(id);
+        if (el) el.value = val;
+    }
+    const modal = document.getElementById('add-modal');
+    if (modal) modal.style.display = 'flex';
+}
 
-        function closeModal() {
-            document.getElementById('add-modal').style.display = 'none';
-            document.getElementById('blacklist-modal').style.display = 'none';
-        }
+function closeModal() {
+    const modals = ['add-modal', 'blacklist-modal', 'user-edit-modal'];
+    modals.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+}
 
         async function sha256(str) {
             const msgBuffer = new TextEncoder().encode(str);
@@ -309,7 +401,7 @@
                 // 注意：旧的 stat-today-anomalies 已更名为 stat-today-blocked (显示在工作台)
                 // 此后的统计更新将通过 fetchTodayStats 统一处理
 
-                renderPagination('anomalies', json.total, json.page, json.limit, 'fetchAnomalies');
+                renderPagination('anomalies', json.total, json.page, json.limit, fetchAnomalies);
             }
         }
 
@@ -330,12 +422,17 @@
                     </td>
                     <td>
                         <div style="display:flex; gap:6px;">
-                            <button class="icon-btn" onclick="viewSnapshot('${a.id}')" title="查看快照"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21 6.25A3.25 3.25 0 0 0 17.75 3H6.25A3.25 3.25 0 0 0 3 6.25v11.5A3.25 3.25 0 0 0 6.25 21h5.772a6.471 6.471 0 0 1-.709-1.5H6.25a1.75 1.75 0 0 1-1.75-1.75V8.5h15v2.813a6.471 6.471 0 0 1 1.5.709V6.25ZM6.25 4.5h11.5c.966 0 1.75.784 1.75 1.75V7h-15v-.75c0-.966.784-1.75 1.75-1.75Z" /><path d="M23 17.5a5.5 5.5 0 1 0-11 0 5.5 5.5 0 0 0 11 0Zm-5.5 0h2a.5.5 0 0 1 0 1H17a.5.5 0 0 1-.5-.491v-3.01a.5.5 0 0 1 1 0V17.5Z" /></svg></button>
-                            <button class="icon-btn" onclick="openProxy('${a.url}')" title="在线代理"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" ><path d="M12 2.001c5.524 0 10 4.477 10 10s-4.476 10-10 10c-5.522 0-10-4.477-10-10s4.478-10 10-10Zm0 1.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Zm-.352 4.053.072-.084a.75.75 0 0 1 .977-.073l.084.073 4 4a.75.75 0 0 1 .073.977l-.072.085-4.002 4a.75.75 0 0 1-1.133-.977l.073-.084 2.722-2.721H7.75a.75.75 0 0 1-.743-.648L7 12a.75.75 0 0 1 .648-.743l.102-.007h6.69l-2.72-2.72a.75.75 0 0 1-.072-.976l.072-.084-.072.084Z" /></svg></button>
-                            <button class="icon-btn danger" onclick="deleteAnomaly('${a.id}')" title="删除"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" ><path d="M12 1.75a3.25 3.25 0 0 1 3.245 3.066L15.25 5h5.25a.75.75 0 0 1 .102 1.493L20.5 6.5h-.796l-1.28 13.02a2.75 2.75 0 0 1-2.561 2.474l-.176.006H8.313a2.75 2.75 0 0 1-2.714-2.307l-.023-.174L4.295 6.5H3.5a.75.75 0 0 1-.743-.648L2.75 5.75a.75.75 0 0 1 .648-.743L3.5 5h5.25A3.25 3.25 0 0 1 12 1.75Zm6.197 4.75H5.802l1.267 12.872a1.25 1.25 0 0 0 1.117 1.122l.127.006h7.374c.6 0 1.109-.425 1.225-1.002l.02-.126L18.196 6.5ZM13.75 9.25a.75.75 0 0 1 .743.648L14.5 10v7a.75.75 0 0 1-1.493.102L13 17v-7a.75.75 0 0 1 .75-.75Zm-3.5 0a.75.75 0 0 1 .743.648L11 10v7a.75.75 0 0 1-1.493.102L9.5 17v-7a.75.75 0 0 1 .75-.75Zm1.75-6a1.75 1.75 0 0 0-1.744 1.606L10.25 5h3.5A1.75 1.75 0 0 0 12 3.25Z" /></svg></button>
+                            <button class="icon-btn view-snapshot-btn" title="查看快照"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21 6.25A3.25 3.25 0 0 0 17.75 3H6.25A3.25 3.25 0 0 0 3 6.25v11.5A3.25 3.25 0 0 0 6.25 21h5.772a6.471 6.471 0 0 1-.709-1.5H6.25a1.75 1.75 0 0 1-1.75-1.75V8.5h15v2.813a6.471 6.471 0 0 1 1.5.709V6.25ZM6.25 4.5h11.5c.966 0 1.75.784 1.75 1.75V7h-15v-.75c0-.966.784-1.75 1.75-1.75Z" /><path d="M23 17.5a5.5 5.5 0 1 0-11 0 5.5 5.5 0 0 0 11 0Zm-5.5 0h2a.5.5 0 0 1 0 1H17a.5.5 0 0 1-.5-.491v-3.01a.5.5 0 0 1 1 0V17.5Z" /></svg></button>
+                            <button class="icon-btn open-proxy-btn" title="在线代理"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" ><path d="M12 2.001c5.524 0 10 4.477 10 10s-4.476 10-10 10c-5.522 0-10-4.477-10-10s4.478-10 10-10Zm0 1.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Zm-.352 4.053.072-.084a.75.75 0 0 1 .977-.073l.084.073 4 4a.75.75 0 0 1 .073.977l-.072.085-4.002 4a.75.75 0 0 1-1.133-.977l.073-.084 2.722-2.721H7.75a.75.75 0 0 1-.743-.648L7 12a.75.75 0 0 1 .648-.743l.102-.007h6.69l-2.72-2.72a.75.75 0 0 1-.072-.976l.072-.084-.072.084Z" /></svg></button>
+                            <button class="icon-btn danger delete-anomaly-btn" title="删除"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" ><path d="M12 1.75a3.25 3.25 0 0 1 3.245 3.066L15.25 5h5.25a.75.75 0 0 1 .102 1.493L20.5 6.5h-.796l-1.28 13.02a2.75 2.75 0 0 1-2.561 2.474l-.176.006H8.313a2.75 2.75 0 0 1-2.714-2.307l-.023-.174L4.295 6.5H3.5a.75.75 0 0 1-.743-.648L2.75 5.75a.75.75 0 0 1 .648-.743L3.5 5h5.25A3.25 3.25 0 0 1 12 1.75Zm6.197 4.75H5.802l1.267 12.872a1.25 1.25 0 0 0 1.117 1.122l.127.006h7.374c.6 0 1.109-.425 1.225-1.002l.02-.126L18.196 6.5ZM13.75 9.25a.75.75 0 0 1 .743.648L14.5 10v7a.75.75 0 0 1-1.493.102L13 17v-7a.75.75 0 0 1 .75-.75Zm-3.5 0a.75.75 0 0 1 .743.648L11 10v7a.75.75 0 0 1-1.493.102L9.5 17v-7a.75.75 0 0 1 .75-.75Zm1.75-6a1.75 1.75 0 0 0-1.744 1.606L10.25 5h3.5A1.75 1.75 0 0 0 12 3.25Z" /></svg></button>
                         </div>
                     </td>
                 `;
+
+                tr.querySelector('.view-snapshot-btn').onclick = () => viewSnapshot(a.id);
+                tr.querySelector('.open-proxy-btn').onclick = () => openProxy(a.url);
+                tr.querySelector('.delete-anomaly-btn').onclick = () => deleteAnomaly(a.id);
+
                 tbody.appendChild(tr);
             });
             if (anomalies.length === 0) {
@@ -373,8 +470,8 @@
             const json = await safeFetch(`/api/admin/ip-logs?page=${ipLogsState.h}&tpage=${ipLogsState.t}&limit=10&q=${encodeURIComponent(q)}`);
             if (json && json.status !== 'fail') {
                 renderIPLogs(json.history, json.today, json.ttotal);
-                renderPagination('ip-logs', json.total, json.page, json.limit, 'fetchHistoryLogPage');
-                renderPagination('ip-today', json.ttotal, json.tpage, json.limit, 'fetchTodayLogPage');
+                renderPagination('ip-logs', json.total, json.page, json.limit, fetchHistoryLogPage);
+                renderPagination('ip-today', json.ttotal, json.tpage, json.limit, fetchTodayLogPage);
             }
         }
 
@@ -406,19 +503,28 @@
             historyBody.innerHTML = '';
             history.forEach(item => {
                 const tr = document.createElement('tr');
-                const actions = item.is_banned ? 
-                    '<span style="color:var(--danger-color); font-size:12px; font-weight:600;">已封禁</span>' : 
-                    `<button class="icon-btn danger" onclick="quickBan('${item.ip}')" title="封禁 IP">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
-                    </button>`;
-
+                const isBanned = !!item.is_banned;
+                
                 tr.innerHTML = `
                     <td style="font-family:monospace; font-weight:600;">${item.ip}</td>
                     <td style="font-size:13px; color:var(--text-muted)">${item.region || '-'}</td>
                     <td style="font-size:11px; color:var(--text-muted); max-width:300px; word-break:break-all; font-family:monospace;">${item.ua}</td>
                     <td style="font-size:11px; color:var(--text-muted)">${new Date(item.last_access).toLocaleString()}</td>
-                    <td>${actions}</td>
+                    <td class="action-cell"></td>
                 `;
+
+                const actionCell = tr.querySelector('.action-cell');
+                if (isBanned) {
+                    actionCell.innerHTML = '<span style="color:var(--danger-color); font-size:12px; font-weight:600;">已封禁</span>';
+                } else {
+                    const btn = document.createElement('button');
+                    btn.className = 'icon-btn danger quick-ban-btn';
+                    btn.title = '封禁 IP';
+                    btn.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>';
+                    btn.onclick = () => quickBan(item.ip);
+                    actionCell.appendChild(btn);
+                }
+
                 historyBody.appendChild(tr);
             });
             if (history.length === 0) {
@@ -437,7 +543,7 @@
             const json = await safeFetch(`/api/admin/blacklist?page=${page}&limit=10`);
             if (json && json.status !== 'fail') {
                 renderBlacklist(json.data);
-                renderPagination('blacklist', json.total, json.page, json.limit, 'fetchBlacklist');
+                renderPagination('blacklist', json.total, json.page, json.limit, fetchBlacklist);
             }
         }
 
@@ -451,11 +557,12 @@
                     <td style="font-size:13px;">${item.reason}</td>
                     <td style="font-size:11px; color:var(--text-muted)">${new Date(item.created_at).toLocaleString()}</td>
                     <td>
-                        <button class="icon-btn success" onclick="removeBlacklist('${item.id}')" title="解封">
+                        <button class="icon-btn success remove-blacklist-btn" title="解封">
                            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" ><path d="M12 2.004c1.875 0 3.334 1.206 3.928 3.003a.75.75 0 1 1-1.425.47C14.102 4.262 13.185 3.504 12 3.504c-1.407 0-2.42.958-2.496 2.551l-.005.195v1.749h8.251a2.25 2.25 0 0 1 2.245 2.097l.005.154v9.496a2.25 2.25 0 0 1-2.096 2.245l-.154.005H6.25A2.25 2.25 0 0 1 4.005 19.9L4 19.746V10.25a2.25 2.25 0 0 1 2.096-2.245L6.25 8l1.749-.001v-1.75C8 3.712 9.71 2.005 12 2.005ZM17.75 9.5H6.25a.75.75 0 0 0-.743.648l-.007.102v9.496c0 .38.282.693.648.743l.102.007h11.5a.75.75 0 0 0 .743-.648l.007-.102V10.25a.75.75 0 0 0-.648-.744L17.75 9.5Zm-5.75 4a1.499 1.499 0 1 1 0 2.996 1.499 1.499 0 0 1 0-2.997Z"></svg>
                         </button>
                     </td>
                 `;
+                tr.querySelector('.remove-blacklist-btn').onclick = () => removeBlacklist(item.id);
                 tbody.appendChild(tr);
             });
             if (data.length === 0) {
@@ -518,7 +625,7 @@
             const json = await safeFetch(`/api/admin/crawler/logs?page=${page}&limit=10&q=${encodeURIComponent(q)}`);
             if (json && json.status !== 'fail') {
                 renderCrawlerLogs(json.data);
-                renderPagination('crawler-logs', json.total, json.page, json.limit, 'fetchCrawlerLogs');
+                renderPagination('crawler-logs', json.total, json.page, json.limit, fetchCrawlerLogs);
             }
         }
 
@@ -555,7 +662,7 @@
             const json = await safeFetch(url);
             if (json && json.status !== 'fail') {
                 renderHistory(json.data);
-                renderPagination('history', json.total, json.page, json.limit, 'fetchHistory');
+                renderPagination('history', json.total, json.page, json.limit, fetchHistory);
             }
         }
 
@@ -581,11 +688,12 @@
                     <td><div style="font-weight:700; color:var(--primary-color)">${item.score}</div></td>
                     <td style="font-size:11px; color:var(--text-muted)">${new Date(item.timestamp).toLocaleString()}</td>
                     <td>
-                        <button class="icon-btn danger" onclick="deleteHistoryItem('${item.userId}', '${item.timestamp}')" title="删除">
+                        <button class="icon-btn danger delete-history-btn" title="删除">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" ><path d="M12 1.75a3.25 3.25 0 0 1 3.245 3.066L15.25 5h5.25a.75.75 0 0 1 .102 1.493L20.5 6.5h-.796l-1.28 13.02a2.75 2.75 0 0 1-2.561 2.474l-.176.006H8.313a2.75 2.75 0 0 1-2.714-2.307l-.023-.174L4.295 6.5H3.5a.75.75 0 0 1-.743-.648L2.75 5.75a.75.75 0 0 1 .648-.743L3.5 5h5.25A3.25 3.25 0 0 1 12 1.75Zm6.197 4.75H5.802l1.267 12.872a1.25 1.25 0 0 0 1.117 1.122l.127.006h7.374c.6 0 1.109-.425 1.225-1.002l.02-.126L18.196 6.5ZM13.75 9.25a.75.75 0 0 1 .743.648L14.5 10v7a.75.75 0 0 1-1.493.102L13 17v-7a.75.75 0 0 1 .75-.75Zm-3.5 0a.75.75 0 0 1 .743.648L11 10v7a.75.75 0 0 1-1.493.102L9.5 17v-7a.75.75 0 0 1 .75-.75Zm1.75-6a1.75 1.75 0 0 0-1.744 1.606L10.25 5h3.5A1.75 1.75 0 0 0 12 3.25Z" /></svg>
                         </button>
                     </td>
                 `;
+                tr.querySelector('.delete-history-btn').onclick = () => deleteHistoryItem(item.userId, item.timestamp);
                 tbody.appendChild(tr);
             });
             if (data.length === 0) {
@@ -751,6 +859,63 @@
             return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
         }
 
+        function bindSectionEvents(tab, container) {
+            if (tab === 'users') {
+                const btn = container.querySelector('#add-user-btn');
+                if (btn) btn.addEventListener('click', openAddModal);
+            } else if (tab === 'history') {
+                const refreshBtn = container.querySelector('#refresh-history-btn');
+                if (refreshBtn) refreshBtn.addEventListener('click', () => fetchHistory());
+                const searchBtn = container.querySelector('#search-history-btn');
+                if (searchBtn) searchBtn.addEventListener('click', () => fetchHistory());
+                const searchInput = container.querySelector('#history-search');
+                if (searchInput) searchInput.addEventListener('input', (e) => handleSearchInput(searchInput));
+                const clearIcon = container.querySelector('#clear-history-search');
+                if (clearIcon) clearIcon.addEventListener('click', () => clearSearchInput(clearIcon, 'history-search', fetchHistory));
+            } else if (tab === 'system') {
+                const clearBtn = container.querySelector('#clear-cache-btn');
+                if (clearBtn) clearBtn.addEventListener('click', clearCache);
+            } else if (tab === 'ip-logs') {
+                const clearBtn = container.querySelector('#clear-ip-logs-btn');
+                if (clearBtn) clearBtn.addEventListener('click', clearIPLogs);
+                const searchBtn = container.querySelector('#search-ip-btn');
+                if (searchBtn) searchBtn.addEventListener('click', () => fetchIPLogs(1, null));
+                const searchInput = container.querySelector('#ip-history-search');
+                if (searchInput) searchInput.addEventListener('input', () => handleSearchInput(searchInput));
+                const clearIcon = container.querySelector('#clear-ip-search');
+                if (clearIcon) clearIcon.addEventListener('click', () => clearSearchInput(clearIcon, 'ip-history-search', fetchIPLogs));
+            } else if (tab === 'blacklist') {
+                const addBtn = container.querySelector('#add-blacklist-ip-btn');
+                if (addBtn) addBtn.addEventListener('click', openAddBlacklistModal);
+            } else if (tab === 'anomalies') {
+                const clearBtn = container.querySelector('#clear-anomalies-btn');
+                if (clearBtn) clearBtn.addEventListener('click', clearAnomalies);
+            } else if (tab === 'crawler-defense') {
+                const saveBtn = container.querySelector('#save-crawler-settings-btn');
+                if (saveBtn) saveBtn.addEventListener('click', saveCrawlerSettings);
+                const clearBtn = container.querySelector('#clear-crawler-logs-btn');
+                if (clearBtn) clearBtn.addEventListener('click', clearCrawlerLogs);
+                const searchBtn = container.querySelector('#search-crawler-btn');
+                if (searchBtn) searchBtn.addEventListener('click', () => fetchCrawlerLogs(1));
+                const searchInput = container.querySelector('#crawler-log-search');
+                if (searchInput) searchInput.addEventListener('input', () => handleSearchInput(searchInput));
+                const clearIcon = container.querySelector('#clear-crawler-search');
+                if (clearIcon) clearIcon.addEventListener('click', () => clearSearchInput(clearIcon, 'crawler-log-search', fetchCrawlerLogs));
+            } else if (tab === 'config') {
+                const sdkTab = container.querySelector('#tab-sdk');
+                if (sdkTab) sdkTab.addEventListener('click', () => setLlmMethod('sdk'));
+                const curlTab = container.querySelector('#tab-curl');
+                if (curlTab) curlTab.addEventListener('click', () => setLlmMethod('curl'));
+                const saveBtn = container.querySelector('#save-config-btn');
+                if (saveBtn) saveBtn.addEventListener('click', saveConfig);
+            } else if (tab === 'appearance') {
+                const resetBtn = container.querySelector('#reset-theme-btn');
+                if (resetBtn) resetBtn.addEventListener('click', resetTheme);
+                const saveBtn = container.querySelector('#save-theme-btn');
+                if (saveBtn) saveBtn.addEventListener('click', saveTheme);
+            }
+        }
+
         function switchTab(tab) {
             localStorage.setItem('admin_last_tab', tab);
             
@@ -797,6 +962,9 @@
                                 sec.appendChild(template.content.cloneNode(true));
                                 template.remove(); // 移除模板以标记已加载
                                 
+                                // 为该区块新加载的元素绑定事件
+                                bindSectionEvents(t, sec);
+
                                 // 处理水合后的特殊逻辑 (如外观设置的预设渲染)
                                 if (t === 'appearance') {
                                     renderPresets();
@@ -878,31 +1046,41 @@
         function renderPresets() {
             const container = document.getElementById('theme-presets');
             if (!container) return;
-            container.innerHTML = allPresets.map(p => `
-                <div class="preset-item" 
-                     title="${p.title}"
-                     onclick="applyPreset(${p.id})"
-                     style="background: linear-gradient(135deg, ${p.colors[0]} 50%, ${p.colors[1]} 50%); 
+            container.innerHTML = '';
+            
+            allPresets.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'preset-item';
+                item.title = p.title;
+                item.style.cssText = `background: linear-gradient(135deg, ${p.colors[0]} 50%, ${p.colors[1]} 50%); 
                             width:100%; aspect-ratio:1; border-radius:12px; cursor:pointer; 
                             border:1px solid var(--border-color); 
-                            position: relative; transition: all 0.2s; overflow: visible;">
-                    
-                    <!-- 覆盖保存按钮 -->
-                    <div class="preset-save-btn" 
-                         onclick="event.stopPropagation(); updatePresetItem(${p.id})"
-                         title="将当前配置保存到此预设"
-                         style="position:absolute; bottom:-5px; right:-5px; background:var(--bg-card); color:var(--text-main); 
+                            position: relative; transition: all 0.2s; overflow: visible;`;
+                
+                item.onclick = () => applyPreset(p.id);
+
+                const saveBtn = document.createElement('div');
+                saveBtn.className = 'preset-save-btn';
+                saveBtn.title = '将当前配置保存到此预设';
+                saveBtn.style.cssText = `position:absolute; bottom:-5px; right:-5px; background:var(--bg-card); color:var(--text-main); 
                                 border:1px solid var(--border-color); border-radius:6px; width:22px; height:22px; 
                                 display:flex; align-items:center; justify-content:center; font-size:12px; 
-                                box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index:10;">
+                                box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index:10;`;
+                saveBtn.innerHTML = `
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                             <polyline points="17 21 17 13 7 13 7 21"></polyline>
                             <polyline points="7 3 7 8 15 8"></polyline>
-                        </svg>
-                    </div>
-                </div>
-            `).join('');
+                        </svg>`;
+                
+                saveBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    updatePresetItem(p.id);
+                };
+
+                item.appendChild(saveBtn);
+                container.appendChild(item);
+            });
         }
 
         function applyPreset(id) {
@@ -1061,7 +1239,7 @@
                     root.style.setProperty('--divider-color', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${isDark ? 0.2 : 0.15})`);
                 }
                 if (window.adjustColor) {
-                    root.style.setProperty('--primary-hover', adjustColor(primary, isDark ? 20 : -20));
+                    root.style.setProperty('--primary-hover', window.adjustColor(primary, isDark ? 20 : -20));
                 }
             }
 
@@ -1336,13 +1514,22 @@
                 return;
             }
 
-            let html = `
-                <div class="pagination-info">第 <b>${page}</b> / ${totalPages} 页 (共 ${total} 条)</div>
-                <div class="pagination-btns">
-                    <button class="pagination-btn" ${page <= 1 ? 'disabled' : ''} onclick="${fetchFunc}(${page - 1})">
-                        &laquo;
-                    </button>
-            `;
+            container.innerHTML = '';
+            
+            const info = document.createElement('div');
+            info.className = 'pagination-info';
+            info.innerHTML = `第 <b>${page}</b> / ${totalPages} 页 (共 ${total} 条)`;
+            container.appendChild(info);
+
+            const btnsContainer = document.createElement('div');
+            btnsContainer.className = 'pagination-btns';
+
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'pagination-btn';
+            prevBtn.disabled = page <= 1;
+            prevBtn.innerHTML = '&laquo;';
+            prevBtn.onclick = () => fetchFunc(page - 1);
+            btnsContainer.appendChild(prevBtn);
 
             let start = Math.max(1, page - 2);
             let end = Math.min(totalPages, start + 4);
@@ -1350,16 +1537,21 @@
             start = Math.max(1, start);
 
             for (let i = start; i <= end; i++) {
-                html += `<button class="pagination-btn ${i === page ? 'active' : ''}" onclick="${fetchFunc}(${i})">${i}</button>`;
+                const btn = document.createElement('button');
+                btn.className = `pagination-btn ${i === page ? 'active' : ''}`;
+                btn.innerText = i;
+                btn.onclick = () => fetchFunc(i);
+                btnsContainer.appendChild(btn);
             }
 
-            html += `
-                    <button class="pagination-btn" ${page >= totalPages ? 'disabled' : ''} onclick="${fetchFunc}(${page + 1})">
-                        &raquo;
-                    </button>
-                </div>
-            `;
-            container.innerHTML = html;
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'pagination-btn';
+            nextBtn.disabled = page >= totalPages;
+            nextBtn.innerHTML = '&raquo;';
+            nextBtn.onclick = () => fetchFunc(page + 1);
+            btnsContainer.appendChild(nextBtn);
+
+            container.appendChild(btnsContainer);
         }
 
         // Search Input Handlers
@@ -1401,47 +1593,3 @@
             }
         }, 3000);
 
-// Expose functions to window for HTML onclick handlers (Webpack entry point scoping)
-Object.assign(window, {
-    switchTab,
-    toggleSidebar,
-    refreshCurrentTab,
-    toggleTheme,
-    toggleUserMenu,
-    logout,
-    openAddModal,
-    closeModal,
-    createUser,
-    deleteUser,
-    approveUser,
-    openEdit,
-    fetchUsers,
-    deleteHistoryItem,
-    fetchHistory,
-    fetchAnomalies,
-    viewSnapshot,
-    openProxy,
-    deleteAnomaly,
-    handleSearchInput,
-    clearSearchInput,
-    clearCache,
-    clearAnomalies,
-    clearIPLogs,
-    fetchIPLogs,
-    fetchHistoryLogPage,
-    fetchTodayLogPage,
-    quickBan,
-    openAddBlacklistModal,
-    addBlacklist,
-    removeBlacklist,
-    fetchBlacklist,
-    saveCrawlerSettings,
-    fetchCrawlerLogs,
-    clearCrawlerLogs,
-    saveConfig,
-    setLlmMethod,
-    saveTheme,
-    resetTheme,
-    applyPreset,
-    getAvatarUrl // Also expose this for consistency if needed by other components
-});

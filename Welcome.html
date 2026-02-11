@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>欢迎页面 - 假新闻检测系统</title>
     <link rel="icon" href="/ico/Detect.ico">
+    <link rel="stylesheet" href="/client-src/css/variables.css">
+    <link rel="stylesheet" href="/client-src/css/common.css">
+    <link rel="stylesheet" href="/client-src/css/welcome.css">
+    <script type="module" src="/client-src/js/theme-loader.js"></script>
 </head>
 <body>
     <div class="welcome-wrapper" id="wrapper">
@@ -37,12 +41,18 @@
                         headers: { 
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ channel, args })
+                        body: JSON.stringify({ channel: channel, args })
                     });
 
                     if (response.status === 401) {
                         window.location.href = '/Login';
                         return;
+                    }
+
+                    // Handle binary responses (e.g., PDF)
+                    const contentType = response.headers.get('Content-Type');
+                    if (contentType && contentType.includes('application/pdf')) {
+                        return await response.arrayBuffer();
                     }
 
                     const result = await response.json();

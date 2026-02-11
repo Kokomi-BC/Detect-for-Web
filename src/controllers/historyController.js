@@ -4,10 +4,28 @@ const { getUserHistoryPath } = require('../utils/fsUtils');
 
 async function handleGetHistory(req, args) {
     const historyPath = getUserHistoryPath(req.userId);
+    let history = [];
+    
     try {
         const data = await fsPromises.readFile(historyPath, 'utf8');
-        let history = JSON.parse(data);
-        
+        history = JSON.parse(data);
+    } catch (err) {
+        if (err.code === 'ENOENT') {
+            return { data: [], hasMore: false, total: 0 };
+        }
+        console.error(`Error reading history for user ${req.userId}:`, err);
+        throw err; // Re-throw to be handled by route
+    }
+
+    if (!Array.isArray(history)) {
+        console.warn(`History for user ${req.userId} is not an array`);
+        return { data: [], hasMore: false, total: 0 };
+    }
+
+    // Filter out invalid items
+    history = history.filter(item => item && typeof item === 'object');
+
+    try {
         const params = args[0] || {};
         const page = parseInt(params.page) || 1;
         const limit = parseInt(params.limit) || 20;
@@ -16,7 +34,7 @@ async function handleGetHistory(req, args) {
         // Apply filtering if query exists
         if (query) {
             history = history.filter(item => {
-                const title = (item.result?.title || item.title || '').toLowerCase();
+                const title = (item.result && item.result.title || item.title || '').toLowerCase();
                 const content = (item.content || '').toLowerCase();
                 const url = (item.url || '').toLowerCase();
                 return title.includes(query) || content.includes(query) || url.includes(query);
@@ -38,7 +56,7 @@ async function handleGetHistory(req, args) {
                 
                 return {
                     timestamp: item.timestamp,
-                    title: item.result?.title || item.title || (preview ? preview.substring(0, 15) : '未命名分析'),
+                    title: item.result && item.result.title || item.title || (preview ? preview.substring(0, 15) : '未命名分析'),
                     preview: preview,
                     url: item.url,
                     hasResult: !!item.result,
@@ -52,7 +70,7 @@ async function handleGetHistory(req, args) {
             total: history.length
         };
     } catch (err) {
-        if (err.code === 'ENOENT') return { data: [], hasMore: false, total: 0 };
+        console.error('Error processing history:', err);
         throw err;
     }
 }

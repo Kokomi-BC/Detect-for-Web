@@ -55,7 +55,7 @@
             width: 20px;
             height: 20px;
             margin-right: 10px;
-            background-image: url('../assets/ico/Detect.ico'); 
+            background-image: url('/ico/Detect.ico'); 
             background-size: contain;
             background-repeat: no-repeat;
         }

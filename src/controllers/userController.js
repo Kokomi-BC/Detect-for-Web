@@ -32,8 +32,12 @@ async function handleAvatarUpload(userId, file) {
 async function handleUpdateUser(pool, userId, body) {
     const { username, password, role } = body;
     
-    if (role && role !== 'user' && body.isSelfUpdate) {
-        throw new Error('不允许修改角色');
+    // 如果是自我更新，检查是否试图改变角色
+    if (role && body.isSelfUpdate) {
+        const [users] = await pool.query('SELECT role FROM users WHERE id = ?', [userId]);
+        if (users.length > 0 && users[0].role !== role) {
+            throw new Error('不允许修改自己的角色');
+        }
     }
 
     if (username) {

@@ -24,32 +24,32 @@ The application runs as an Express server.
         - User history: `data/users/{userId}/history.json`.
         - Crawler Anomalies: `data/anomalies.json` (metadata) and `data/anomalies/*.html` (page snapshots).
 
-### Frontend Process (`public/` & `dist/`)
-- **`public/Main.html`**: The main desktop detection interface (Vanilla JS).
-- **`public/Mobile.html`**: Mobile-optimized detection interface with "Dynamic Island" UI.
-- **`public/Login.html`**: User authentication gateway.
-- **`public/Welcome.html`**: Intermediate welcome screen.
-- **`public/css/`**: Centralized style management.
+### Frontend Process (`client-src/`, `public/` & `dist/`)
+- **`Main.html`**, **`Mobile.html`**, **`Login.html`**, **`Welcome.html`**: Entry HTML files located in the root directory.
+- **`client-src/css/`**: Centralized style management.
     - `variables.css`: Global theme variables and color palette.
     - `common.css`: Shared resets and global components.
     - `main.css`, `mobile.css`, `admin.css`: Page-specific modular styles.
-- **`public/js/`**: Client-side logic.
+- **`client-src/js/`**: Client-side logic.
     - `mobile.js`: Core logic for mobile version, including Toast management.
     - `theme-loader.js`: Dynamic theme application.
     - `user-editor.js`: User profile editing logic.
+- **`public/`**: Static assets that are copied to the build root (e.g., `ico/Detect.ico`).
 - **`window.electronAPI` Mock**: A bridge in the frontend that converts old Electron `ipcRenderer.invoke` calls into REST API `fetch` requests to `/api/invoke`.
 
 ## Deployment & Development
 
 
 ### Commands
-- **Start Server**: `npm start` or `pm2 start ecosystem.config.js`
+- **Start Server**: `npm run server` or `pm2 start ecosystem.config.js`
   - Runs `src/server.js`.
   - Controlled by **PM2** (process name: `fake-news-detector`).
   - Listens on `https://0.0.0.0:443`.
   - Logs can be viewed via `pm2 logs`.
-- **Build Frontend**: `npm run build:dev` / `npm run build:renderer`
-  - Uses Webpack to process HTML files and output to `dist/`.
+- **Frontend Dev**: `npm run dev`
+  - Starts Vite development server.
+- **Build Frontend**: `npm run build`
+  - Uses Vite to bundle and minify assets (including HTML/JS/CSS) into `dist/`.
 - **NPM Install**: `cnpm install` for faster dependency installation.
 
 ### Administrative Features
@@ -125,31 +125,33 @@ src/
     dbUtils.js        # Database helper functions
     fsUtils.js        # File system helper functions
     utils.js          # General purpose helpers
-public/
-  css/                # Unified CSS Management
+client-src/
+  css/                # Unified CSS Management (Source)
     variables.css     # Global Colors & Variables
     common.css        # Shared Resets & Layouts
     mobile.css        # Mobile-specific styles
     main.css          # Desktop-specific styles
     admin.css         # Admin Dashboard specific
-  js/                 # Client-side JS logic
+  js/                 # Client-side JS logic (Source)
     mobile.js         # Core logic for Mobile version
     theme-loader.js   # Dynamic theme injection
     user-editor.js    # Entry for user profile editing
     user-editor-core.js # Shared user editing logic
     export-manager.js # History export logic
-  assets/             # Static images and icons
-  Login.html          # Auth UI
-  Welcome.html        # Welcome UI
-  Main.html           # Main Desktop UI
-  Admin.html          # Admin Dashboard UI
-  Mobile.html         # Mobile-optimized UI
+public/               # Static assets (Copied to dist/)
+  ico/                # Icons and favicons
+Login.html            # Auth UI (Vite Entry)
+Welcome.html          # Welcome UI (Vite Entry)
+Main.html             # Main Desktop UI (Vite Entry)
+Admin.html            # Admin Dashboard UI (Vite Entry)
+Mobile.html           # Mobile-optimized UI (Vite Entry)
 data/                 # Persistent storage
   img_cache/          # Cached external images
   anomalies/          # Extraction error snapshots
   anomalies.json      # Extraction error metadata
   users/              # User-specific history JSONs
-dist/                 # Webpack build output
+dist/                 # Vite build output
+vite.config.js        # Vite configuration
 storage/              # Crawlee state storage (KV & Queues)
 ```
 
