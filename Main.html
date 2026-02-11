@@ -1117,13 +1117,22 @@
             if (typeof heic2any !== 'undefined') return;
             return new Promise((resolve, reject) => {
                 const script = document.createElement('script');
-                script.src = '/client-src/js/heic2any.min.js'; // 移动后的稳定路径
+                const paths = ['/js/heic2any.min.js', '/client-src/js/heic2any.min.js'];
+                let pathIdx = 0;
+                const loadNext = () => {
+                    if (pathIdx >= paths.length) {
+                        reject(new Error('Failed to load heic2any script from all paths'));
+                        return;
+                    }
+                    script.src = paths[pathIdx++];
+                };
                 script.onload = () => {
                     if (typeof heic2any !== 'undefined') resolve();
                     else reject(new Error('heic2any still undefined after script load'));
                 };
-                script.onerror = () => reject(new Error('Failed to load heic2any script via tag'));
+                script.onerror = loadNext;
                 document.head.appendChild(script);
+                loadNext();
             });
         }
 

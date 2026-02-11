@@ -161,14 +161,28 @@ class UserEditorCore {
                     // 动态加载 heic2any
                     await new Promise((resolve, reject) => {
                         const script = document.createElement('script');
-                        // 确保在生产环境和开发环境下都能正确加载
-                        script.src = window.location.origin + '/js/heic2any.min.js';
+                        // 智能尝试多个路径以兼容开发和生产环境
+                        const paths = [
+                            '/js/heic2any.min.js',
+                            '/client-src/js/heic2any.min.js'
+                        ];
+                        let pathIdx = 0;
+
+                        const loadNext = () => {
+                            if (pathIdx >= paths.length) {
+                                reject(new Error('所有路径均无法加载 heic2any 脚本'));
+                                return;
+                            }
+                            script.src = paths[pathIdx++];
+                        };
+
                         script.onload = () => {
                             if (typeof heic2any !== 'undefined') resolve();
                             else reject(new Error('heic2any still undefined'));
                         };
-                        script.onerror = reject;
+                        script.onerror = loadNext;
                         document.head.appendChild(script);
+                        loadNext();
                     });
                 }
 

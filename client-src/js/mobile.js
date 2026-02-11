@@ -60,6 +60,11 @@ let historyPage = 1;
 let historyLoading = false;
 let hasMoreHistory = true;
 let historySearchQuery = '';
+
+// 暴露全局 Toast 函数，供加载的独立组件使用
+window.showLoadingToast = showLoadingToast;
+window.hideLoadingToast = hideLoadingToast;
+window.showToast = showToast;
 let searchTimeout = null;
 const historyLimit = 20;
 
@@ -2092,13 +2097,28 @@ async function processAndAddImages(files) {
                 if (typeof heic2any === 'undefined') {
                     await new Promise((resolve, reject) => {
                         const script = document.createElement('script');
-                        script.src = '/client-src/js/heic2any.min.js';
+                        // 智能尝试多个路径以兼容开发和生产环境
+                        const paths = [
+                            '/js/heic2any.min.js',
+                            '/client-src/js/heic2any.min.js'
+                        ];
+                        let pathIdx = 0;
+
+                        const loadNext = () => {
+                            if (pathIdx >= paths.length) {
+                                reject(new Error('所有路径均无法加载 heic2any 脚本'));
+                                return;
+                            }
+                            script.src = paths[pathIdx++];
+                        };
+
                         script.onload = () => {
                             if (typeof heic2any !== 'undefined') resolve();
                             else reject(new Error('heic2any not found after script load'));
                         };
-                        script.onerror = () => reject(new Error('Script tag load failed'));
+                        script.onerror = loadNext;
                         document.head.appendChild(script);
+                        loadNext();
                     });
                 }
 
@@ -2108,14 +2128,14 @@ async function processAndAddImages(files) {
                     quality: 0.7
                 });
                 
-                hideLoadingToast();
-                
                 const finalBlob = Array.isArray(blob) ? blob[0] : blob;
                 processFile = new File([finalBlob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
             } catch (err) {
                 console.error('HEIC conversion failed', err);
                 showToast('HEIC 转换失败', 'error');
                 continue;
+            } finally {
+                hideLoadingToast();
             }
         }
 
