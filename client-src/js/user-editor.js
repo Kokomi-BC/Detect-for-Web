@@ -66,16 +66,20 @@ class UserEditorCore {
 
         document.body.insertAdjacentHTML('beforeend', modalHtml);
         this.modal = document.getElementById('user-edit-modal');
+        this.bindEvents();
+    }
 
-        document.getElementById('user-edit-avatar-upload-btn').onclick = () => document.getElementById('user-edit-avatar-input').click();
-        document.getElementById('user-edit-avatar-delete-btn').onclick = () => this.handleAvatarDelete();
-        document.getElementById('user-edit-avatar-input').onchange = (e) => this.handleAvatarChange(e);
-        document.getElementById('user-edit-cancel').onclick = () => this.close();
-        document.getElementById('user-edit-save').onclick = () => this.save();
+    bindEvents() {
+        if (!this.modal) return;
+        this.modal.querySelector('#user-edit-avatar-upload-btn').onclick = () => this.modal.querySelector('#user-edit-avatar-input').click();
+        this.modal.querySelector('#user-edit-avatar-delete-btn').onclick = () => this.handleAvatarDelete();
+        this.modal.querySelector('#user-edit-avatar-input').onchange = (e) => this.handleAvatarChange(e);
+        this.modal.querySelector('#user-edit-cancel').onclick = () => this.close();
+        this.modal.querySelector('#user-edit-save').onclick = () => this.save();
     }
 
     open(options) {
-        const { userId, username, isAdminContext = false, onSuccess = null } = options;
+        const { userId, username, isAdminContext = false, isSelf = false, onSuccess = null } = options;
         this.userId = userId;
         this.isAdmin = isAdminContext;
         this.onSuccess = onSuccess;
@@ -83,6 +87,8 @@ class UserEditorCore {
         this.pendingAvatarAction = null;
         
         this.render();
+        // 重新绑定事件，确保 this 指向当前的编辑器实例
+        this.bindEvents();
 
         document.getElementById('user-edit-id').value = userId;
         document.getElementById('user-edit-username').value = username || '';
@@ -93,9 +99,20 @@ class UserEditorCore {
         preview.src = `/api/public/avatar/${userId}?t=${this.avatarTimestamp}`;
         
         this.modal.style.display = 'flex';
+        // 强制重绘以触发动画
+        this.modal.offsetHeight;
+        this.modal.classList.add('active');
     }
 
-    close() { this.modal.style.display = 'none'; }
+    close() { 
+        if (!this.modal) return;
+        this.modal.classList.remove('active');
+        setTimeout(() => {
+            if (!this.modal.classList.contains('active')) {
+                this.modal.style.display = 'none';
+            }
+        }, 300);
+    }
 
     async handleAvatarChange(e) {
         if (!e.target.files || !e.target.files[0]) return;

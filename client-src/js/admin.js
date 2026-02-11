@@ -324,14 +324,23 @@ function openAddModal() {
         if (el) el.value = val;
     }
     const modal = document.getElementById('add-modal');
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.offsetHeight;
+        modal.classList.add('active');
+    }
 }
 
 function closeModal() {
     const modals = ['add-modal', 'blacklist-modal', 'user-edit-modal'];
     modals.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
+        if (el) {
+            el.classList.remove('active');
+            setTimeout(() => {
+                if (!el.classList.contains('active')) el.style.display = 'none';
+            }, 300);
+        }
     });
 }
 
@@ -573,7 +582,12 @@ function closeModal() {
         function openAddBlacklistModal() {
             document.getElementById('blacklist-ip').value = '';
             document.getElementById('blacklist-reason').value = '';
-            document.getElementById('blacklist-modal').style.display = 'flex';
+            const modal = document.getElementById('blacklist-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                modal.offsetHeight;
+                modal.classList.add('active');
+            }
         }
 
         async function addBlacklist() {

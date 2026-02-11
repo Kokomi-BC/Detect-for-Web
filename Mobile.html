@@ -16,28 +16,6 @@
             document.documentElement.setAttribute('data-theme', theme);
         })();
     </script>
-    <style>
-        .tooltip-tag {
-            display: inline-block;
-            padding: 4px 12px;
-            background: var(--warning-light);
-            color: var(--warning-color);
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            margin-top: 6px;
-        }
-        .tooltip-quote {
-            background: var(--bg-secondary);
-            border-left: 4px solid var(--border-color);
-            padding: 10px 14px;
-            font-style: italic;
-            margin: 10px 0;
-            font-size: 14px;
-            line-height: 1.5;
-            color: var(--text-secondary);
-        }
-    </style>
 </head>
 <body>
     <!-- HEADER -->
@@ -213,7 +191,7 @@
     <div id="customTooltip" class="custom-tooltip"></div>
 
     <!-- Conflict Modal -->
-    <div id="conflictModal" class="drawer-backdrop" style="display: none; align-items: center; justify-content: center;">
+    <div id="conflictModal" class="drawer-backdrop" style="align-items: center; justify-content: center;">
         <div class="result-card" style="width: 85%; max-width: 320px; text-align: center; padding: 24px;">
             <div style="font-weight: 700; font-size: 18px; margin-bottom: 12px; color: var(--text-primary);">内容不能共存</div>
             <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5;">系统暂不支持同时检测文本链接与本地图片，请选择保留其中一项。</div>
@@ -226,7 +204,7 @@
     </div>
 
     <!-- General Confirmation Modal -->
-    <div id="confirmModal" class="drawer-backdrop" style="display: none; align-items: center; justify-content: center; z-index: 11000;">
+    <div id="confirmModal" class="drawer-backdrop" style="align-items: center; justify-content: center; z-index: 11000;">
         <div class="result-card" style="width: 85%; max-width: 300px; text-align: center; padding: 20px; border-radius: 20px;">
             <div id="confirmTitle" style="font-weight: 700; font-size: 17px; margin-bottom: 8px; color: var(--text-primary);">确认提示</div>
             <div id="confirmMessage" style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6;">确定要执行此操作吗？</div>

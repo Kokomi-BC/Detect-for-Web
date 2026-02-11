@@ -557,14 +557,17 @@ function showConfirm(title, message, onConfirm) {
     };
 
     modal.style.display = 'flex';
-    setTimeout(() => modal.classList.add('active'), 10);
+    modal.offsetHeight;
+    modal.classList.add('active');
 }
 
 function closeConfirmModal() {
     const modal = document.getElementById('confirmModal');
     if (modal) {
         modal.classList.remove('active');
-        setTimeout(() => { modal.style.display = 'none'; }, 300);
+        setTimeout(() => {
+            if (!modal.classList.contains('active')) modal.style.display = 'none';
+        }, 300);
     }
     confirmCallback = null;
 }
@@ -2047,12 +2050,19 @@ function showConflictModal() {
             if (keepLinkBtn) keepLinkBtn.textContent = '保留网页/文件';
         }
         modal.style.display = 'flex';
+        modal.offsetHeight;
+        modal.classList.add('active');
     }
 }
 
 function closeConflictModal() {
     const modal = document.getElementById('conflictModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            if (!modal.classList.contains('active')) modal.style.display = 'none';
+        }, 300);
+    }
     pendingConflict = null;
 }
 
