@@ -1,6 +1,6 @@
 {
   "name": "fake-news-detector",
-  "version": "3.1.0",
+  "version": "3.2.1",
   "description": "假新闻检测系统",
   "main": "src/server.js",
   "scripts": {
@@ -50,6 +50,7 @@
     "express": "^4.18.2",
     "express-rate-limit": "^8.2.1",
     "heic2any": "^0.0.4",
+    "html2canvas": "^1.4.1",
     "image-size": "^2.0.2",
     "jsdom": "^27.3.0",
     "jsonwebtoken": "^9.0.3",

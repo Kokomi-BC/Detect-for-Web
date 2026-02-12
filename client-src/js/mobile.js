@@ -1,4 +1,5 @@
 import { userEditor } from './user-editor.js';
+import html2canvas from 'html2canvas';
 
 // Mobile Logic for AI Detective
 
@@ -69,7 +70,7 @@ let searchTimeout = null;
 const historyLimit = 20;
 
 // --- Elements ---
-let textInput, detectBtn, plusBtn, fileInput, docInput, previewImages, historyBtn, userBtn, exitEditBtn, exitResultBtn, headerTitle, inputCard, extractedContentArea, startBranding, clearBtn;
+let textInput, detectBtn, plusBtn, fileInput, docInput, previewImages, historyBtn, userBtn, exitEditBtn, exitResultBtn, exportBtn, headerTitle, inputCard, extractedContentArea, startBranding, clearBtn;
 
 function initElements() {
     textInput = document.getElementById('textInput');
@@ -82,6 +83,7 @@ function initElements() {
     userBtn = document.getElementById('userBtn');
     exitEditBtn = document.getElementById('exitEditBtnInside');
     exitResultBtn = document.getElementById('exitResultBtn');
+    exportBtn = document.getElementById('exportBtn');
     headerTitle = document.getElementById('headerTitle');
     inputCard = document.getElementById('inputCard');
     extractedContentArea = document.getElementById('extractedContentArea');
@@ -116,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bind Exit Buttons
     if (exitEditBtn) exitEditBtn.addEventListener('click', exitFullscreenInput);
     if (exitResultBtn) exitResultBtn.addEventListener('click', showInputView);
+    if (exportBtn) exportBtn.addEventListener('click', exportDetectionResult);
     
     // Bind Clear Button
     if (clearBtn) {
@@ -504,10 +507,14 @@ function showResultView() {
     document.getElementById('resultView').classList.add('active');
     
     // Header
+    const mobileHeader = document.querySelector('.mobile-header');
+    if (mobileHeader) mobileHeader.classList.add('bg-glass');
+
     historyBtn.style.display = 'none';
     if (userBtn) userBtn.style.display = 'none';
     exitEditBtn.style.display = 'none';
     exitResultBtn.style.display = 'flex';
+    if (exportBtn) exportBtn.style.display = 'flex';
     if (headerTitle) headerTitle.style.display = 'block';
     if (startBranding) startBranding.style.display = 'none';
     
@@ -520,7 +527,11 @@ function showInputView() {
     document.getElementById('inputView').classList.add('active');
     
     // Header restore
+    const mobileHeader = document.querySelector('.mobile-header');
+    if (mobileHeader) mobileHeader.classList.remove('bg-glass');
+
     exitResultBtn.style.display = 'none';
+    if (exportBtn) exportBtn.style.display = 'none';
     exitEditBtn.style.display = 'none';
     historyBtn.style.display = 'flex';
     if (userBtn) userBtn.style.display = 'flex';
@@ -528,7 +539,6 @@ function showInputView() {
     // Explicitly restore elements hidden by fullscreen mode if we were stuck
     if (startBranding) startBranding.style.display = 'block';
     if (headerTitle) headerTitle.style.display = 'none'; 
-    const mobileHeader = document.querySelector('.mobile-header');
     if (mobileHeader) mobileHeader.style.display = 'flex';
     
     // Ensure we are not in fullscreen class (double check)
@@ -711,7 +721,8 @@ async function handleUrlExtraction(url) {
 function getFaviconUrl(url) {
     try {
         const urlObj = new URL(url);
-        return `https://ico.kucat.cn/get.php?url=${urlObj.hostname}&sz=32`;
+        const faviconUrl = `https://ico.kucat.cn/get.php?url=${urlObj.hostname}&sz=32`;
+        return `/api/proxy-image?url=${encodeURIComponent(faviconUrl)}`;
     } catch (e) {
         return null;
     }
@@ -2297,6 +2308,75 @@ async function handleLogout() {
         location.href = '/Login';
     } catch (err) {
         showToast('退出失败', 'error');
+    }
+}
+
+async function exportDetectionResult() {
+    const resultItem = document.getElementById('resultItem');
+    if (!resultItem || resultItem.style.display === 'none') {
+        showToast('没有可导出的结果', 'info');
+        return;
+    }
+
+    showLoadingToast('正在生成图片...');
+    
+    try {
+        // Use html2canvas to capture the result card
+        const canvas = await html2canvas(resultItem, {
+            useCORS: true,
+            scale: 2, // Higher quality
+            backgroundColor: getComputedStyle(document.body).backgroundColor || '#f3f4f6',
+            logging: false,
+            onclone: (clonedDoc) => {
+                const clonedResult = clonedDoc.getElementById('resultItem');
+                if (clonedResult) {
+                    clonedResult.style.display = 'block';
+                    clonedResult.style.padding = '60px 20px 20px 20px'; // Significantly increased top padding to fix overlap
+                    clonedResult.style.width = '100%';
+                    clonedResult.style.maxWidth = '600px';
+                    clonedResult.style.position = 'relative';
+
+                    // Add "检测结果报告" title at the top of the image
+                    const title = clonedDoc.createElement('div');
+                    title.textContent = '检测结果报告';
+                    title.style.position = 'absolute';
+                    title.style.top = '14px';
+                    title.style.left = '0';
+                    title.style.width = '100%';
+                    title.style.textAlign = 'center';
+                    title.style.fontSize = '20px';
+                    title.style.fontWeight = 'bold';
+                    title.style.color = 'var(--text-primary)';
+                    title.style.opacity = '1';
+                    clonedResult.prepend(title);
+
+                    // Fix SVG rotation for html2canvas
+                    const scoreSvg = clonedResult.querySelector('.score-circle-svg');
+                    if (scoreSvg) {
+                        // html2canvas often ignores CSS transforms on certain SVG elements.
+                        // Wrapping content in a <g> with a transform attribute is the most compatible way.
+                        const innerContent = scoreSvg.innerHTML;
+                        scoreSvg.innerHTML = `<g transform="rotate(-90 50 50)">${innerContent}</g>`;
+                        scoreSvg.style.transform = 'none'; // Clear CSS transform on clone to avoid double rotation
+                    }
+                }
+            }
+        });
+
+        // Convert canvas to image and trigger download
+        const imgData = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        link.download = `Detection_Result_${timestamp}.png`;
+        link.href = imgData;
+        link.click();
+        
+        showToast('图片已导出', 'success');
+    } catch (err) {
+        console.error('Export error:', err);
+        showToast('导出失败(CORS或内存限制)', 'error');
+    } finally {
+        hideLoadingToast();
     }
 }
 
