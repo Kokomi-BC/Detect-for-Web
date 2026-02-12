@@ -61,6 +61,7 @@ let historyPage = 1;
 let historyLoading = false;
 let hasMoreHistory = true;
 let historySearchQuery = '';
+let isResultHeaderAtTop = false;
 
 // 暴露全局 Toast 函数，供加载的独立组件使用
 window.showLoadingToast = showLoadingToast;
@@ -104,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSSE(); // Ensure SSE is initialized for real-time status
     setupNavigation();
     renderImages(); // Ensure initial UI state is correct
+    initResultHeaderScrollBehavior();
     
     // Bind static elements for Mobile.html
     const bind = (id, fn) => {
@@ -452,6 +454,63 @@ function setToastText(message) {
     }, 150);
 }
 
+function applyResultHeaderState(atTop) {
+    const mobileHeader = document.querySelector('.mobile-header');
+    if (!mobileHeader) return;
+
+    if (atTop) {
+        mobileHeader.classList.remove('bg-glass');
+        mobileHeader.classList.add('header-top-expanded');
+    } else {
+        mobileHeader.classList.remove('header-top-expanded');
+        mobileHeader.classList.add('bg-glass');
+    }
+
+    isResultHeaderAtTop = atTop;
+}
+
+function updateResultHeaderByScroll(force = false) {
+    if (currentMode !== 'result') return;
+
+    const resultView = document.getElementById('resultView');
+    const mobileHeader = document.querySelector('.mobile-header');
+    if (!resultView || !mobileHeader) return;
+
+    const scrollTop = resultView.scrollTop || 0;
+    
+    // Calculate progress: 1 at top, 0 at 40px scroll
+    // We use a slightly larger range (40px) to make the transition smooth
+    const range = 40; 
+    const progress = Math.max(0, Math.min(1, 1 - (scrollTop / range)));
+    
+    // Apply progress as CSS variable for micro-animations
+    mobileHeader.style.setProperty('--header-progress', progress.toFixed(3));
+
+    // Still manage the state classes for logic and fallback
+    const enterTopThreshold = 2;
+    const exitTopThreshold = 10;
+
+    let nextAtTop = isResultHeaderAtTop;
+    if (scrollTop <= enterTopThreshold) {
+        nextAtTop = true;
+    } else if (scrollTop >= exitTopThreshold) {
+        nextAtTop = false;
+    }
+
+    if (force || nextAtTop !== isResultHeaderAtTop) {
+        applyResultHeaderState(nextAtTop);
+    }
+}
+
+function initResultHeaderScrollBehavior() {
+    const resultView = document.getElementById('resultView');
+    if (!resultView) return;
+
+    resultView.addEventListener('scroll', () => {
+        updateResultHeaderByScroll(false);
+    }, { passive: true });
+}
+
 // --- View Logic ---
 function enterFullscreenInput() {
     if (currentMode === 'result') return;
@@ -508,7 +567,9 @@ function showResultView() {
     
     // Header
     const mobileHeader = document.querySelector('.mobile-header');
-    if (mobileHeader) mobileHeader.classList.add('bg-glass');
+    if (mobileHeader) {
+        mobileHeader.classList.remove('header-top-expanded');
+    }
 
     historyBtn.style.display = 'none';
     if (userBtn) userBtn.style.display = 'none';
@@ -517,6 +578,8 @@ function showResultView() {
     if (exportBtn) exportBtn.style.display = 'flex';
     if (headerTitle) headerTitle.style.display = 'block';
     if (startBranding) startBranding.style.display = 'none';
+
+    updateResultHeaderByScroll(true);
     
     if (isInputFullscreen) exitFullscreenInput();
 }
@@ -526,9 +589,14 @@ function showInputView() {
     document.getElementById('resultView').classList.remove('active');
     document.getElementById('inputView').classList.add('active');
     
-    // Header restore
+    // Header restore - set to expanded state (progress 1) to avoid shadow at top
     const mobileHeader = document.querySelector('.mobile-header');
-    if (mobileHeader) mobileHeader.classList.remove('bg-glass');
+    if (mobileHeader) {
+        mobileHeader.classList.remove('bg-glass');
+        mobileHeader.classList.remove('header-top-expanded');
+        mobileHeader.style.setProperty('--header-progress', '1');
+    }
+    isResultHeaderAtTop = true; // Set to true as we are at the top of input view
 
     exitResultBtn.style.display = 'none';
     if (exportBtn) exportBtn.style.display = 'none';

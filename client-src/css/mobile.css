@@ -31,29 +31,56 @@ body {
 
 /* Header */
 .mobile-header {
-    height: 44px;
+    /* Use variables for reactive animation */
+    --p: var(--header-progress, 1);
+    height: calc(52px + 16px * var(--p));
     display: flex;
     align-items: center;
-    justify-content: center; /* Center the title */
-    padding: 0 16px;
-    z-index: 1000; /* High z-index to stay on top of scrollable content */
-    position: fixed; /* Fixed to top to allow content to scroll behind for glass effect */
+    justify-content: center;
+    padding: 0 calc(18px + 2px * var(--p));
+    z-index: 1000;
+    position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    transition: background-color var(--transition-fast), border-bottom var(--transition-fast), backdrop-filter var(--transition-fast);
+    transform-origin: top center;
+    will-change: height, padding, backdrop-filter, background-color, box-shadow;
+    
+    /* Background and Blur interpolation */
+    background-color: rgba(var(--bg-rgb), calc(0.7 * (1 - var(--p))));
+    backdrop-filter: blur(calc(20px * (1 - var(--p))));
+    -webkit-backdrop-filter: blur(calc(20px * (1 - var(--p))));
+    
+    /* Border and Shadow interpolation */
+    border-bottom: 1px solid rgba(var(--border-rgb), calc(1 - var(--p)));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, calc(0.08 * (1 - var(--p))));
+    
+    /* Smooth transitions for when the variable isn't updating (e.g. snapping) */
+    transition: 
+        background-color 200ms ease, 
+        backdrop-filter 200ms ease, 
+        -webkit-backdrop-filter 200ms ease, 
+        box-shadow 200ms ease, 
+        height 250ms cubic-bezier(0.22, 1, 0.36, 1), 
+        padding 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .header-title {
-    font-size: 17px; /* iOS Standard */
+    --p: var(--header-progress, 0);
+    font-size: calc(17px + 7px * var(--p));
     font-weight: 600;
     color: var(--text-primary);
-    letter-spacing: -0.5px;
+    letter-spacing: calc(-0.5px - 0.1px * var(--p));
+    transform: translateY(calc(2px * var(--p)));
+    transition: all 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.mobile-header .icon-btn {
+.mobile-header .icon-btn,
+.mobile-header .exit-result-btn,
+.mobile-header .export-result-btn {
+    --p: var(--header-progress, 0);
     position: absolute; 
-    top: 4px; /* (44px header - 36px button) / 2 = 4px */
+    top: calc(8px + 8px * var(--p));
     width: 36px;
     height: 36px;
     background: var(--bg-tertiary);
@@ -64,15 +91,19 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--transition-fast);
+    transition: background 0.2s, transform 0.2s, top 250ms cubic-bezier(0.22, 1, 0.36, 1);
     z-index: 10;
     padding: 0;
 }
 
-.mobile-header .icon-btn:active {
-    background: var(--border-color);
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
-    border-color: var(--primary-color);
+/* Fallback/State classes (mostly handled by variables now, but kept for compatibility) */
+.mobile-header.header-top-expanded {
+    border-bottom: 1px solid transparent !important;
+    box-shadow: none !important;
+}
+
+.mobile-header.bg-glass {
+    /* bg-glass is now the default state when --header-progress is 0 */
 }
 
 #historyBtn {
@@ -111,7 +142,7 @@ body {
 .exit-result-btn {
     position: absolute;
     left: 12px; 
-    top: 4px; /* (44px header - 36px btn) / 2 */
+    top: 8px; /* (52px header - 36px btn) / 2 */
     display: none;
     width: 36px;
     height: 36px;
@@ -135,7 +166,7 @@ body {
 .export-result-btn {
     position: absolute;
     right: 12px;
-    top: 4px;
+    top: 8px;
     display: none;
     width: 36px;
     height: 36px;
@@ -219,7 +250,7 @@ body {
     flex: 1;
     position: relative;
     overflow: hidden;
-    padding-top: 44px; /* Space for the fixed header */
+    padding-top: 52px; /* Space for the fixed header */
 }
 
 .view-section {
@@ -233,7 +264,7 @@ body {
     transition: opacity 0.3s ease, transform 0.3s ease, background-color var(--transition-fast), color var(--transition-fast);
     overflow-y: auto;
     padding: 16px;
-    padding-top: 48px; 
+    padding-top: 68px; /* Support expanded header */
     box-sizing: border-box;
     opacity: 0;
     pointer-events: none;
@@ -606,8 +637,8 @@ textarea.mobile-input {
 .input-card.fullscreen .toolbar-container {
     position: fixed;
     bottom: 25px;
-    left: 20px;
-    right: 20px;
+    left: 8px;
+    right: 8px;
 }
 
 .input-actions {
@@ -634,7 +665,7 @@ textarea.mobile-input {
     font-size: 18px;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+    box-shadow: none;
     transition: all 0.2s;
     display: flex;
     align-items: center;
