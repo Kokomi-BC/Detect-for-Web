@@ -325,20 +325,17 @@ function updateStatusUI(status, data) {
     let message = '';
     switch(status) {
         case 'extracting':
-            message = data?.step === 'images' ? '正在加载正文图片...' : '正在提取网页内容...';
-            applyMessage(message);
-            break;
         case 'parsing':
-            message = '正在解析内容...';
+            message = '正在解析网页...';
             applyMessage(message);
             break;
         case 'analyzing':
-            message = 'AI 正在推理中...';
+            message = '进行初步分析中...';
             applyMessage(message);
             break;
         case 'searching':
             searchStartTime = Date.now();
-            message = `正在联网搜索: ${data?.query || ''}`;
+            message = `联网搜索: ${data?.query || ''}`;
             applyMessage(message);
             // Limit search word display to max 5 seconds
             mobileStatusTimeout = setTimeout(() => {
@@ -346,13 +343,13 @@ function updateStatusUI(status, data) {
             }, 5000);
             break;
         case 'search-failed':
-            message = '联网搜索失败，正在分析...';
+            message = '联网搜索失败，进行离线分析...';
             applyMessage(message);
             break;
         case 'deep-analysis':
             const elapsed = Date.now() - (searchStartTime || 0);
             const minDisplay = 4000;
-            message = '正在进行深度分析...';
+            message = '深度分析中...';
 
             if (elapsed < minDisplay && searchStartTime) {
                 // Keep the search keyword visible for at least 4 seconds
@@ -1319,8 +1316,14 @@ function renderImages() {
     uploadedImages.forEach((img, index) => {
         const div = document.createElement('div');
         div.className = 'preview-img-wrapper';
+        
+        let displayUrl = img.url;
+        if (displayUrl && !displayUrl.startsWith('data:') && !displayUrl.startsWith('blob:') && displayUrl.startsWith('http')) {
+            displayUrl = `/api/proxy-image?url=${encodeURIComponent(displayUrl)}`;
+        }
+
         div.innerHTML = `
-            <img src="${img.url}">
+            <img src="${displayUrl}">
             <div class="remove-img-btn close-circle-btn">${closeSvg}</div>
         `;
 
@@ -1415,7 +1418,11 @@ function previewImage(url) {
     const modal = document.getElementById('imageModal');
     const img = document.getElementById('modalImage');
     if (modal && img) {
-        img.src = url;
+        let displayUrl = url;
+        if (displayUrl && !displayUrl.startsWith('data:') && !displayUrl.startsWith('blob:') && displayUrl.startsWith('http')) {
+            displayUrl = `/api/proxy-image?url=${encodeURIComponent(displayUrl)}`;
+        }
+        img.src = displayUrl;
         modal.style.display = 'flex';
     }
 }

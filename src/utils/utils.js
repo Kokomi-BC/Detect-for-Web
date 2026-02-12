@@ -289,6 +289,31 @@ function formatDate(date, format = 'YYYY-MM-DD HH:mm:ss') {
 }
 
 /**
+ * 获取请求图片的 Headers
+ * @param {string} url 图片 URL
+ * @returns {Object} Headers 对象
+ */
+function getImageHeaders(url) {
+    const headers = { 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+    };
+
+    // 添加特定站点的 Referer 头
+    if (url.includes('sinaimg.cn') || url.includes('weibo.com') || url.includes('sina.cn')) {
+        headers['Referer'] = 'https://weibo.com/';
+    } else if (url.includes('mmbiz.qpic.cn') || url.includes('weixin.qq.com')) {
+        headers['Referer'] = 'https://mp.weixin.qq.com/';
+    } else if (url.includes('baidu.com') || url.includes('bdstatic.com')) {
+        headers['Referer'] = 'https://www.baidu.com/';
+    } else if (url.includes('zhihu.com') || url.includes('zhimg.com')) {
+        headers['Referer'] = 'https://www.zhihu.com/';
+    }
+    
+    return headers;
+}
+
+/**
  * 获取远程图片的尺寸
  * @param {string} url 图片的完整 URL
  * @returns {Promise<{width: number, height: number} | null>}
@@ -301,22 +326,10 @@ async function getImageDimensions(url) {
   return new Promise((resolve) => {
     const protocol = url.startsWith('https') ? https : http;
     const options = {
-      headers: { 
-          'User-Agent': 'Mozilla/5.Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.00 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-          'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
-      },
+      headers: getImageHeaders(url),
       timeout: 5000,
       rejectUnauthorized: false
     };
-
-    // 添加特定站点的 Referer 头
-    if (url.includes('sinaimg.cn') || url.includes('weibo.com')) {
-        options.headers['Referer'] = 'https://weibo.com/';
-    } else if (url.includes('mmbiz.qpic.cn') || url.includes('weixin.qq.com')) {
-        options.headers['Referer'] = 'https://mp.weixin.qq.com/';
-    } else if (url.includes('baidu.com') || url.includes('bdstatic.com')) {
-        options.headers['Referer'] = 'https://www.baidu.com/';
-    }
 
     const req = protocol.get(url, options, (res) => {
       if (res.statusCode !== 200) {
@@ -375,5 +388,6 @@ module.exports = {
   extractDomain,
   formatDate,
   getImageDimensions,
+  getImageHeaders,
   getIpRegion
 };

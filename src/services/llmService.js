@@ -259,6 +259,11 @@ Summary: Use concise Chinese keywords for search; output strictly valid JSON; al
       throw new Error('模型服务未配置 (LLM API is not configured)');
     }
 
+    // Step 1: Notify start of preliminary analysis
+    if (typeof onStatusChange === 'function') {
+      onStatusChange('analyzing', { step: 'preliminary' });
+    }
+
     const messages = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userContent }

@@ -157,7 +157,7 @@ router.post('/login', async (req, res) => {
             // Set HttpOnly Cookie
             res.cookie('token', token, {
                 httpOnly: true,
-                secure: true, 
+                secure: false, // Changed to false to support local HTTP dev like Vite
                 sameSite: 'strict',
                 maxAge: 12 * 60 * 60 * 1000 
             });

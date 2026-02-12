@@ -2613,7 +2613,7 @@
                 item.dataset.index = index;
 
                 item.innerHTML = `
-                    <img src="${image.url}" alt="${image.name}">
+                    <img src="${getProxyUrl(image.url)}" alt="${image.name}">
                     <button class="image-delete-btn" data-id="${image.id}">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -4314,17 +4314,17 @@
                             loadingText.textContent = text;
                         };
 
-                        if (status === 'extracting') {
-                            updateText(data?.step === 'images' ? '正在为您加载并处理正文图片...' : '正在启动浏览器并提取网页内容...');
-                        } else if (status === 'parsing') {
-                            updateText('网页内容提取成功，正在解析...');
+                        if (status === 'extracting' || status === 'parsing') {
+                             updateText('正在解析网页...');
+                        } else if (status === 'analyzing') {
+                             updateText('进行初步分析中...');
                         } else if (status === 'searching') {
                             window.searchStartTime = Date.now();
-                            updateText(`正在联网搜索: ${data?.query || ''}`);
+                            updateText(`联网搜索: ${data?.query || ''}`);
                             // Limit display of search query to max 5 seconds
                             window.statusTextTimeout = setTimeout(() => {
                                 if (window.currentAnalysisStatus === 'searching') {
-                                    updateText('正在进行深度分析...');
+                                    updateText('深度分析中...');
                                 }
                             }, 5000);
                         } else if (status === 'search-failed') {
@@ -4336,10 +4336,10 @@
                             if (elapsed < minDisplay && window.searchStartTime) {
                                 // If the search keyword was shown for too short, wait until 4s is reached
                                 window.statusTextTimeout = setTimeout(() => {
-                                    updateText('正在进行深度分析...');
+                                    updateText('深度分析中...');
                                 }, minDisplay - elapsed);
                             } else {
-                                updateText('正在进行深度分析...');
+                                updateText('深度分析中...');
                             }
                         } else {
                             updateText('AI 正在分析中，请稍候...');
@@ -4472,7 +4472,7 @@
                 uploadedImages.forEach(img => {
                     const item = document.createElement('div');
                     item.className = 'parsed-image-item';
-                    item.innerHTML = `<img src="${img.url}" alt="${img.name}">`;
+                    item.innerHTML = `<img src="${getProxyUrl(img.url)}" alt="${img.name}">`;
                     // 允许从解析区域拖动到左侧（传递图片 URL）
                     item.setAttribute('draggable', 'true');
                     item.addEventListener('dragstart', (ev) => {
@@ -4509,6 +4509,7 @@
                 if (displaySrc && !displaySrc.startsWith('blob:')) {
                     displaySrc = getProxyUrl(displaySrc);
                     img.src = displaySrc;
+                    img.setAttribute('referrerpolicy', 'no-referrer');
                     img.setAttribute('data-converted', 'true');
                     img.style.opacity = '1';
                 }
@@ -4672,7 +4673,7 @@
             const modalImage = document.getElementById('modalImage');
             const modalReason = document.getElementById('modalReason');
 
-            modalImage.src = url;
+            modalImage.src = getProxyUrl(url);
 
             if (reason) {
                 modalReason.textContent = reason;

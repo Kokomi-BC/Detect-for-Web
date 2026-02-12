@@ -24,6 +24,7 @@ const {
     sanitizeId,
     isPathSafe
 } = require('../utils/fsUtils');
+const { getImageHeaders } = require('../utils/utils');
 const historyController = require('../controllers/historyController');
 const adminController = require('../controllers/adminController');
 const userController = require('../controllers/userController');
@@ -183,7 +184,7 @@ module.exports = function(services, state) {
                 contentType = JSON.parse(await fsPromises.readFile(metaPath, 'utf8')).contentType;
             } else {
                 const response = await fetch(imageUrl, { 
-                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' } 
+                    headers: getImageHeaders(imageUrl) 
                 });
                 if (!response.ok) throw new Error('Fetch failed');
                 const arrayBuffer = await response.arrayBuffer();
@@ -229,8 +230,13 @@ module.exports = function(services, state) {
                 contentType = JSON.parse(await fsPromises.readFile(metaPath, 'utf8')).contentType;
             } else {
                 const response = await fetch(imageUrl, { 
-                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' } 
+                    headers: getImageHeaders(imageUrl) 
                 });
+                
+                if (!response.ok) {
+                    throw new Error(`Upstream returned ${response.status}`);
+                }
+
                 const arrayBuffer = await response.arrayBuffer();
                 buffer = Buffer.from(arrayBuffer);
                 contentType = response.headers.get('content-type') || 'image/jpeg';
