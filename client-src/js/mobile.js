@@ -72,6 +72,7 @@ const historyLimit = 20;
 
 // --- Elements ---
 let textInput, detectBtn, plusBtn, fileInput, docInput, previewImages, historyBtn, userBtn, exitEditBtn, exitResultBtn, exportBtn, headerTitle, inputCard, extractedContentArea, startBranding, clearBtn;
+let actionSheet, actionSheetBackdrop, exportActionSheet, exportActionSheetBackdrop;
 
 function initElements() {
     textInput = document.getElementById('textInput');
@@ -90,6 +91,11 @@ function initElements() {
     extractedContentArea = document.getElementById('extractedContentArea');
     startBranding = document.getElementById('startBranding');
     clearBtn = document.getElementById('clearBtn');
+    
+    actionSheet = document.getElementById('actionSheet');
+    actionSheetBackdrop = document.getElementById('actionSheetBackdrop');
+    exportActionSheet = document.getElementById('exportActionSheet');
+    // Using existing backdrop for export too or handle separately
 }
 
 // --- Initialization ---
@@ -120,7 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bind Exit Buttons
     if (exitEditBtn) exitEditBtn.addEventListener('click', exitFullscreenInput);
     if (exitResultBtn) exitResultBtn.addEventListener('click', showInputView);
-    if (exportBtn) exportBtn.addEventListener('click', exportDetectionResult);
     
     // Bind Clear Button
     if (clearBtn) {
@@ -388,9 +393,11 @@ function showLoadingToast(message) {
     }
 
     setToastText(message);
-    if (loadingToast && !loadingToast.classList.contains('active')) {
-        loadingToast.classList.add('active');
-        toastShowTime = Date.now();
+    if (loadingToast) {
+        if (!loadingToast.classList.contains('active')) {
+            loadingToast.classList.add('active');
+        }
+        toastShowTime = Date.now(); // Always refresh to ensure minimum display time for the current message
     }
 }
 
@@ -1116,30 +1123,70 @@ function showToast(message, type = 'info') {
 
 // --- Image Upload ---
 function initActionSheet() {
-    plusBtn.addEventListener('click', () => {
-        // Restore Default Upload Menu
-        const content = document.getElementById('actionSheetContent');
-        content.innerHTML = `
-             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="uploadImageBtn">添加图片</div>
-             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="uploadDocBtn">上传文件</div> 
-        `;
-        
-        // Re-bind events since innerHTML was reset
-        document.getElementById('uploadImageBtn').addEventListener('click', triggerImageUpload);
-        document.getElementById('uploadDocBtn').addEventListener('click', triggerFileUpload);
+    const backdrop = document.getElementById('actionSheetBackdrop');
+    const actionSheet = document.getElementById('actionSheet');
+    const exportSheet = document.getElementById('exportActionSheet');
 
-        document.getElementById('actionSheetBackdrop').classList.add('active');
-        document.getElementById('actionSheet').classList.add('active'); // CSS translate
-        document.getElementById('actionSheet').style.transform = 'translateY(0)';
+    const closeAllSheets = () => {
+        backdrop.classList.remove('active');
+        if (actionSheet) {
+            actionSheet.classList.remove('active');
+            actionSheet.style.transform = 'translateY(100%)';
+        }
+        if (exportSheet) {
+            exportSheet.classList.remove('active');
+            exportSheet.style.transform = 'translateY(100%)';
+        }
+        hideTooltip();
+    };
+
+    plusBtn.addEventListener('click', () => {
+        backdrop.classList.add('active');
+        actionSheet.classList.add('active');
+        actionSheet.style.transform = 'translateY(0)';
     });
+
+    if (exportBtn) {
+        exportBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            backdrop.classList.add('active');
+            exportSheet.classList.add('active');
+            exportSheet.style.transform = 'translateY(0)';
+        });
+    }
+
+    // Bind Export Options
+    document.querySelectorAll('.export-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const format = btn.getAttribute('data-format');
+            closeAllSheets();
+            if (window.exportManager) {
+                window.exportManager.exportResult(format);
+            }
+        });
+    });
+
+    document.getElementById('closeActionSheetBtn')?.addEventListener('click', closeAllSheets);
+    document.getElementById('closeExportActionSheetBtn')?.addEventListener('click', closeAllSheets);
+    backdrop.addEventListener('click', closeAllSheets);
+
+    document.getElementById('uploadImageBtn').addEventListener('click', triggerImageUpload);
+    document.getElementById('uploadDocBtn').addEventListener('click', triggerFileUpload);
 }
 
 function closeActionSheet() {
-    document.getElementById('actionSheetBackdrop').classList.remove('active');
+    const backdrop = document.getElementById('actionSheetBackdrop');
     const actionSheet = document.getElementById('actionSheet');
+    const exportSheet = document.getElementById('exportActionSheet');
+
+    backdrop.classList.remove('active');
     if (actionSheet) {
         actionSheet.classList.remove('active');
         actionSheet.style.transform = 'translateY(100%)';
+    }
+    if (exportSheet) {
+        exportSheet.classList.remove('active');
+        exportSheet.style.transform = 'translateY(100%)';
     }
     // Also hide tooltips if any
     hideTooltip();
@@ -2376,75 +2423,6 @@ async function handleLogout() {
         location.href = '/Login';
     } catch (err) {
         showToast('退出失败', 'error');
-    }
-}
-
-async function exportDetectionResult() {
-    const resultItem = document.getElementById('resultItem');
-    if (!resultItem || resultItem.style.display === 'none') {
-        showToast('没有可导出的结果', 'info');
-        return;
-    }
-
-    showLoadingToast('正在生成图片...');
-    
-    try {
-        // Use html2canvas to capture the result card
-        const canvas = await html2canvas(resultItem, {
-            useCORS: true,
-            scale: 2, // Higher quality
-            backgroundColor: getComputedStyle(document.body).backgroundColor || '#f3f4f6',
-            logging: false,
-            onclone: (clonedDoc) => {
-                const clonedResult = clonedDoc.getElementById('resultItem');
-                if (clonedResult) {
-                    clonedResult.style.display = 'block';
-                    clonedResult.style.padding = '60px 20px 20px 20px'; // Significantly increased top padding to fix overlap
-                    clonedResult.style.width = '100%';
-                    clonedResult.style.maxWidth = '600px';
-                    clonedResult.style.position = 'relative';
-
-                    // Add "检测结果报告" title at the top of the image
-                    const title = clonedDoc.createElement('div');
-                    title.textContent = '检测结果报告';
-                    title.style.position = 'absolute';
-                    title.style.top = '14px';
-                    title.style.left = '0';
-                    title.style.width = '100%';
-                    title.style.textAlign = 'center';
-                    title.style.fontSize = '20px';
-                    title.style.fontWeight = 'bold';
-                    title.style.color = 'var(--text-primary)';
-                    title.style.opacity = '1';
-                    clonedResult.prepend(title);
-
-                    // Fix SVG rotation for html2canvas
-                    const scoreSvg = clonedResult.querySelector('.score-circle-svg');
-                    if (scoreSvg) {
-                        // html2canvas often ignores CSS transforms on certain SVG elements.
-                        // Wrapping content in a <g> with a transform attribute is the most compatible way.
-                        const innerContent = scoreSvg.innerHTML;
-                        scoreSvg.innerHTML = `<g transform="rotate(-90 50 50)">${innerContent}</g>`;
-                        scoreSvg.style.transform = 'none'; // Clear CSS transform on clone to avoid double rotation
-                    }
-                }
-            }
-        });
-
-        // Convert canvas to image and trigger download
-        const imgData = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-        link.download = `Detection_Result_${timestamp}.png`;
-        link.href = imgData;
-        link.click();
-        
-        showToast('图片已导出', 'success');
-    } catch (err) {
-        console.error('Export error:', err);
-        showToast('导出失败(CORS或内存限制)', 'error');
-    } finally {
-        hideLoadingToast();
     }
 }
 

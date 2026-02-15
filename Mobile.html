@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/client-src/css/common.css">
     <link rel="stylesheet" href="/client-src/css/mobile.css">
     <script type="module" src="/client-src/js/theme-loader.js"></script>
+    <script type="module" src="/client-src/js/export-manager.js"></script>
     <script type="module" src="/client-src/js/mobile.js"></script>
     <script>
         (function() {
@@ -160,6 +161,17 @@
              <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="uploadDocBtn">上传文件 (Word/PDF/TXT/MD)</div> 
          </div>
          <div id="closeActionSheetBtn" style="padding:20px; text-align:center; color:var(--text-secondary); font-size:16px; cursor:pointer;" >取消</div>
+    </div>
+
+    <!-- Export Action Sheet -->
+    <div id="exportActionSheet" class="drawer-panel" style="height:auto; bottom:0; top:auto; width:100%; max-width:100%; transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 20px 20px 0 0; padding-bottom:30px; left:0; z-index: 10001;">
+        <div style="padding: 16px; text-align: center; color: var(--text-secondary); font-size: 14px; border-bottom: 1px solid var(--bg-tertiary);">导出检测结果</div>
+        <div id="exportActionContent">
+            <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" class="export-option" data-format="image">导出为图片</div>
+            <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" class="export-option" data-format="pdf">导出为 PDF</div>
+            <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" class="export-option" data-format="html">导出为 HTML</div>
+        </div>
+        <div id="closeExportActionSheetBtn" style="padding:20px; text-align:center; color:var(--text-secondary); font-size:16px; cursor:pointer;" >取消</div>
     </div>
 
     <div id="historyDrawerBackdrop" class="drawer-backdrop" style="display: none;" ></div>

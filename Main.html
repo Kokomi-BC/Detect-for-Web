@@ -688,47 +688,48 @@
                                         </div>
                                         <span>导出为 PDF</span>
                                     </div>
+                                    <div class="dropdown-item" data-format="image">
+                                        <div class="dropdown-item-icon">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                                <polyline points="21 15 16 10 5 21"></polyline>
+                                            </svg>
+                                        </div>
+                                        <span>导出为图片</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="result-score">
-                            <div class="score-circle-container" id="scoreCircleContainer">
-                                <svg class="score-svg" viewBox="0 0 100 100">
-                                    <circle class="score-bg" cx="50" cy="50" r="45"></circle>
-                                    <circle class="score-progress" id="scoreProgress" cx="50" cy="50" r="45"></circle>
-                                </svg>
-                                <div class="score-text" id="scoreText">0%</div>
+
+                        <!-- 手机端风格结果卡片 -->
+                        <div class="result-card">
+                            <div class="summary-header">
+                                <div class="score-circle-container" id="scoreCircleContainer">
+                                    <svg class="score-circle-svg" viewBox="0 0 100 100">
+                                        <circle class="score-circle-bg" cx="50" cy="50" r="45"></circle>
+                                        <circle class="score-circle-progress" id="scoreProgress" cx="50" cy="50" r="45"></circle>
+                                    </svg>
+                                    <div class="score-inner">
+                                        <div class="score-val" id="scoreValue">--%</div>
+                                    </div>
+                                </div>
+                                <div class="summary-text-content">
+                                    <div class="summary-val-text" id="scoreText">--%</div>
+                                    <div class="summary-title-text">真实性评分</div>
+                                    <div class="summary-desc-text" id="scoreDescription">AI正在分析中...</div>
+                                </div>
                             </div>
-                            <div class="score-details">
-                                <div class="score-label">真实性评分</div>
-                                <div class="score-value" id="scoreValue">0%</div>
-                                <div class="score-description" id="scoreDescription">等待检测...</div>
+                            
+                            <div class="result-analysis" id="analysisContainer">
+                                <div class="analysis-title">详细分析</div>
+                                <!-- 动态注入分析点 -->
                             </div>
                         </div>
 
-                        <div class="result-analysis">
-                            <div class="analysis-title">详细分析</div>
-                            <div class="analysis-item">
-                                <div class="analysis-icon positive">✓</div>
-                                <div class="analysis-text">内容来源可靠，引用了权威媒体的数据</div>
-                            </div>
-                            <div class="analysis-item">
-                                <div class="analysis-icon positive">✓</div>
-                                <div class="analysis-text">语言表达客观，无明显情绪化倾向</div>
-                            </div>
-                            <div class="analysis-item">
-                                <div class="analysis-icon neutral">!</div>
-                                <div class="analysis-text">部分信息需要进一步核实</div>
-                            </div>
-                            <div class="analysis-item">
-                                <div class="analysis-icon positive">✓</div>
-                                <div class="analysis-text">图片内容与文字描述相符</div>
-                            </div>
-                        </div>
-
-                        <!-- 解析内容 -->
-                        <div class="parsed-content" id="parsedContent" style="display: none;">
-                            <h3 class="parsed-title" id="parsedTitle"></h3>
+                        <!-- 解析内容 (原本就有的，现在加上手机端的 result-card 样式) -->
+                        <div class="parsed-content result-card" id="parsedContent" style="display: none;">
+                            <h3 class="parsed-title" id="parsedTitle" style="margin-top: 0; margin-bottom: 12px;"></h3>
                             <div class="parsed-images-container" id="parsedImages"></div>
                             <div class="parsed-text" id="parsedText"></div>
                         </div>
@@ -875,7 +876,6 @@
     <div class="toast" id="toast"></div>
 
     <!-- 自定义确认弹窗 -->
-    <div class="custom-modal" id="customModal">
         <div class="custom-modal-content">
             <div class="custom-modal-title">清空内容</div>
             <div class="custom-modal-message">确定要清空页面吗？</div>
@@ -4437,29 +4437,32 @@
             const scoreProgress = document.getElementById('scoreProgress');
             const scoreContainer = document.getElementById('scoreCircleContainer');
 
-            scoreText.textContent = score + '%';
-            scoreValue.textContent = score + '%';
+            if (scoreText) scoreText.textContent = score + '%';
+            if (scoreValue) scoreValue.textContent = score + '%';
 
             // Reset classes
             scoreContainer.className = 'score-circle-container';
 
             if (score >= 80) {
                 scoreContainer.classList.add('real');
-                scoreDescription.textContent = '该内容具有较高的可信度';
+                if (scoreDescription) scoreDescription.textContent = '该内容具有较高的可信度';
             } else if (score >= 60) {
                 scoreContainer.classList.add('uncertain');
-                scoreDescription.textContent = '该内容存在一定的不确定性';
+                if (scoreDescription) scoreDescription.textContent = '该内容存在一定的不确定性';
             } else {
                 scoreContainer.classList.add('fake');
-                scoreDescription.textContent = '该内容可能存在虚假信息';
+                if (scoreDescription) scoreDescription.textContent = '该内容可能存在虚假信息';
             }
 
             // Animate Progress
             const circumference = 2 * Math.PI * 45; // r=45
             const offset = circumference - (score / 100) * circumference;
-            scoreProgress.style.strokeDashoffset = circumference; // Reset first
+            if (scoreProgress) {
+                scoreProgress.style.strokeDasharray = circumference;
+                scoreProgress.style.strokeDashoffset = circumference;
+            }
             setTimeout(() => {
-                scoreProgress.style.strokeDashoffset = offset;
+                if (scoreProgress) scoreProgress.style.strokeDashoffset = offset;
             }, 100);
 
             // 显示输入内容
@@ -4558,29 +4561,32 @@
 
             // 使用随机分数作为示例
             const score = Math.floor(Math.random() * 40) + 60;
-            scoreText.textContent = score + '%';
-            scoreValue.textContent = score + '%';
+            if (scoreText) scoreText.textContent = score + '%';
+            if (scoreValue) scoreValue.textContent = score + '%';
 
             // Reset classes
             scoreContainer.className = 'score-circle-container';
 
             if (score >= 80) {
                 scoreContainer.classList.add('real');
-                scoreDescription.textContent = '该内容具有较高的可信度';
+                if (scoreDescription) scoreDescription.textContent = '该内容具有较高的可信度';
             } else if (score >= 60) {
                 scoreContainer.classList.add('uncertain');
-                scoreDescription.textContent = '该内容存在一定的不确定性';
+                if (scoreDescription) scoreDescription.textContent = '该内容存在一定的不确定性';
             } else {
                 scoreContainer.classList.add('fake');
-                scoreDescription.textContent = '该内容可能存在虚假信息';
+                if (scoreDescription) scoreDescription.textContent = '该内容可能存在虚假信息';
             }
 
             // Animate Progress
             const circumference = 2 * Math.PI * 45; // r=45
             const offset = circumference - (score / 100) * circumference;
-            scoreProgress.style.strokeDashoffset = circumference; // Reset first
+            if (scoreProgress) {
+                scoreProgress.style.strokeDasharray = circumference;
+                scoreProgress.style.strokeDashoffset = circumference; 
+            }
             setTimeout(() => {
-                scoreProgress.style.strokeDashoffset = offset;
+                if (scoreProgress) scoreProgress.style.strokeDashoffset = offset;
             }, 100);
 
             // 显示解析内容
@@ -4922,9 +4928,12 @@
             // Animate Progress
             const circumference = 2 * Math.PI * 45; // r=45
             const offset = circumference - (percentage / 100) * circumference;
-            scoreProgress.style.strokeDashoffset = circumference; // Reset first
+            if (scoreProgress) {
+                scoreProgress.style.strokeDasharray = circumference;
+                scoreProgress.style.strokeDashoffset = circumference; 
+            }
             setTimeout(() => {
-                scoreProgress.style.strokeDashoffset = offset;
+                if (scoreProgress) scoreProgress.style.strokeDashoffset = offset;
             }, 100);
 
             // Type handling for description
@@ -4937,11 +4946,11 @@
             }
 
             // Update Analysis Points
-            const analysisContainer = document.querySelector('.result-analysis');
+            const analysisContainer = document.getElementById('analysisContainer') || document.querySelector('.result-analysis');
             // 清空旧的静态内容（保留标题）
             const analysisTitle = analysisContainer.querySelector('.analysis-title');
             analysisContainer.innerHTML = '';
-            analysisContainer.appendChild(analysisTitle);
+            if (analysisTitle) analysisContainer.appendChild(analysisTitle);
 
             if (result.analysis_points && Array.isArray(result.analysis_points)) {
                 result.analysis_points.forEach((point, index) => {
@@ -5083,23 +5092,10 @@
             }
 
             if (uniqueImages.size > 0) {
-                // 添加标题
-                const title = document.createElement('div');
-                title.className = 'parsed-images-title';
-                title.textContent = '引用的图片';
-                parsedImages.appendChild(title);
-
-                // 添加分隔线
-                const separator = document.createElement('div');
-                separator.style.height = '1px';
-                separator.style.backgroundColor = 'var(--border-color)';
-                separator.style.margin = '8px 0 12px 0';
-                separator.style.width = '100%';
-                parsedImages.appendChild(separator);
-
                 // 创建图片容器
                 const imgContainer = document.createElement('div');
                 imgContainer.className = 'parsed-images';
+                imgContainer.style.marginBottom = '12px';
 
                 uniqueImages.forEach((imgObj) => {
                     const item = document.createElement('div');

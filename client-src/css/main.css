@@ -1957,44 +1957,53 @@
             transition: background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
         }
 
-        /* SVG Score Circle */
+        /* SVG Score Circle (align with mobile/common styles) */
         .score-circle-container {
+            width: 80px;
+            height: 80px;
             position: relative;
-            width: 100px;
-            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+        .score-circle-svg,
         .score-svg {
-            transform: rotate(-90deg);
             width: 100%;
             height: 100%;
+            transform: rotate(-90deg);
         }
+        .score-circle-bg,
         .score-bg {
             fill: none;
             stroke: var(--bg-tertiary);
             stroke-width: 8;
         }
+        .score-circle-progress,
         .score-progress {
             fill: none;
-            stroke: var(--accent-color);
+            stroke: var(--success-color);
             stroke-width: 8;
             stroke-linecap: round;
-            stroke-dasharray: 283; /* 2 * PI * 45 */
+            stroke-dasharray: 283;
             stroke-dashoffset: 283;
-            transition: stroke-dashoffset 1.5s cubic-bezier(0.2, 0.8, 0.2, 1), stroke 0.3s;
+            transition: stroke-dashoffset 1s ease-out;
         }
+        .score-inner,
         .score-text {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--text-primary);
+            text-align: center;
+            line-height: 1;
         }
 
         /* Score Colors */
+        .score-circle-container.real .score-circle-progress,
         .score-circle-container.real .score-progress { stroke: var(--success-color); }
+        .score-circle-container.fake .score-circle-progress,
         .score-circle-container.fake .score-progress { stroke: var(--danger-color); }
+        .score-circle-container.uncertain .score-circle-progress,
         .score-circle-container.uncertain .score-progress { stroke: var(--warning-color); }
 
         .score-details { flex: 1; }
@@ -2022,63 +2031,36 @@
             line-height: 1.5;
         }
 
-        /* Analysis List */
+        /* Analysis List (align with mobile/common styles) */
         .result-analysis {
-            background: var(--bg-glass);
-            border-radius: var(--radius-lg);
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--border-color);
-            transition: background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+            margin-top: 15px;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            padding: 0;
+            box-shadow: none;
         }
 
         .analysis-title {
-            font-size: calc(18px * var(--font-scale));
             font-weight: 600;
-            margin-bottom: 16px;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .analysis-title::before {
-            content: '';
-            width: 4px;
-            height: 18px;
-            background: var(--accent-color);
-            border-radius: 2px;
+            margin-bottom: 12px;
+            border-left: 4px solid var(--primary-color);
+            padding-left: 8px;
+            font-size: 15px;
+            color: var(--text-main);
         }
 
         .analysis-item {
             display: flex;
-            align-items: flex-start;
-            gap: 16px;
-            margin-bottom: 12px;
-            padding: 16px;
-            background: var(--bg-card);
-            border-radius: var(--radius-md);
-            transition: var(--transition);
-            border: 1px solid transparent;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .analysis-item::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: transparent;
-            z-index: 1;
-        }
-
-        .analysis-item:hover {
-            transform: translateX(4px);
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 0;
+            transform: none;
             box-shadow: var(--shadow-sm);
-            border-color: var(--border-color);
+            transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
         }
 
         .analysis-icon {
@@ -2088,26 +2070,24 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            font-weight: bold;
             flex-shrink: 0;
             font-size: 14px;
-            font-weight: bold;
         }
 
-        /* Analysis Status Styles */
-        .analysis-item.positive::before { background: var(--success-color); }
-        .analysis-item.positive .analysis-icon { color: var(--success-color); background: var(--success-light); }
-        
-        .analysis-item.negative::before { background: var(--danger-color); }
-        .analysis-item.negative .analysis-icon { color: var(--danger-color); background: var(--danger-light); }
-        
-        .analysis-item.warning::before { background: var(--warning-color); }
-        .analysis-item.warning .analysis-icon { color: var(--warning-color); background: var(--warning-light); }
+        .analysis-icon.positive,
+        .analysis-item.positive .analysis-icon { background: var(--success-light); color: var(--success-color); }
+        .analysis-icon.warning,
+        .analysis-item.warning .analysis-icon { background: var(--warning-light); color: var(--warning-color); }
+        .analysis-icon.negative,
+        .analysis-item.negative .analysis-icon { background: var(--danger-light); color: var(--danger-color); }
 
         .analysis-text {
             flex: 1;
-            font-size: calc(15px * var(--font-scale));
-            line-height: 1.6;
+            font-size: 14px;
+            line-height: 1.5;
             color: var(--text-primary);
+            word-break: break-all;
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
@@ -2369,6 +2349,14 @@
             transition: background-color var(--transition-fast), color var(--transition-fast);
         }
 
+        .parsed-content.result-card {
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
+            padding: 0;
+            margin-bottom: 0;
+        }
+
         .parsed-title {
             font-size: calc(20px * var(--font-scale));
             font-weight: 700;
@@ -2601,69 +2589,7 @@
             background-color: rgba(255, 190, 11, 0.6);
         }
 
-        /* 详细分析列表项样式 */
-        .analysis-item {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 12px;
-            padding: 12px;
-            background: var(--bg-card);
-            border-radius: 8px;
-            transition: var(--transition);
-            border: 1px solid transparent;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .analysis-item::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: transparent;
-            z-index: 1;
-        }
-
-        .analysis-item:hover {
-            transform: translateX(4px);
-            border-color: var(--border-color);
-        }
-
-        .analysis-icon {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 12px;
-            flex-shrink: 0;
-            font-weight: bold;
-            font-size: 14px;
-        }
-
-        .analysis-icon.positive {
-            background: rgba(6, 255, 165, 0.15);
-            color: var(--success-color);
-        }
-
-        .analysis-icon.warning {
-            background: rgba(255, 190, 11, 0.15);
-            color: var(--warning-color);
-        }
-
-        .analysis-icon.negative {
-            background: rgba(251, 86, 7, 0.15);
-            color: var(--danger-color);
-        }
-
-        .analysis-text {
-            font-size: calc(14px * var(--font-scale));
-            line-height: 1.5;
-            color: var(--text-primary);
-        }
+        /* 详细分析列表项样式由上方统一定义，避免重复覆盖 */
 
         /* 错误状态 */
         .error-state {

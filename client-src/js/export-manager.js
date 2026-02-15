@@ -1,34 +1,56 @@
 
+import html2canvas from 'html2canvas';
+
 class ExportManager {
     constructor() {
+        // Detect if mobile to use different CSS set
+        const isMobile = window.innerWidth <= 768 || !!document.querySelector('.mobile-container');
+        
         this.cssFiles = [
             '/client-src/css/variables.css',
-            '/client-src/css/common.css',
-            '/client-src/css/main.css'
+            '/client-src/css/common.css'
         ];
+        
+        if (isMobile) {
+            this.cssFiles.push('/client-src/css/mobile.css');
+        } else {
+            this.cssFiles.push('/client-src/css/main.css');
+        }
     }
 
     async exportResult(format = 'html') {
         const resultItem = document.getElementById('resultItem');
-        if (!resultItem || !resultItem.classList.contains('active')) {
+        if (!resultItem || (resultItem.style.display === 'none' && !resultItem.classList.contains('active'))) {
             if (window.showToast) {
                 window.showToast('暂无检测结果可导出', 'warning');
             }
             return;
         }
         
-        if (window.showToast) {
+        const isMobile = window.innerWidth <= 768 || !!document.querySelector('.mobile-container');
+        const theme = document.documentElement.getAttribute('data-theme') || 'light';
+
+        if (isMobile && window.showLoadingToast) {
+            window.showLoadingToast(format === 'image' ? '正在生成图片...' : `正在生成 ${format.toUpperCase()}...`);
+        } else if (window.showToast) {
             window.showToast(`正在生成 ${format.toUpperCase()} 导出文件，请稍候...`, 'info', 0);
         }
 
         // Clone the result item to modify it for export
         const clone = resultItem.cloneNode(true);
+        clone.style.display = 'block'; // Ensure cloned version is visible for analysis
         
-        // Remove export button if exists in clone
-        const exportBtnInClone = clone.querySelector('#exportBtn');
-        if (exportBtnInClone) {
-            exportBtnInClone.remove();
-        }
+        // Remove ALL possible UI components from the clone
+        const uiSelectors = [
+            '#exportBtn', '.export-result-btn', '.exit-result-btn', 
+            '.exit-detection-btn', '#exitDetectionBtn', '.toolbar-btn',
+            '.drawer-panel', '.drawer-backdrop', '#exportDropdown',
+            '#actionSheet', '#exportActionSheet', '.loading-toast',
+            '.mobile-header', '#title-bar', '.sidebar-toggle-btn'
+        ];
+        uiSelectors.forEach(selector => {
+            clone.querySelectorAll(selector).forEach(el => el.remove());
+        });
 
         // Add specific class for export view styling
         const containerDiv = document.createElement('div');
@@ -44,6 +66,140 @@ class ExportManager {
         // Construct HTML
         const html = this.buildHtml(clone.outerHTML, cssContent);
 
+        if (format === 'image') {
+            try {
+                // Determine background color based on theme
+                const bgColor = theme === 'dark' ? '#1e2128' : '#f3f4f6';
+                
+                // Give browser time to render if mobile
+                if (isMobile) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                
+                const exportOptions = {
+                    useCORS: true,
+                    scale: 2,
+                    backgroundColor: bgColor, // Use a solid background color to avoid transparency issues
+                    logging: false,
+                    onclone: (clonedDoc) => {
+                        // Sync theme to cloned document so CSS variables work correctly
+                        clonedDoc.documentElement.setAttribute('data-theme', theme);
+                        clonedDoc.body.setAttribute('data-theme', theme);
+
+                        // Inject a style tag to the cloned document to fix common html2canvas rendering issues
+                        const style = clonedDoc.createElement('style');
+                        style.innerHTML = `
+                            * { 
+                                backdrop-filter: none !important; 
+                                -webkit-backdrop-filter: none !important;
+                                text-shadow: none !important;
+                                transition: none !important;
+                                animation: none !important;
+                                --font-scale: 1.0 !important;
+                            }
+                            .result-score, .result-card, .analysis-item, .parsed-content, .parsed-text, .result-analysis { 
+                                background-color: var(--bg-primary) !important; 
+                                box-shadow: none !important;
+                                opacity: 1 !important;
+                                border: 1px solid var(--border-color) !important;
+                            }
+                            .score-circle-container { 
+                                background: transparent !important; 
+                            }
+                            #resultItem {
+                                background-color: ${bgColor} !important;
+                                transform: none !important;
+                                opacity: 1 !important;
+                            }
+                            .fake-highlight {
+                                background-color: var(--warning-light) !important;
+                                color: var(--text-main) !important;
+                                text-decoration: none !important;
+                                border-bottom: 2px solid var(--warning-color) !important;
+                            }
+                            #resultItem .parsed-content.result-card {
+                                background-color: var(--bg-primary) !important;
+                                border: 1px solid var(--border-color) !important;
+                                border-radius: 16px !important;
+                                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+                                padding: 20px !important;
+                                margin-bottom: 20px !important;
+                            }
+                        `;
+                        clonedDoc.head.appendChild(style);
+
+                        // Proactively REMOVE all global UI components from the cloned document
+                        const toRemoveCount = [
+                            '#actionSheet', '#exportActionSheet', '.drawer-backdrop', 
+                            '#moreDropdown', '#userDropdown', '#exportDropdown',
+                            '.mobile-header', '#title-bar', '.sidebar-toggle-btn',
+                            '.loading-toast', '#customTooltip', '.resizer',
+                            '.squeeze-mask', '.exit-detection-btn'
+                        ];
+                        toRemoveCount.forEach(s => {
+                            clonedDoc.querySelectorAll(s).forEach(el => el.remove());
+                        });
+
+                        const clonedResult = clonedDoc.getElementById('resultItem');
+                        if (clonedResult) {
+                            clonedResult.style.display = 'block';
+                            clonedResult.style.opacity = '1';
+                            clonedResult.style.transform = 'none';
+                            clonedResult.style.width = isMobile ? '100%' : '800px'; 
+                            clonedResult.style.padding = isMobile ? '60px 20px 20px 20px' : '60px 30px 30px 30px';
+                            clonedResult.style.position = 'relative';
+                            clonedResult.style.boxShadow = 'none'; // Avoid rendering artifacts
+                            
+                            // Set clear background
+                            clonedResult.style.background = bgColor;
+                            clonedDoc.body.style.background = bgColor;
+
+                            // Add title
+                            const title = clonedDoc.createElement('div');
+                            title.textContent = '检测结果报告';
+                            title.style.position = 'absolute';
+                            title.style.top = isMobile ? '14px' : '20px';
+                            title.style.left = '0';
+                            title.style.width = '100%';
+                            title.style.textAlign = 'center';
+                            title.style.fontSize = isMobile ? '20px' : '24px';
+                            title.style.fontWeight = 'bold';
+                            title.style.color = 'var(--text-primary)';
+                            clonedResult.prepend(title);
+
+                            // Handle Score Circle SVG (common in both)
+                            const scoreSvg = clonedResult.querySelector('.score-svg, .score-circle-svg');
+                            if (scoreSvg) {
+                                const innerContent = scoreSvg.innerHTML;
+                                scoreSvg.innerHTML = `<g transform="rotate(-90 50 50)">${innerContent}</g>`;
+                                scoreSvg.style.transform = 'none';
+                            }
+                        }
+                    }
+                };
+
+                const canvas = await html2canvas(resultItem, exportOptions);
+                const imgData = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                const timestamp = new Date().getTime();
+                link.download = `分析报告_${timestamp}.png`;
+                link.href = imgData;
+                link.click();
+
+                if (isMobile && window.hideLoadingToast) {
+                    window.hideLoadingToast();
+                    if (window.showToast) window.showToast('图片已导出', 'success');
+                } else if (window.showToast) {
+                    window.showToast('结果已导出为图片', 'success');
+                }
+            } catch (err) {
+                console.error('Image Export Error:', err);
+                if (isMobile && window.hideLoadingToast) window.hideLoadingToast();
+                if (window.showToast) window.showToast('图片导出失败', 'error');
+            }
+            return;
+        }
+
         if (format === 'pdf') {
             try {
                 const data = await window.api.invoke('export-pdf', { html });
@@ -58,11 +214,15 @@ class ExportManager {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                if (window.showToast) {
+                if (isMobile && window.hideLoadingToast) {
+                    window.hideLoadingToast();
+                    if (window.showToast) window.showToast('PDF 报告已生成', 'success');
+                } else if (window.showToast) {
                     window.showToast('PDF 报告已生成', 'success');
                 }
             } catch (err) {
                 console.error('PDF Export Error:', err);
+                if (isMobile && window.hideLoadingToast) window.hideLoadingToast();
                 if (window.showToast) {
                     window.showToast(err.message || 'PDF 导出失败', 'error');
                 }
@@ -70,6 +230,7 @@ class ExportManager {
         } else {
             // Trigger download for HTML
             this.downloadFile(html);
+            if (isMobile && window.hideLoadingToast) window.hideLoadingToast();
         }
     }
 
@@ -215,6 +376,13 @@ class ExportManager {
             body {
                 padding: 40px;
                 min-height: 100vh;
+            }
+            /* Proactively hide ALL UI in export */
+            .drawer-panel, .drawer-backdrop, .loading-toast, .mobile-header, #title-bar, .sidebar-toggle-btn, .toolbar-btn, #exportBtn {
+                display: none !important;
+            }
+            .image-modal, #customTooltip {
+                display: none !important;
             }
             .container {
                 display: block !important;

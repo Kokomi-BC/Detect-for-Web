@@ -324,3 +324,187 @@ button.icon-btn.danger:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 15px rgba(231, 29, 54, 0.2);
 }
+
+/* --- Drawer & Action Sheet (Shared) --- */
+.drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.4);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+}
+.drawer-backdrop.active {
+    opacity: 1;
+    visibility: visible;
+}
+.drawer-panel {
+    background: var(--bg-primary);
+    z-index: 10001;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color var(--transition-fast);
+}
+.export-option:hover {
+    background: var(--border-color) !important;
+    transform: translateY(-2px);
+}
+.export-option:active {
+    transform: scale(0.98);
+}
+.drawer-title {
+    padding: 16px 20px;
+    font-weight: 600;
+    font-size: 17px;
+    text-align: center;
+    color: var(--text-primary);
+}
+.drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Shared Result Card Styles */
+.result-card {
+    background: var(--bg-primary);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    transition: background-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.summary-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.summary-text-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.summary-val-text {
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.summary-title-text {
+    font-size: 15px;
+    font-weight: bold;
+    margin-bottom: 6px;
+    color: var(--text-main);
+}
+
+.summary-desc-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.score-circle-container {
+    width: 80px;
+    height: 80px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.score-circle-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.score-circle-bg {
+    fill: none;
+    stroke: var(--bg-tertiary);
+    stroke-width: 8;
+}
+
+.score-circle-progress {
+    fill: none;
+    stroke: var(--success-color);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 283;
+    stroke-dashoffset: 283;
+    transition: stroke-dashoffset 1s ease-out;
+}
+
+.score-circle-container.uncertain .score-circle-progress { stroke: var(--warning-color); }
+.score-circle-container.fake .score-circle-progress { stroke: var(--danger-color); }
+.score-circle-container.real .score-circle-progress { stroke: var(--success-color); }
+
+.score-inner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    line-height: 1;
+}
+
+.score-val {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.result-analysis {
+    margin-top: 15px;
+}
+
+.analysis-title {
+    font-weight: 600; 
+    margin-bottom: 12px; 
+    border-left: 4px solid var(--primary-color); 
+    padding-left: 8px;
+    font-size: 15px;
+}
+
+.analysis-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    transition: transform var(--transition-fast), background-color var(--transition-fast);
+}
+
+.analysis-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+    font-size: 14px;
+}
+
+.analysis-icon.positive { background: var(--success-light); color: var(--success-color); }
+.analysis-icon.warning { background: var(--warning-light); color: var(--warning-color); }
+.analysis-icon.negative { background: var(--danger-light); color: var(--danger-color); }
+
+.analysis-text {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    word-break: break-all;
+}
