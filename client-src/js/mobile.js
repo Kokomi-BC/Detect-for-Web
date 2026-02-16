@@ -1,6 +1,3 @@
-import { userEditor } from './user-editor.js';
-import html2canvas from 'html2canvas';
-
 // Mobile Logic for AI Detective
 
 // --- API Mock ---
@@ -56,12 +53,57 @@ let _abortController = null;
 let currentAnalysisStatus = 'initializing';
 let isExtracting = false;
 let currentUser = null;
+let _exportManagerPromise = null;
+let _userEditorPromise = null;
 
 let historyPage = 1;
 let historyLoading = false;
 let hasMoreHistory = true;
 let historySearchQuery = '';
 let isResultHeaderAtTop = false;
+
+async function getExportManager() {
+    if (window.exportManager) return window.exportManager;
+    if (!_exportManagerPromise) {
+        _exportManagerPromise = new Promise((resolve, reject) => {
+            const existing = document.querySelector('script[data-module="export-manager"]');
+            if (existing) {
+                existing.addEventListener('load', () => resolve(window.exportManager), { once: true });
+                existing.addEventListener('error', () => reject(new Error('导出模块加载失败')), { once: true });
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.src = '/js/export-manager.js';
+            script.setAttribute('data-module', 'export-manager');
+            script.onload = () => resolve(window.exportManager);
+            script.onerror = () => reject(new Error('导出模块加载失败'));
+            document.head.appendChild(script);
+        })
+            .finally(() => {
+                _exportManagerPromise = null;
+            });
+    }
+    return _exportManagerPromise;
+}
+
+async function getUserEditor() {
+    if (window.userEditor) return window.userEditor;
+    if (!_userEditorPromise) {
+        _userEditorPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.src = '/js/user-editor.js';
+            script.onload = () => resolve(window.userEditor);
+            script.onerror = () => reject(new Error('用户编辑模块加载失败'));
+            document.head.appendChild(script);
+        }).finally(() => {
+            _userEditorPromise = null;
+        });
+    }
+    return _userEditorPromise;
+}
 
 // 暴露全局 Toast 函数，供加载的独立组件使用
 window.showLoadingToast = showLoadingToast;
@@ -1157,11 +1199,19 @@ function initActionSheet() {
 
     // Bind Export Options
     document.querySelectorAll('.export-option').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             const format = btn.getAttribute('data-format');
             closeAllSheets();
-            if (window.exportManager) {
-                window.exportManager.exportResult(format);
+            try {
+                const exportManager = await getExportManager();
+                if (exportManager) {
+                    await exportManager.exportResult(format);
+                } else {
+                    throw new Error('Export manager unavailable');
+                }
+            } catch (e) {
+                console.error('Failed to load export manager:', e);
+                showToast('导出模块加载失败', 'error');
             }
         });
     });
@@ -2394,6 +2444,7 @@ function showUserActionSheet() {
 
 async function openMobileUserEditor() {
     try {
+        const userEditor = await getUserEditor();
         if (userEditor && currentUser) {
             userEditor.open({
                 userId: currentUser.id,

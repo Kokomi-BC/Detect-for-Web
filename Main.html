@@ -11,7 +11,6 @@
     <link rel="stylesheet" href="/client-src/css/common.css">
     <link rel="stylesheet" href="/client-src/css/main.css">
     <script type="module" src="/client-src/js/theme-loader.js"></script>
-    <script type="module" src="/client-src/js/export-manager.js"></script>
 </head>
 
 <body>
@@ -555,6 +554,13 @@
                             <span>全选</span>
                             <span class="shortcut-hint">Ctrl+A</span>
                         </div>
+                        <div class="context-menu-separator ctx-result-only" id="ctxExportImgSep" style="display: none;"></div>
+                        <div class="context-menu-item ctx-result-only" id="ctxPageExportImg" style="display: none;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                            </svg>
+                            <span>导出检测结果为图片</span>
+                        </div>
                         <div class="context-menu-item" id="ctxAddImage">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                                 <path
@@ -820,6 +826,14 @@
                     </svg>
                     <span>导出为 PDF</span>
                 </div>
+                <div class="context-menu-item" data-format="image">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    <span>导出为图片</span>
+                </div>
             </div>
         </div>
     </div>
@@ -1022,8 +1036,17 @@
                 const meData = await meRes.json();
                 if (meData.status !== 'fail') {
                     try {
-                        const module = await import('./client-src/js/user-editor.js');
-                        const userEditor = module.default || module.userEditor;
+                        if (!window.__userEditorLoadPromise) {
+                            window.__userEditorLoadPromise = new Promise((resolve, reject) => {
+                                const script = document.createElement('script');
+                                script.type = 'module';
+                                script.src = '/js/user-editor.js';
+                                script.onload = () => resolve(window.userEditor);
+                                script.onerror = () => reject(new Error('User editor load failed'));
+                                document.head.appendChild(script);
+                            });
+                        }
+                        const userEditor = await window.__userEditorLoadPromise;
                         userEditor.open({
                             userId: meData.user.id,
                             username: meData.user.username,
@@ -2293,6 +2316,15 @@
 
                     // Select All
                     setDisplay('ctxSelectAll', true);
+                    
+                    // Export as Image (Special for Results)
+                    const resultItem = document.getElementById('resultItem');
+                    const isResultActive = resultItem && resultItem.classList.contains('active');
+                    const showExportImg = isResultActive && !isInput && !isImage;
+                    
+                    setDisplay('ctxPageExportImg', showExportImg);
+                    setDisplay('ctxExportImgSep', showExportImg);
+
                     const selectAllItem = document.getElementById('ctxSelectAll');
                     if (isInput) {
                         const textInput = document.getElementById('textInput');
@@ -2552,6 +2584,16 @@
                 }
                 contextMenu.classList.remove('active');
             });
+
+            const ctxPageExportImg = document.getElementById('ctxPageExportImg');
+            if (ctxPageExportImg) {
+                ctxPageExportImg.addEventListener('click', () => {
+                    if (typeof exportResult === 'function') {
+                        exportResult('image');
+                    }
+                    contextMenu.classList.remove('active');
+                });
+            }
 
             document.getElementById('ctxPaste').addEventListener('click', async () => {
                 handlePaste();
@@ -4064,9 +4106,24 @@
             }
 
             if (ctxExportResult) {
-                ctxExportResult.addEventListener('click', function () {
-                    exportResult();
-                    if (resultContextMenu) resultContextMenu.classList.remove('active');
+                // 处理子菜单项点击
+                ctxExportResult.querySelectorAll('.context-menu-item[data-format]').forEach(subItem => {
+                    subItem.addEventListener('click', (e) => {
+                        e.stopPropagation(); // 阻止冒泡到父级
+                        const format = subItem.getAttribute('data-format');
+                        exportResult(format);
+                        if (resultContextMenu) resultContextMenu.classList.remove('active');
+                    });
+                });
+
+                // 点击父级默认导出 HTML
+                ctxExportResult.addEventListener('click', function (e) {
+                    if (e.target === ctxExportResult || ctxExportResult.contains(e.target)) {
+                        // 如果点击的是具体子项，上面的监听器会处理
+                        if (e.target.closest('.context-submenu')) return;
+                        exportResult();
+                        if (resultContextMenu) resultContextMenu.classList.remove('active');
+                    }
                 });
             }
 
@@ -4100,10 +4157,33 @@
         }
 
         async function exportResult(format = 'html') {
-            if (window.exportManager) {
+            try {
+                if (!window.exportManager) {
+                    window.__exportManagerLoadPromise = window.__exportManagerLoadPromise || new Promise((resolve, reject) => {
+                        const existing = document.querySelector('script[data-module="export-manager"]');
+                        if (existing) {
+                            existing.addEventListener('load', () => resolve(window.exportManager), { once: true });
+                            existing.addEventListener('error', () => reject(new Error('导出模块加载失败')), { once: true });
+                            return;
+                        }
+
+                        const script = document.createElement('script');
+                        script.type = 'module';
+                        script.src = '/js/export-manager.js';
+                        script.setAttribute('data-module', 'export-manager');
+                        script.onload = () => resolve(window.exportManager);
+                        script.onerror = () => reject(new Error('导出模块加载失败'));
+                        document.head.appendChild(script);
+                    });
+
+                    await window.__exportManagerLoadPromise;
+                }
+                if (!window.exportManager) {
+                    throw new Error('ExportManager not loaded');
+                }
                 await window.exportManager.exportResult(format);
-            } else {
-                console.error('ExportManager not loaded');
+            } catch (error) {
+                console.error('ExportManager load failed:', error);
                 showToast('导出模块加载失败', 'error');
             }
         }

@@ -21,6 +21,8 @@ export default defineConfig({
         login: resolve(__dirname, 'Login.html'),
         welcome: resolve(__dirname, 'Welcome.html'),
         mobile: resolve(__dirname, 'Mobile.html'),
+        'export-manager': resolve(__dirname, 'client-src/js/export-manager.js'),
+        'user-editor': resolve(__dirname, 'client-src/js/user-editor.js'),
       },
       output: {
         entryFileNames: 'js/[name].[hash].js',
@@ -35,6 +37,7 @@ export default defineConfig({
     },
   },
   plugins: [
+    ViteMinifyPlugin({}),
     legacy({
       targets: ['defaults', 'not IE 11'],
     }),

@@ -7,10 +7,10 @@ const { truncateText } = require('../utils/utils');
 const fs = require('fs');
 const path = require('path');
 
-// 设置全局配置以降低内存压力
+// 设置全局配置：在 4G 服务器上提升可用内存与并发能力
 const config = Configuration.getGlobalConfig();
-config.set('maxMemoryMbytes', 768); 
-config.set('availableMemoryRatio', 0.15); 
+config.set('maxMemoryMbytes', 3024); // 提升至 3.5GB
+config.set('availableMemoryRatio', 0.8); // 允许占用 90% 的系统内存
 
 class ExtractionManager {
   constructor(pool = null) {
@@ -94,13 +94,13 @@ class ExtractionManager {
                       '--single-process',
                       '--no-zygote',
                       '--disable-accelerated-2d-canvas',
-                      '--js-flags=--max-old-space-size=256', 
+                      '--js-flags=--max-old-space-size=3072', 
                       '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36 NetType/WIFI MicroMessenger/7.0.20.1781(0x6700143B) WindowsWechat(0x63090a13) UnifiedPCWindowsWechat(0xf254160e) XWEB/18055 Flue'
                   ]
               }
           },
-          // 极致限制并发
-          maxConcurrency: 1,
+          // 提升并发至 2 线程
+          maxConcurrency: 2,
           minConcurrency: 1,
           requestHandlerTimeoutSecs: 60,
           navigationTimeoutSecs: 45,

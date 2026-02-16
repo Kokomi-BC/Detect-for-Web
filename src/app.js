@@ -11,6 +11,7 @@ const { authenticate, SECRET_KEY } = require('./middleware/auth');
 const ExtractionManager = require('./services/extractionManager');
 const FileParser = require('./services/fileParser');
 const LLMService = require('./services/llmService');
+const PdfService = require('./services/pdfService');
 
 const authRouter = require('./routes/auth');
 const apiRouter = require('./routes/api');
@@ -31,7 +32,8 @@ const { pool } = require('./config/db');
 const services = {
     extractionManager: new ExtractionManager(pool),
     fileParser: new FileParser(),
-    llmService: new LLMService()
+    llmService: new LLMService(),
+    pdfService: PdfService
 };
 
 const state = {
@@ -167,6 +169,49 @@ app.use('/ico', express.static(path.join(__dirname, '../public/ico'), {
 app.use('/js', express.static(path.join(__dirname, '../public/js'), {
     maxAge: '1h'
 }));
+
+// 动态解析带哈希的 JS 模块
+app.get(['/js/export-manager.js', '/js/user-editor.js'], (req, res, next) => {
+    try {
+        const moduleName = req.path.split('/').pop().replace('.js', '');
+        const candidateDirs = [
+            path.join(__dirname, '../dist/js'),
+            path.join(__dirname, '../dist/assets')
+        ];
+
+        let foundDir = null;
+        let target = null;
+
+        for (const dir of candidateDirs) {
+            if (!fs.existsSync(dir)) continue;
+            const candidate = fs
+                .readdirSync(dir)
+                .filter(name => new RegExp(`^${moduleName}\\..+\\.js$`).test(name))
+                .sort((a, b) => {
+                    const aTime = fs.statSync(path.join(dir, a)).mtimeMs;
+                    const bTime = fs.statSync(path.join(dir, b)).mtimeMs;
+                    return bTime - aTime;
+                })[0];
+
+            if (candidate) {
+                foundDir = dir;
+                target = candidate;
+                break;
+            }
+        }
+
+        if (!target || !foundDir) {
+            return res.status(404).send(`${moduleName} bundle not found`);
+        }
+
+        res.setHeader('Content-Type', 'application/javascript');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        return res.sendFile(path.join(foundDir, target));
+    } catch (e) {
+        console.error('[App] Failed to resolve module bundle:', e);
+        return res.status(500).send('module resolve failed');
+    }
+});
 
 app.get('/Login', (req, res) => {
     const token = req.cookies.token;

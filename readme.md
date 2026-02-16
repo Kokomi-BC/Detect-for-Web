@@ -35,7 +35,7 @@ Detect 是一款基于网页端的假新闻检测应用，由 Electron 版本迁
     - theme-loader.js：动态主题切换逻辑。
     - user-editor.js：用户资料编辑逻辑。
 - 静态资源：public/ 目录，存放图标（如 /ico/Detect.ico）等静态文件，构建时将直接复制到 dist/ 根目录。
-- Electron API 兼容层：前端内置 window.electronAPI 模拟层，将旧版本 Electron 的 ipcRenderer.invoke 调用，转换为 /api/invoke 的 fetch 请求。
+- API 抽象层：前端内置 `window.api` 模拟层，将原本的后端能力调用转换为 `/api/invoke` 的 fetch 请求。
 
 部署与开发规范
 

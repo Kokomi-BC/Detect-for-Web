@@ -28,7 +28,6 @@ const { getImageHeaders } = require('../utils/utils');
 const historyController = require('../controllers/historyController');
 const adminController = require('../controllers/adminController');
 const userController = require('../controllers/userController');
-const exportController = require('../controllers/exportController');
 
 // Global state for CPU tracking
 let lastCpuInfo = os.cpus();
@@ -64,7 +63,7 @@ const uploadAvatar = multer({
 });
 
 module.exports = function(services, state) {
-    const { extractionManager, fileParser, llmService } = services;
+    const { extractionManager, fileParser, llmService, pdfService } = services;
     const { sseClients } = state;
 
     // SSE for Real-time Updates
@@ -99,9 +98,6 @@ module.exports = function(services, state) {
                 case 'delete-history': result = await historyController.handleDeleteHistory(req, args, deleteCachedImages); break;
                 case 'clear-history': result = await historyController.handleClearHistory(req, deleteCachedImages); break;
                 
-                // Export
-                case 'export-pdf': return exportController.handleExportPdf(req, res, args);
-                
                 // Core Features
                 case 'process-file-upload': {
                     const { name, data } = args[0];
@@ -133,6 +129,15 @@ module.exports = function(services, state) {
                 case 'cancel-extraction': {
                     extractionManager.cancelExtraction();
                     result = { success: true };
+                    break;
+                }
+                case 'export-pdf': {
+                    const { html } = args[0];
+                    const pdfBuffer = await pdfService.generatePdf(html);
+                    result = { 
+                        pdfBase64: pdfBuffer.toString('base64'),
+                        fileName: `分析报告_${new Date().getTime()}.pdf`
+                    };
                     break;
                 }
                 case 'convert-image-to-base64': result = await handleConvertImage(args[0]); break;

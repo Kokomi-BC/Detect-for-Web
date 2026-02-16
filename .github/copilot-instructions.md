@@ -35,7 +35,7 @@ The application runs as an Express server.
     - `theme-loader.js`: Dynamic theme application.
     - `user-editor.js`: User profile editing logic.
 - **`public/`**: Static assets that are copied to the build root (e.g., `ico/Detect.ico`).
-- **`window.electronAPI` Mock**: A bridge in the frontend that converts old Electron `ipcRenderer.invoke` calls into REST API `fetch` requests to `/api/invoke`.
+- **`window.api` Mock**: A bridge in the frontend that converts logic calls into REST API `fetch` requests to `/api/invoke`.
 
 ## Deployment & Development
 

@@ -1,5 +1,3 @@
-import { userEditor } from './user-editor.js';
-
 // --- API Bridge for Web compatibility (Migration) ---
 window.api = {
     invoke: async (channel, ...args) => {
@@ -36,7 +34,25 @@ let currentAdminId = null;
 let currentAdminUsername = '';
 let currentAdminRole = '';
 let avatarTimestamp = Date.now();
+let _userEditorPromise = null;
 const getAvatarUrl = (id, thumb = false) => `/api/public/avatar/${id}?t=${avatarTimestamp}${thumb ? '&thumbnail=1' : ''}`;
+
+async function getUserEditor() {
+    if (window.userEditor) return window.userEditor;
+    if (!_userEditorPromise) {
+        _userEditorPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.src = '/js/user-editor.js';
+            script.onload = () => resolve(window.userEditor);
+            script.onerror = () => reject(new Error('用户编辑模块加载失败'));
+            document.head.appendChild(script);
+        }).finally(() => {
+            _userEditorPromise = null;
+        });
+    }
+    return _userEditorPromise;
+}
 
 // --- Theme Logic ---
 function applyTheme(theme) {
@@ -306,6 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function openEdit(id, username, role, is_online = false) {
             try {
+                const userEditor = await getUserEditor();
                 userEditor.open({
                     userId: id,
                     username: username,
