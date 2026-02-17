@@ -45,7 +45,7 @@ async function getUserEditor() {
             script.type = 'module';
             script.src = '/js/user-editor.js';
             script.onload = () => resolve(window.userEditor);
-            script.onerror = () => reject(new Error('用户编辑模块加载失败'));
+            script.onerror = () => reject(new Error('User editor load failed'));
             document.head.appendChild(script);
         }).finally(() => {
             _userEditorPromise = null;

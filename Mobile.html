@@ -8,6 +8,17 @@
     <link rel="stylesheet" href="/client-src/css/variables.css">
     <link rel="stylesheet" href="/client-src/css/common.css">
     <link rel="stylesheet" href="/client-src/css/mobile.css">
+    <script>
+        // Use early script to fix landing on sub-paths (Vite + base: '/' is now used, but we still prefer clean URLs)
+        // 解决从历史记录或外部链接进入时带有路径后缀导致的资源加载(CSS)丢失及状态异常
+        (function() {
+            const path = window.location.pathname;
+            // 只要不是标准的 /Mobile (忽略结尾斜杠)，则重定向回基点，保持状态一致
+            if (path.includes('/Mobile/') && path.replace(/\/$/, '') !== '/Mobile') {
+                window.location.replace('/Mobile');
+            }
+        })();
+    </script>
     <script type="module" src="/client-src/js/theme-loader.js"></script>
     <script type="module" src="/client-src/js/mobile.js"></script>
     <script>
@@ -157,14 +168,13 @@
     <div id="actionSheet" class="drawer-panel" style="height:auto; bottom:0; top:auto; width:100%; max-width:100%; transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 20px 20px 0 0; padding-bottom:30px; left:0;">
          <div id="actionSheetContent">
              <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="uploadImageBtn">添加图片</div>
-             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="uploadDocBtn">上传文件 (Word/PDF/TXT/MD)</div> 
+             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="uploadDocBtn">上传文档</div> 
          </div>
          <div id="closeActionSheetBtn" style="padding:20px; text-align:center; color:var(--text-secondary); font-size:16px; cursor:pointer;" >取消</div>
     </div>
 
     <!-- Export Action Sheet -->
     <div id="exportActionSheet" class="drawer-panel" style="height:auto; bottom:0; top:auto; width:100%; max-width:100%; transform:translateY(100%); transition:transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 20px 20px 0 0; padding-bottom:30px; left:0; z-index: 10001;">
-        <div style="padding: 16px; text-align: center; color: var(--text-secondary); font-size: 14px; border-bottom: 1px solid var(--bg-tertiary);">导出检测结果</div>
         <div id="exportActionContent">
             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" class="export-option" data-format="image">导出为图片</div>
             <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" class="export-option" data-format="pdf">导出为 PDF</div>
@@ -200,8 +210,8 @@
 
     <!-- Image Modal -->
     <div class="image-modal" id="imageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center; flex-direction: column;" >
-        <img id="modalImage" style="max-width: 95%; max-height: 85%; object-fit: contain;">
-        <div style="color: white; margin-top: 15px; font-size: 14px;">点击屏幕关闭</div>
+        <span class="close-circle-btn" id="closeImageModalBtn" style="position: absolute; top: 20px; right: 20px; width: 36px; height: 36px; z-index: 10001; background: rgba(0,0,0,0.3) !important; color: white !important;"></span>
+        <img id="modalImage" style="max-width: 95%; max-height: 85%; object-fit: contain; transition: transform 0.3s ease-out;">
     </div>
 
     <div id="customTooltip" class="custom-tooltip"></div>

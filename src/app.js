@@ -176,40 +176,45 @@ app.get(['/js/export-manager.js', '/js/user-editor.js'], (req, res, next) => {
         const moduleName = req.path.split('/').pop().replace('.js', '');
         const candidateDirs = [
             path.join(__dirname, '../dist/js'),
-            path.join(__dirname, '../dist/assets')
+            path.join(__dirname, '../dist/assets'),
+            path.join(__dirname, '../client-src/js') // Fallback to source in dev
         ];
 
-        let foundDir = null;
-        let target = null;
+        let foundPath = null;
 
         for (const dir of candidateDirs) {
             if (!fs.existsSync(dir)) continue;
-            const candidate = fs
-                .readdirSync(dir)
-                .filter(name => new RegExp(`^${moduleName}\\..+\\.js$`).test(name))
-                .sort((a, b) => {
-                    const aTime = fs.statSync(path.join(dir, a)).mtimeMs;
-                    const bTime = fs.statSync(path.join(dir, b)).mtimeMs;
-                    return bTime - aTime;
-                })[0];
+            
+            // Try exact match first (dev/src)
+            const exactFile = path.join(dir, `${moduleName}.js`);
+            if (fs.existsSync(exactFile)) {
+                foundPath = exactFile;
+                break;
+            }
 
-            if (candidate) {
-                foundDir = dir;
-                target = candidate;
+            // Try hashed match (dist)
+            const files = fs.readdirSync(dir);
+            const hashedMatch = files.find(name => 
+                name.startsWith(`${moduleName}.`) && name.endsWith('.js') && !name.includes('legacy')
+            );
+            
+            if (hashedMatch) {
+                foundPath = path.join(dir, hashedMatch);
                 break;
             }
         }
 
-        if (!target || !foundDir) {
-            return res.status(404).send(`${moduleName} bundle not found`);
+        if (!foundPath) {
+            res.setHeader('Content-Type', 'application/javascript');
+            return res.status(404).send(`/* Bundle ${moduleName} not found */`);
         }
 
         res.setHeader('Content-Type', 'application/javascript');
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        return res.sendFile(path.join(foundDir, target));
+        return res.sendFile(foundPath);
     } catch (e) {
-        console.error('[App] Failed to resolve module bundle:', e);
-        return res.status(500).send('module resolve failed');
+        console.error('JS Module Resolution Error:', e);
+        next();
     }
 });
 
@@ -240,10 +245,21 @@ app.get('/Welcome', (req, res) => {
     res.sendFile(path.join(__dirname, '../dist/Welcome.html'));
 });
 
-app.get('/Mobile', (req, res) => {
+// Handle Mobile route with optional trailing slash to prevent relative asset path resolution errors
+app.get(['/Mobile', '/Mobile/'], (req, res) => {
+    // Check if the actual requested path ends with /Mobile/
+    if (req.path === '/Mobile/' || (req.originalUrl && req.originalUrl.split('?')[0].endsWith('/Mobile/'))) {
+        return res.redirect(301, '/Mobile');
+    }
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.sendFile(path.join(__dirname, '../dist/Mobile.html')); 
 });
+
+// Robust fallbacks for relative asset paths requested from /Mobile/ directory
+app.use(['/Mobile/css', '*/css', '/Mobile/result/css'], express.static(path.join(__dirname, '../dist/css')));
+app.use(['/Mobile/js', '*/js', '/Mobile/result/js'], express.static(path.join(__dirname, '../dist/js')));
+app.use(['/Mobile/assets', '*/assets', '/Mobile/result/assets'], express.static(path.join(__dirname, '../dist/assets')));
+app.use(['/Mobile/ico', '*/ico', '/Mobile/result/ico'], express.static(path.join(__dirname, '../public/ico')));
 
 // Redirect .html requests
 app.get('/*.html', (req, res) => {

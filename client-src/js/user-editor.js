@@ -100,7 +100,7 @@ class UserEditorCore {
     }
 
     open(options) {
-        const { userId, username, role, is_online = false, isAdminContext = false, isSelf = false, onSuccess = null } = options;
+        const { userId, username, role, is_online = false, isAdminContext = false, isSelf = false, onSuccess = null, noPush = false } = options;
         this.userId = userId;
         this.isAdmin = isAdminContext;
         this.onSuccess = onSuccess;
@@ -110,6 +110,15 @@ class UserEditorCore {
         this.render();
         // 重新绑定事件，确保 this 指向当前的编辑器实例
         this.bindEvents();
+
+        // 状态管理：添加哈希
+        if (!noPush) {
+            if (typeof window._pushHybridHash === 'function') {
+                window._pushHybridHash(window.currentMode || 'input', 'user-edit');
+            } else if (!window.location.pathname.includes('/user-edit')) {
+                window.history.pushState({ page: 'home', initialized: true }, '', '/Mobile/user-edit');
+            }
+        }
 
         document.getElementById('user-edit-id').value = userId;
         document.getElementById('user-edit-username').value = username || '';
@@ -136,8 +145,14 @@ class UserEditorCore {
         this.modal.classList.add('active');
     }
 
-    close() { 
+    close(noPush = false) { 
         if (!this.modal) return;
+        
+        // 状态管理：移除路径状态
+        if (!noPush && window.location.pathname.includes('user-edit')) {
+            window.history.back();
+        }
+
         this.modal.classList.remove('active');
         setTimeout(() => {
             if (!this.modal.classList.contains('active')) {

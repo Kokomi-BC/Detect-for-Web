@@ -4160,19 +4160,11 @@
             try {
                 if (!window.exportManager) {
                     window.__exportManagerLoadPromise = window.__exportManagerLoadPromise || new Promise((resolve, reject) => {
-                        const existing = document.querySelector('script[data-module="export-manager"]');
-                        if (existing) {
-                            existing.addEventListener('load', () => resolve(window.exportManager), { once: true });
-                            existing.addEventListener('error', () => reject(new Error('导出模块加载失败')), { once: true });
-                            return;
-                        }
-
                         const script = document.createElement('script');
                         script.type = 'module';
                         script.src = '/js/export-manager.js';
-                        script.setAttribute('data-module', 'export-manager');
                         script.onload = () => resolve(window.exportManager);
-                        script.onerror = () => reject(new Error('导出模块加载失败'));
+                        script.onerror = () => reject(new Error('Export manager load failed'));
                         document.head.appendChild(script);
                     });
 

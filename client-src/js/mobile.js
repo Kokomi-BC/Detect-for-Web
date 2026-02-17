@@ -37,15 +37,22 @@ window.api = {
 };
 
 // --- Constants ---
-const UI_CLOSE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+const UI_CLOSE_SVG = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="display: block;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>`;
 
 // --- State ---
 let uploadedImages = [];
-let currentMode = 'input'; // input, result
+window._lastImageThumbEl = null;
+window.currentMode = 'input'; // input, result
 let isInputFullscreen = false;
 let allHistory = [];
 let lastBackPress = 0;
 let pendingConflict = null;
+
+// Image Interaction State
+let imageScale = 1;
+let imageRotation = 0;
+let imageX = 0;
+let imageY = 0;
 
 let mobileStatusTimeout = null;
 let searchStartTime = 0;
@@ -66,24 +73,15 @@ async function getExportManager() {
     if (window.exportManager) return window.exportManager;
     if (!_exportManagerPromise) {
         _exportManagerPromise = new Promise((resolve, reject) => {
-            const existing = document.querySelector('script[data-module="export-manager"]');
-            if (existing) {
-                existing.addEventListener('load', () => resolve(window.exportManager), { once: true });
-                existing.addEventListener('error', () => reject(new Error('导出模块加载失败')), { once: true });
-                return;
-            }
-
             const script = document.createElement('script');
             script.type = 'module';
             script.src = '/js/export-manager.js';
-            script.setAttribute('data-module', 'export-manager');
             script.onload = () => resolve(window.exportManager);
-            script.onerror = () => reject(new Error('导出模块加载失败'));
+            script.onerror = () => reject(new Error('Export manager load failed'));
             document.head.appendChild(script);
-        })
-            .finally(() => {
-                _exportManagerPromise = null;
-            });
+        }).finally(() => {
+            _exportManagerPromise = null;
+        });
     }
     return _exportManagerPromise;
 }
@@ -96,7 +94,7 @@ async function getUserEditor() {
             script.type = 'module';
             script.src = '/js/user-editor.js';
             script.onload = () => resolve(window.userEditor);
-            script.onerror = () => reject(new Error('用户编辑模块加载失败'));
+            script.onerror = () => reject(new Error('User editor load failed'));
             document.head.appendChild(script);
         }).finally(() => {
             _userEditorPromise = null;
@@ -154,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupNavigation();
     renderImages(); // Ensure initial UI state is correct
     initResultHeaderScrollBehavior();
+    initImageTouchHandlers();
     
     // Bind static elements for Mobile.html
     const bind = (id, fn) => {
@@ -162,12 +161,16 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     bind('closeActionSheetBtn', closeActionSheet);
-    bind('actionSheetBackdrop', closeActionSheet);
-    bind('historyDrawerBackdrop', () => toggleHistory(false));
+    bind('actionSheetBackdrop', () => window.history.back());
+    bind('historyDrawerBackdrop', () => window.history.back());
+    bind('closeImageModalBtn', () => window.history.back());
+    
+    const closeBtn = document.getElementById('closeImageModalBtn');
+    if (closeBtn) closeBtn.innerHTML = UI_CLOSE_SVG;
 
     // Bind Exit Buttons
-    if (exitEditBtn) exitEditBtn.addEventListener('click', exitFullscreenInput);
-    if (exitResultBtn) exitResultBtn.addEventListener('click', showInputView);
+    if (exitEditBtn) exitEditBtn.addEventListener('click', () => window.history.back());
+    if (exitResultBtn) exitResultBtn.addEventListener('click', () => window.history.back());
     
     // Bind Clear Button
     if (clearBtn) {
@@ -183,7 +186,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     bind('imageModal', (e) => {
-        e.currentTarget.style.display = 'none';
+        // 点击背景关闭图片预览
+        if (e.target.id === 'imageModal') {
+            window.history.back();
+        }
     });
     bind('keepLinkBtn', () => resolveConflict('link'));
     bind('keepImagesBtn', () => resolveConflict('images'));
@@ -200,47 +206,146 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
-    // Add global click listener for tooltips
-    document.addEventListener('click', (e) => {
-        const tooltip = document.getElementById('customTooltip');
-        // If tooltip is active and click is not on a highlight or inside the tooltip itself
-        if (tooltip && tooltip.classList.contains('active')) {
-            if (!e.target.closest('.fake-highlight') && !e.target.closest('.custom-tooltip')) {
-                hideTooltip();
-            }
-        }
-    });
 });
+
+// 实时状态检测工具 (全局)
+const getOverlayActive = () => {
+    const els = ['imageModal', 'confirmModal', 'conflictModal'];
+    let active = els.some(id => {
+        const el = document.getElementById(id);
+        return el && (el.style.display === 'flex' || el.style.display === 'block' || el.classList.contains('active'));
+    });
+    
+    // Check known overlay classes
+    const classes = ['customTooltip', 'historyDrawer', 'actionSheet', 'exportActionSheet'];
+    active = active || classes.some(id => {
+        const el = document.getElementById(id);
+        return el && el.classList.contains('active');
+    });
+    return active;
+};
 
 function setupNavigation() {
     let exitCount = 0;
     let exitTimer = null;
 
-    // 状态恢复函数：确保始终处于 home 运行态
-    const resetToHomeState = () => {
-        if (!window.history.state || window.history.state.page !== 'home') {
-            window.history.pushState({ page: 'home', initialized: true }, '');
+    window._pushHybridHash = (view, overlay = null) => {
+        let path = '/Mobile';
+        if (view === 'result') {
+            path += overlay ? `/result/${overlay}` : '/result';
+        } else if (view === 'edit') {
+            path += overlay ? `/edit/${overlay}` : '/edit';
+        } else {
+            // Home/Input mode
+            path += overlay ? `/${overlay}` : '';
+        }
+
+        if (window.location.pathname !== path) {
+            window.history.pushState({ page: 'home', initialized: true }, '', path);
         }
     };
 
-    // 初始状态：仅标记当前页，不增加深度以避免 "Session History Item Has Been Marked Skippable" 警告
-    // 该警告是因为在用户交互前进行了多次 pushState
+    window.closeAllOverlays = (noPush = false) => {
+        // 1. 关闭图片预览
+        const imageModal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImage');
+        if (imageModal && imageModal.classList.contains('active')) {
+            imageModal.classList.remove('active');
+            
+            if (modalImg) {
+                // 确保动画过渡属性存在
+                modalImg.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease';
+                
+                if (window._lastImageThumbEl && imageScale === 1 && imageRotation === 0) {
+                    const rect = window._lastImageThumbEl.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    const winW = window.innerWidth;
+                    const winH = window.innerHeight;
+                    const translateX = centerX - winW / 2;
+                    const translateY = centerY - winH / 2;
+                    const scale = rect.width / Math.min(winW, winH) * 0.8;
+                    modalImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+                } else {
+                    // If transformed, just fade out and scale down slightly
+                    modalImg.style.transform = `scale(${imageScale * 0.8}) rotate(${imageRotation}deg)`;
+                }
+                modalImg.style.opacity = '0';
+            }
+
+            // 如果路径包含子状态且不是 popstate 触发的，则后退
+            if (!noPush) {
+                const relPath = window.location.pathname.replace('/Mobile', '').replace(/^\//, '');
+                if (relPath.includes('/') || ['image', 'plus-menu', 'user-menu', 'export-menu', 'menu', 'history', 'user-edit'].includes(relPath)) {
+                    window.history.back();
+                }
+            }
+
+            // 等待动画结束后隐藏
+            setTimeout(() => {
+                if (!imageModal.classList.contains('active')) {
+                    imageModal.style.display = 'none';
+                    if (modalImg) {
+                        modalImg.style.transform = '';
+                        modalImg.style.transition = '';
+                    }
+                }
+            }, 400);
+        }
+
+        // 2. 关闭 Tooltip
+        const tooltip = document.getElementById('customTooltip');
+        if (tooltip && tooltip.classList.contains('active')) {
+            hideTooltip(true);
+        }
+
+        // 3. 关闭用户信息编辑 (User Editor)
+        const userEditModal = document.getElementById('user-edit-modal');
+        if (userEditModal && userEditModal.classList.contains('active')) {
+             userEditModal.classList.remove('active');
+             setTimeout(() => { userEditModal.style.display = 'none'; }, 300);
+             if (!noPush) {
+                 const relPath = window.location.pathname.replace('/Mobile', '').replace(/^\//, '');
+                 if (relPath.includes('user-edit')) {
+                     window.history.back();
+                 }
+             }
+        }
+
+        // 4. 其他常规浮层
+        if (document.getElementById('confirmModal')) closeConfirmModal();
+        if (document.getElementById('conflictModal')) closeConflictModal();
+        
+        // 5. 抽屉式浮层
+        if (typeof toggleHistory === 'function') toggleHistory(false, true);
+        if (typeof closeActionSheet === 'function') closeActionSheet(true);
+    };
+
+    // 状态恢复函数：确保始终处于 home 运行态
+    const resetToHomeState = () => {
+        const currentPath = window.location.pathname;
+        if (!window.history.state || window.history.state.page !== 'home' || !window.history.state.initialized) {
+            window.history.pushState({ page: 'home', initialized: true }, '', currentPath);
+        }
+    };
+
+    // 初始状态
     if (!window.history.state || !window.history.state.page) {
-        window.history.replaceState({ page: 'home' }, '');
+        window.history.replaceState({ page: 'home' }, '', window.location.pathname || '/Mobile');
     }
 
-    // 延迟初始化：仅在用户首次点击或触摸后扩展历史栈深度
+    // 延迟初始化堆栈 (基础防御，防止误触退出)
     const initNavigationStack = () => {
         if (window.history.state && window.history.state.initialized) return;
         
         try {
-            window.history.replaceState({ page: 'base', initialized: true }, '');
-            window.history.pushState({ page: 'stable', initialized: true }, '');
-            window.history.pushState({ page: 'home', initialized: true }, '');
-            console.log('Navigation stack initialized after user interaction');
+            const currentPath = window.location.pathname;
+            window.history.replaceState({ page: 'base', initialized: true }, '', '/Mobile/base');
+            window.history.pushState({ page: 'stable', initialized: true }, '', '/Mobile/stable');
+            window.history.pushState({ page: 'home', initialized: true }, '', currentPath);
+            console.log('Navigation stack initialized');
         } catch (e) {
-            console.warn('Failed to initialized navigation stack:', e);
+            console.warn('Failed to initialize navigation stack:', e);
         }
         
         window.removeEventListener('touchstart', initNavigationStack);
@@ -251,80 +356,91 @@ function setupNavigation() {
     window.addEventListener('mousedown', initNavigationStack, { passive: true });
 
     window.addEventListener('popstate', (event) => {
-        // 如果从未初始化过（即用户未进行任何交互就点击返回），允许浏览器正常跳转回上一页面
         if (!window.history.state || !window.history.state.initialized) return;
 
-        // 关键逻辑：只要被监测到离开 home 态，不论是回到 stable 还是 base，都视为一次返回尝试
+        const fullPath = window.location.pathname;
+        console.log('Popstate detected, current path:', fullPath);
+
+        // 解析复合路径: /Mobile/view/overlay
+        const relPath = fullPath.replace('/Mobile', '').replace(/^\//, '');
+        let targetView = '';
+        let targetOverlay = '';
+        
+        if (relPath.includes('/')) {
+            const parts = relPath.split('/');
+            targetView = parts[0];
+            targetOverlay = parts[1];
+        } else if (['result', 'edit'].includes(relPath)) {
+            targetView = relPath;
+        } else {
+            targetOverlay = relPath; // e.g. 'history', 'menu', or ''
+        }
+
+        // 1. 处理视图切换 (Base View)
+        if (targetView === 'result') {
+            if (window.currentMode !== 'result') showResultView(true);
+        } else if (targetView === 'edit') {
+            if (!isInputFullscreen) enterFullscreenInput(true);
+        } else {
+            // Home/Input 视图
+            if (window.currentMode === 'result') showInputView(true);
+            if (isInputFullscreen) exitFullscreenInput(true);
+        }
+
+        // 2. 处理覆盖层状态 (Overlay)
+        // 先关闭所有，如果 path 里有 overlay 再打开
+        window.closeAllOverlays(true);
+
+        if (targetOverlay === 'history') {
+            if (typeof toggleHistory === 'function') toggleHistory(true, true);
+        } else if (targetOverlay === 'plus-menu') {
+            if (typeof showPlusActionSheet === 'function') showPlusActionSheet(true);
+        } else if (targetOverlay === 'user-menu') {
+            if (typeof showUserActionSheet === 'function') showUserActionSheet(true);
+        } else if (targetOverlay === 'export-menu') {
+            if (typeof showExportActionSheet === 'function') showExportActionSheet(true);
+        } else if (targetOverlay === 'tooltip') {
+            // Tooltip state handling is usually by showing the last active highlight if needed, 
+            // but for simplicity we just ensure it's closed in closeAllOverlays
+        } else if (targetOverlay === 'image') {
+            // 图片预览通常由点击触发，popstate 只能处理关闭逻辑（已由 closeAllOverlays 完成）
+        } else if (targetOverlay === 'user-edit') {
+            if (window.userEditor && typeof window.userEditor.open === 'function') {
+                window.userEditor.open({
+                    userId: currentUser?.id,
+                    username: currentUser?.username,
+                    role: currentUser?.role,
+                    is_online: true,
+                    isSelf: true,
+                    noPush: true // 重要：popstate 触发的不要再 push
+                });
+            }
+        }
+
+        // 3. 关键拦截逻辑：只要由于返回动作进入了非 home 态（如 stable 或 base），就触发退出逻辑
         if (!event.state || event.state.page !== 'home') {
             
-            // 实时状态检测
-            const getOverlayActive = () => {
-                const els = ['imageModal', 'confirmModal', 'conflictModal'];
-                let active = els.some(id => {
-                    const el = document.getElementById(id);
-                    return el && el.style.display === 'flex';
-                });
-                
-                const classes = ['customTooltip', 'historyDrawer', 'actionSheet'];
-                active = active || classes.some(id => {
-                    const el = document.getElementById(id);
-                    return el && el.classList.contains('active');
-                });
-                return active;
-            };
-
-            const getResultActive = () => {
-                const inputView = document.getElementById('inputView');
-                const isInputActive = inputView && inputView.classList.contains('active');
-                return (currentMode === 'result' || !isInputActive || isInputFullscreen);
-            };
-
-            // 1. 浮层计数器逻辑
+            // 实时检测并关闭浮层 (作为防御)
             if (getOverlayActive()) {
-                if (document.getElementById('imageModal')) document.getElementById('imageModal').style.display = 'none';
-                if (typeof hideTooltip === 'function') hideTooltip();
-                if (typeof closeConfirmModal === 'function') closeConfirmModal();
-                if (typeof closeConflictModal === 'function') closeConflictModal();
-                if (typeof toggleHistory === 'function') toggleHistory(false);
-                if (typeof closeActionSheet === 'function') closeActionSheet();
-                
+                closeAllOverlays(true);
                 exitCount = 0; 
                 resetToHomeState();
-                console.log('Intercepted back for Overlay');
                 return;
             }
 
-            // 2. 结果页/全屏态计数器逻辑
-            if (getResultActive()) {
-                if (currentMode === 'result' || !document.getElementById('inputView').classList.contains('active')) {
-                    if (typeof showInputView === 'function') showInputView();
-                } else if (isInputFullscreen) {
-                    if (typeof exitFullscreenInput === 'function') exitFullscreenInput();
-                }
-                
-                exitCount = 0;
-                resetToHomeState();
-                console.log('Intercepted back for Result/Fullscreen');
-                return;
-            }
-
-            // 3. 处于主页面，二次退出计数器逻辑
+            // 二次退出逻辑
             exitCount++;
-            
             if (exitCount === 1) {
                 showToast('再按一次返回键退出程序', 'info');
-                resetToHomeState(); // 立即补回 home 运行态
+                resetToHomeState();
 
                 if (exitTimer) clearTimeout(exitTimer);
                 exitTimer = setTimeout(() => {
                     exitCount = 0;
                 }, 2000);
-                console.log('Intercepted back for Exit Step 1');
             } else if (exitCount >= 2) {
-                // 2秒内连续返回，且无拦截需求：允许退出
                 showToast('正在退出程序...', 'info');
-                console.log('Final Exit allowed');
-                // 不再 pushState，允许浏览器穿透到 base 之前的真实记录（即退出）
+                // 这里通常由系统接管退出
             }
         }
     });
@@ -561,12 +677,17 @@ function initResultHeaderScrollBehavior() {
 }
 
 // --- View Logic ---
-function enterFullscreenInput() {
-    if (currentMode === 'result') return;
+function enterFullscreenInput(noPush = false) {
+    if (window.currentMode === 'result') return;
     
     isInputFullscreen = true;
     inputCard.classList.add('fullscreen');
     
+    // 状态管理
+    if (!noPush) {
+        window._pushHybridHash('edit');
+    }
+
     // Header changes
     historyBtn.style.display = 'none';
     if (userBtn) userBtn.style.display = 'none';
@@ -583,14 +704,21 @@ function enterFullscreenInput() {
     
     // Capture and move bottom button
     const bottomArea = document.querySelector('.bottom-action-area');
-    inputCard.appendChild(bottomArea);
-    bottomArea.style.display = 'block';
-    bottomArea.style.marginTop = 'auto';
+    if (bottomArea) {
+        inputCard.appendChild(bottomArea);
+        bottomArea.style.display = 'block';
+        bottomArea.style.marginTop = 'auto';
+    }
 }
 
-function exitFullscreenInput() {
+function exitFullscreenInput(noPush = false) {
     isInputFullscreen = false;
     inputCard.classList.remove('fullscreen');
+
+    // 如果是通过手动点击（非 Popstate）返回，则尝试回到 Home 态
+    if (!noPush && window.location.pathname.includes('/edit')) {
+        window.history.back();
+    }
     
     // Header restore
     const exitEditBtn = document.getElementById('exitEditBtnInside');
@@ -606,14 +734,25 @@ function exitFullscreenInput() {
     
     // Move button back
     const bottomArea = document.querySelector('.bottom-action-area');
-    document.getElementById('inputView').appendChild(bottomArea);
+    if (bottomArea) {
+        document.getElementById('inputView').appendChild(bottomArea);
+    }
 }
 
-function showResultView() {
-    currentMode = 'result';
+function showResultView(noPush = false, replace = false) {
+    window.currentMode = 'result';
     document.getElementById('inputView').classList.remove('active');
     document.getElementById('resultView').classList.add('active');
     
+    // 状态管理
+    if (!noPush) {
+        if (replace) {
+            window.history.replaceState({ page: 'home', initialized: true }, '', '/Mobile/result');
+        } else {
+            window._pushHybridHash('result');
+        }
+    }
+
     // Header
     const mobileHeader = document.querySelector('.mobile-header');
     if (mobileHeader) {
@@ -630,14 +769,21 @@ function showResultView() {
 
     updateResultHeaderByScroll(true);
     
-    if (isInputFullscreen) exitFullscreenInput();
+    if (isInputFullscreen) exitFullscreenInput(true);
 }
 
-function showInputView() {
-    currentMode = 'input';
+function showInputView(noPush = false) {
+    window.currentMode = 'input';
     document.getElementById('resultView').classList.remove('active');
     document.getElementById('inputView').classList.add('active');
     
+    // 状态管理：显式切回 Home
+    if (!noPush) {
+        if (window.location.pathname !== '/Mobile') {
+            window.history.pushState({ page: 'home', initialized: true }, '', '/Mobile');
+        }
+    }
+
     // Header restore - set to expanded state (progress 1) to avoid shadow at top
     const mobileHeader = document.querySelector('.mobile-header');
     if (mobileHeader) {
@@ -1165,49 +1311,28 @@ function showToast(message, type = 'info') {
 
 // --- Image Upload ---
 function initActionSheet() {
-    const backdrop = document.getElementById('actionSheetBackdrop');
-    const actionSheet = document.getElementById('actionSheet');
-    const exportSheet = document.getElementById('exportActionSheet');
-
-    const closeAllSheets = () => {
-        backdrop.classList.remove('active');
-        if (actionSheet) {
-            actionSheet.classList.remove('active');
-            actionSheet.style.transform = 'translateY(100%)';
-        }
-        if (exportSheet) {
-            exportSheet.classList.remove('active');
-            exportSheet.style.transform = 'translateY(100%)';
-        }
-        hideTooltip();
-    };
-
     plusBtn.addEventListener('click', () => {
-        backdrop.classList.add('active');
-        actionSheet.classList.add('active');
-        actionSheet.style.transform = 'translateY(0)';
+        showPlusActionSheet();
     });
 
     if (exportBtn) {
         exportBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            backdrop.classList.add('active');
-            exportSheet.classList.add('active');
-            exportSheet.style.transform = 'translateY(0)';
+            showExportActionSheet();
         });
     }
 
-    // Bind Export Options
+    // Bind Export Options (these are static in Mobile.html)
     document.querySelectorAll('.export-option').forEach(btn => {
         btn.addEventListener('click', async () => {
             const format = btn.getAttribute('data-format');
-            closeAllSheets();
+            // Close by going back
+            window.history.back();
+            
             try {
                 const exportManager = await getExportManager();
                 if (exportManager) {
                     await exportManager.exportResult(format);
-                } else {
-                    throw new Error('Export manager unavailable');
                 }
             } catch (e) {
                 console.error('Failed to load export manager:', e);
@@ -1216,18 +1341,56 @@ function initActionSheet() {
         });
     });
 
-    document.getElementById('closeActionSheetBtn')?.addEventListener('click', closeAllSheets);
-    document.getElementById('closeExportActionSheetBtn')?.addEventListener('click', closeAllSheets);
-    backdrop.addEventListener('click', closeAllSheets);
+    document.getElementById('closeActionSheetBtn')?.addEventListener('click', () => window.history.back());
+    document.getElementById('closeExportActionSheetBtn')?.addEventListener('click', () => window.history.back());
+}
+
+function showPlusActionSheet(noPush = false) {
+    if (!noPush) {
+        window._pushHybridHash(window.currentMode, 'plus-menu');
+    }
+
+    const actionSheet = document.getElementById('actionSheet');
+    const backdrop = document.getElementById('actionSheetBackdrop');
+    const content = document.getElementById('actionSheetContent');
+
+    content.innerHTML = `
+        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="uploadImageBtn">添加图片</div>
+        <div style="padding:20px; text-align:center; border-bottom:1px solid var(--bg-tertiary); font-size:16px;" id="uploadDocBtn">上传文档</div>
+    `;
 
     document.getElementById('uploadImageBtn').addEventListener('click', triggerImageUpload);
     document.getElementById('uploadDocBtn').addEventListener('click', triggerFileUpload);
+
+    backdrop.classList.add('active');
+    actionSheet.classList.add('active');
+    actionSheet.style.transform = 'translateY(0)';
 }
 
-function closeActionSheet() {
+function showExportActionSheet(noPush = false) {
+    if (!noPush) {
+        window._pushHybridHash(window.currentMode, 'export-menu');
+    }
+
+    const exportSheet = document.getElementById('exportActionSheet');
+    const backdrop = document.getElementById('actionSheetBackdrop');
+
+    backdrop.classList.add('active');
+    exportSheet.classList.add('active');
+    exportSheet.style.transform = 'translateY(0)';
+}
+
+function closeActionSheet(noPush = false) {
     const backdrop = document.getElementById('actionSheetBackdrop');
     const actionSheet = document.getElementById('actionSheet');
     const exportSheet = document.getElementById('exportActionSheet');
+
+    if (!noPush) {
+        const path = window.location.pathname;
+        if (path.includes('plus-menu') || path.includes('user-menu') || path.includes('export-menu')) {
+            window.history.back();
+        }
+    }
 
     backdrop.classList.remove('active');
     if (actionSheet) {
@@ -1238,8 +1401,7 @@ function closeActionSheet() {
         exportSheet.classList.remove('active');
         exportSheet.style.transform = 'translateY(100%)';
     }
-    // Also hide tooltips if any
-    hideTooltip();
+    hideTooltip(noPush);
 }
 
 function triggerImageUpload() {
@@ -1504,8 +1666,8 @@ function renderImages() {
         `;
 
         // Click to preview
-        div.addEventListener('click', () => {
-            previewImage(img.url);
+        div.addEventListener('click', (e) => {
+            previewImage(img.url, e.currentTarget);
         });
 
         // Click removal
@@ -1590,17 +1752,8 @@ function showImageContext(imgUrl, index) {
     sheet.style.transform = 'translateY(0)';
 }
 
-function previewImage(url) {
-    const modal = document.getElementById('imageModal');
-    const img = document.getElementById('modalImage');
-    if (modal && img) {
-        let displayUrl = url;
-        if (displayUrl && !displayUrl.startsWith('data:') && !displayUrl.startsWith('blob:') && displayUrl.startsWith('http')) {
-            displayUrl = `/api/proxy-image?url=${encodeURIComponent(displayUrl)}`;
-        }
-        img.src = displayUrl;
-        modal.style.display = 'flex';
-    }
+function previewImage(url, sourceEl) {
+    openImageModal(url, sourceEl);
 }
 
 function formatFileSize(bytes) {
@@ -1719,16 +1872,22 @@ function updateThemeIcon() {
     }
 }
 
-function toggleHistory(show) {
+function toggleHistory(show, noPush = false) {
     const backdrop = document.getElementById('historyDrawerBackdrop');
     const drawer = document.getElementById('historyDrawer');
     if (show) {
+        if (!noPush) {
+            window._pushHybridHash(window.currentMode, 'history');
+        }
         backdrop.style.display = 'block';
         setTimeout(() => {
             backdrop.classList.add('active');
             drawer.classList.add('active');
         }, 10);
     } else {
+        if (!noPush && (window.location.pathname.includes('history'))) {
+            window.history.back();
+        }
         backdrop.classList.remove('active');
         drawer.classList.remove('active');
         setTimeout(() => {
@@ -1929,9 +2088,9 @@ async function showResultFromHistory(index) {
     }
 
     showResult(item.result, item.content, item.images || [], item.url);
-    showResultView();
-    closeActionSheet();
-    toggleHistory(false);
+    showResultView(false, true); // Use replace to allow one-back to home
+    closeActionSheet(true);
+    toggleHistory(false, true);
 }
 
 async function deleteHistoryItem(index) {
@@ -2150,7 +2309,7 @@ function showResult(result, originalText, originalImages, sourceUrl) {
                 }
 
                 item.innerHTML = `<img src="${displaySrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.opacity='0.2'">`;
-                item.onclick = () => openImageModal(displaySrc);
+                item.onclick = (e) => openImageModal(displaySrc, e.currentTarget);
                 container.appendChild(item);
             });
             parsedImages.appendChild(container);
@@ -2158,11 +2317,261 @@ function showResult(result, originalText, originalImages, sourceUrl) {
     }
 }
 
-function openImageModal(src) {
+function initImageTouchHandlers() {
     const modal = document.getElementById('imageModal');
     const modalImg = document.getElementById('modalImage');
-    modalImg.src = src;
+    if (!modal || !modalImg) return;
+
+    let initialDist = 0;
+    let initialAngle = 0;
+    let isPinching = false;
+    let isDragging = false;
+    let baseScale = 1;
+    let baseRotation = 0;
+    let lastTouchX = 0;
+    let lastTouchY = 0;
+
+    const getImageRenderMetrics = () => {
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const naturalW = modalImg.naturalWidth || vw;
+        const naturalH = modalImg.naturalHeight || vh;
+
+        const fitScale = Math.min(1, (vw * 0.95) / naturalW, (vh * 0.85) / naturalH);
+        const baseW = naturalW * fitScale;
+        const baseH = naturalH * fitScale;
+        const transformedW = baseW * imageScale;
+        const transformedH = baseH * imageScale;
+
+        return { vw, vh, transformedW, transformedH };
+    };
+
+    const clampImagePosition = (animate = false) => {
+        const { vw, transformedW } = getImageRenderMetrics();
+        const maxX = Math.max(0, (transformedW - vw) / 2);
+
+        let changed = false;
+        const nextX = Math.min(maxX, Math.max(-maxX, imageX));
+        if (nextX !== imageX) {
+            imageX = nextX;
+            changed = true;
+        }
+
+        if (maxX === 0 && imageX !== 0) {
+            imageX = 0;
+            changed = true;
+        }
+
+        if (changed) {
+            if (animate) {
+                modalImg.style.transition = 'transform 0.35s cubic-bezier(0.2, 0, 0.2, 1)';
+            }
+            updateImageTransform();
+            if (animate) {
+                setTimeout(() => {
+                    modalImg.style.transition = 'transform 0.1s ease-out';
+                }, 350);
+            }
+        }
+
+        return { maxX };
+    };
+
+    const getDist = (t1, t2) => Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    const getAngle = (t1, t2) => Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180 / Math.PI;
+
+    modal.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+            isPinching = true;
+            isDragging = false; // Disable dragging when pinching
+            initialDist = getDist(e.touches[0], e.touches[1]);
+            initialAngle = getAngle(e.touches[0], e.touches[1]);
+            baseScale = imageScale;
+            baseRotation = imageRotation;
+            e.preventDefault();
+        } else if (e.touches.length === 1) {
+            isDragging = true;
+            isPinching = false;
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
+        }
+    }, { passive: false });
+
+    modal.addEventListener('touchmove', (e) => {
+        if (isPinching && e.touches.length === 2) {
+            e.preventDefault();
+            const dist = getDist(e.touches[0], e.touches[1]);
+            const angle = getAngle(e.touches[0], e.touches[1]);
+            
+            // Increased sensitivity: use power function for scale and multiplier for rotation
+            const sensitivity = 1.25;
+            const distRatio = dist / initialDist;
+            imageScale = baseScale * Math.pow(distRatio, sensitivity);
+            
+            const angleDiff = angle - initialAngle;
+            imageRotation = baseRotation + (angleDiff * sensitivity);
+            
+            // Limit scale
+            imageScale = Math.min(Math.max(0.2, imageScale), 12);
+            
+            updateImageTransform();
+            clampImagePosition(false);
+        } else if (isDragging && e.touches.length === 1) {
+            const touch = e.touches[0];
+            const { vw, transformedW } = getImageRenderMetrics();
+            const maxX = Math.max(0, (transformedW - vw) / 2);
+
+            // Damping / Elasticity Logic
+            let moveBoost = imageScale > 1 ? Math.min(1 + (imageScale - 1) * 0.35, 2.1) : 1;
+            
+            // If already out of bounds X, apply resistance
+            if (Math.abs(imageX) > maxX) {
+                moveBoost *= 0.3;
+            }
+
+            const deltaX = (touch.clientX - lastTouchX) * moveBoost;
+            const deltaY = touch.clientY - lastTouchY;
+            
+            imageX += deltaX;
+            imageY += deltaY;
+            
+            lastTouchX = touch.clientX;
+            lastTouchY = touch.clientY;
+            
+            updateImageTransform();
+            // Removed instant clamp to allow elasticity
+            // clampImagePosition(false); 
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    modal.addEventListener('touchend', (e) => {
+        const winH = window.innerHeight;
+        const winW = window.innerWidth;
+
+        if (e.touches.length < 2) {
+            if (isPinching) {
+                // 2. 当图片过小时，自动关闭图片
+                if (imageScale < 0.6) {
+                    window.history.back();
+                    isPinching = false;
+                    return;
+                }
+
+                // 1. 增加图片矫正的灵敏度: 现在总是矫正到最近的 90 度
+                const snappedRotation = Math.round(imageRotation / 90) * 90;
+                imageRotation = snappedRotation;
+                
+                modalImg.style.transition = 'transform 0.4s cubic-bezier(0.2, 0, 0.2, 1)';
+                updateImageTransform();
+                setTimeout(() => {
+                    modalImg.style.transition = 'transform 0.1s ease-out';
+                }, 400);
+            }
+            isPinching = false;
+        }
+
+        if (e.touches.length === 0) {
+            if (isDragging) {
+                const { vw, vh, transformedH } = getImageRenderMetrics();
+                const maxY = Math.max(0, (transformedH - vh) / 2);
+                const exceededYRange = Math.abs(imageY) > maxY;
+                const heavyMoveDown = imageY > winH * 0.18;
+                const heavyMoveOut = Math.abs(imageX) > winW * 0.4 || Math.abs(imageY) > winH * 0.4;
+                const needRecover = exceededYRange || heavyMoveOut;
+
+                // 放大态仍执行 X 轴空隙自动回正
+                clampImagePosition(true);
+
+                if (heavyMoveDown && imageScale <= 2.2) {
+                    // 下滑退出
+                    window.history.back();
+                } else if (needRecover) {
+                    // 大范围移出时恢复位置（保持与缩放态兼容）
+                    if (maxY === 0) {
+                        imageY = 0;
+                    } else {
+                        imageY = Math.min(maxY, Math.max(-maxY, imageY));
+                    }
+                    modalImg.style.transition = 'transform 0.4s cubic-bezier(0.2, 0, 0.2, 1)';
+                    updateImageTransform();
+                    setTimeout(() => {
+                        modalImg.style.transition = 'transform 0.1s ease-out';
+                    }, 400);
+                }
+                // 小范围移动保持当前位置
+            }
+            isDragging = false;
+        }
+    });
+
+    // Handle mouse wheel for desktop preview testing if needed
+    modal.addEventListener('wheel', (e) => {
+        if (modal.classList.contains('active')) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            imageScale *= delta;
+            imageScale = Math.min(Math.max(0.1, imageScale), 10);
+            updateImageTransform();
+        }
+    }, { passive: false });
+}
+
+function updateImageTransform() {
+    const modalImg = document.getElementById('modalImage');
+    if (!modalImg) return;
+    modalImg.style.transform = `translate(${imageX}px, ${imageY}px) scale(${imageScale}) rotate(${imageRotation}deg)`;
+}
+
+function openImageModal(src, sourceEl) {
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImage');
+    if (!modal || !modalImg) return;
+
+    window._lastImageThumbEl = sourceEl;
+
+    window._pushHybridHash(window.currentMode, 'image');
+
+    // Reset interaction state
+    imageScale = 1;
+    imageRotation = 0;
+    imageX = 0;
+    imageY = 0;
+
+    let displayUrl = src;
+    if (displayUrl && !displayUrl.startsWith('data:') && !displayUrl.startsWith('blob:') && displayUrl.startsWith('http')) {
+        displayUrl = `/api/proxy-image?url=${encodeURIComponent(displayUrl)}`;
+    }
+
+    modalImg.src = displayUrl;
     modal.style.display = 'flex';
+    
+    if (sourceEl) {
+        const rect = sourceEl.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const winW = window.innerWidth;
+        const winH = window.innerHeight;
+        
+        const translateX = centerX - winW / 2;
+        const translateY = centerY - winH / 2;
+        const scale = rect.width / Math.min(winW, winH) * 0.8;
+
+        modalImg.style.transition = 'none';
+        modalImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        modalImg.style.opacity = '0';
+        
+        requestAnimationFrame(() => {
+            modal.classList.add('active');
+            modalImg.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease';
+            modalImg.style.transform = 'translate(0, 0) scale(1)';
+            modalImg.style.opacity = '1';
+        });
+    } else {
+        modal.classList.add('active');
+        modalImg.style.opacity = '1';
+        modalImg.style.transform = 'scale(1)';
+    }
 }
 
 // --- Tooltip ---
@@ -2171,6 +2580,8 @@ function showReasonTooltip(element) {
     const reasonAttr = element.getAttribute('data-reason');
     if (!reasonAttr) return;
     
+    window._pushHybridHash(window.currentMode, 'tooltip');
+
     let riskType = '内容存疑';
     let description = reasonAttr;
     let originalText = element.textContent;
@@ -2186,8 +2597,8 @@ function showReasonTooltip(element) {
     tooltip.innerHTML = `
         <div class="tooltip-header" style="font-weight:600; margin-bottom:10px; padding:18px 20px 14px; border-bottom:1px solid var(--border-color); font-size:18px; display: flex; justify-content: space-between; align-items: center;">
             <span>风险详情</span>
-            <span class="close-circle-btn" style="width: 30px; height: 30px;" id="closeTooltipBtn">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            <span class="close-circle-btn" style="width: 32px; height: 32px;" id="closeTooltipBtn">
+                ${UI_CLOSE_SVG}
             </span>
         </div>
         <div style="padding: 20px 24px 40px;">
@@ -2209,16 +2620,32 @@ function showReasonTooltip(element) {
     const backdrop = document.getElementById('actionSheetBackdrop');
     backdrop.classList.add('active');
     
-    // For tooltips, clicking backdrop should also hide it
-    // We can manually override the backdrop behavior or just let it close everything
+    // Ensure the close button is bound
+    const cbtn = document.getElementById('closeTooltipBtn');
+    if (cbtn) {
+        cbtn.onclick = (e) => {
+            e.stopPropagation();
+            window.history.back();
+        };
+    }
     
-    document.getElementById('closeTooltipBtn').addEventListener('click', hideTooltip);
     tooltip.classList.add('active');
 }
 
-function hideTooltip() {
-    document.getElementById('customTooltip').classList.remove('active');
-    document.getElementById('actionSheetBackdrop').classList.remove('active');
+function hideTooltip(noPush = false) {
+    const tooltip = document.getElementById('customTooltip');
+    const backdrop = document.getElementById('actionSheetBackdrop');
+    if (tooltip) tooltip.classList.remove('active');
+    
+    // If we're closing via back button (noPush=true), backdrop will be handled by closeAllOverlays
+    // If we're closing via direct call (eg clicking a button inside without history), we handle backdrop
+    if (backdrop && !getOverlayActive()) {
+        backdrop.classList.remove('active');
+    }
+
+    if (!noPush && window.location.pathname.includes('tooltip')) {
+        window.history.back();
+    }
 }
 
 // --- Conflict Modal Logic ---
@@ -2412,9 +2839,13 @@ function updateAvatar(user) {
     };
 }
 
-function showUserActionSheet() {
+function showUserActionSheet(noPush = false) {
     const user = currentUser;
     if (!user) return;
+
+    if (!noPush) {
+        window._pushHybridHash(window.currentMode, 'user-menu');
+    }
 
     const actionSheet = document.getElementById('actionSheet');
     const backdrop = document.getElementById('actionSheetBackdrop');
@@ -2443,6 +2874,9 @@ function showUserActionSheet() {
 }
 
 async function openMobileUserEditor() {
+    // 视觉上先关闭菜单，不触发 back() 以免干扰 editor 的 pushState
+    closeActionSheet(true);
+
     try {
         const userEditor = await getUserEditor();
         if (userEditor && currentUser) {
@@ -2465,7 +2899,6 @@ async function openMobileUserEditor() {
     } catch (error) {
         console.error('Failed to open user editor:', error);
     }
-    closeActionSheet();
 }
 
 async function handleLogout() {

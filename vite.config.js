@@ -5,7 +5,7 @@ import { ViteMinifyPlugin } from 'vite-plugin-minify';
 import obfuscator from 'vite-plugin-javascript-obfuscator';
 
 export default defineConfig({
-  base: './',
+  base: '/',
   esbuild: {
     drop: ['console', 'debugger'],
   },
@@ -65,6 +65,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'client-src'),
+      '/js/export-manager.js': resolve(__dirname, 'client-src/js/export-manager.js'),
+      '/js/user-editor.js': resolve(__dirname, 'client-src/js/user-editor.js'),
     },
   },
 });

@@ -3058,7 +3058,7 @@
         /* 导出视图专用样式 - 仅在导出为图片/PDF时通过 .export-view 类激活 */
         body.export-view { 
             background: var(--bg-primary); 
-            padding: 40px; 
+            padding: 20px; 
             height: auto; 
             overflow: visible;
             animation: none !important;
