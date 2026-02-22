@@ -343,7 +343,7 @@ class ExportManager {
         const cardStyle = `
             background: ${colors.card};
             border-radius: 16px;
-            padding: 24px;
+            padding: 16px;
             margin-bottom: 20px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
             border: 1px solid ${colors.border};
@@ -362,7 +362,7 @@ class ExportManager {
         const globeIcon = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.09.66-.14 1.32-.14 2s.05 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08c.96-1.65 2.49-2.93 4.33-3.56-.6 1.11-1.06 2.31-1.38 3.56zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.14-1.32-.14-2s.05-1.34.14-2h4.68c.09.66.14 1.32.14 2s-.05 1.34-.14 2zm.84 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.09-.66.14-1.32.14-2s-.05-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/></svg>`;
 
         const scoreCardHtml = `
-            <div style="${cardStyle} display: flex; align-items: flex-start; gap: 20px;">
+            <div style="${cardStyle} display: flex; align-items: flex-start; gap: 20px; margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none;">
                 <!-- Circle -->
                 <div style="position: relative; width: 80px; height: 80px; flex-shrink: 0;">
                     <svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
@@ -422,7 +422,7 @@ class ExportManager {
         });
 
         const analysisCardHtml = `
-            <div style="${cardStyle}">
+            <div style="${cardStyle} border-top-left-radius: 0; border-top-right-radius: 0; border-top: none;">
                 <div style="display: flex; align-items: center; margin-bottom: 10px;">
                     <div style="width: 4px; height: 16px; background: ${colors.primary}; margin-right: 8px; border-radius: 2px;"></div>
                     <div style="font-size: 16px; font-weight: 600; color: ${colors.text};">
@@ -500,13 +500,13 @@ class ExportManager {
         `;
 
         const bodyContent = `
-            <div class="export-container" style="max-width: 800px; width: calc(100% - 40px); margin: 0 auto; padding: 20px 0;">
+            <div class="export-container" style="max-width: 800px; width: calc(100% - 24px); margin: 0 auto; padding: 20px 0;">
                 ${helperStyle}
                 ${headerHtml}
                 ${scoreCardHtml}
                 ${analysisCardHtml}
                 ${contentCardHtml}
-                <div style="text-align: center; color: ${colors.textSec}; font-size: 12px; margin-top: 40px; padding-bottom: 20px; font-weight: 500; opacity: 0.7;">
+                <div style="text-align: center; color: ${colors.textSec}; font-size: 12px; margin-top: 40px; padding-bottom: 24px; font-weight: 500; opacity: 0.7;">
                     Powered by Detect AI
                 </div>
             </div>

@@ -2340,8 +2340,17 @@ function initImageTouchHandlers() {
         const fitScale = Math.min(1, (vw * 0.95) / naturalW, (vh * 0.85) / naturalH);
         const baseW = naturalW * fitScale;
         const baseH = naturalH * fitScale;
-        const transformedW = baseW * imageScale;
-        const transformedH = baseH * imageScale;
+        
+        let transformedW = baseW * imageScale;
+        let transformedH = baseH * imageScale;
+
+        // 核心修复：如果旋转了 90 或 270 度，交换宽高供边界计算使用
+        const isRotated = Math.abs(Math.round(imageRotation / 90) % 2) === 1;
+        if (isRotated) {
+            const temp = transformedW;
+            transformedW = transformedH;
+            transformedH = temp;
+        }
 
         return { vw, vh, transformedW, transformedH };
     };
@@ -2418,19 +2427,19 @@ function initImageTouchHandlers() {
             clampImagePosition(false);
         } else if (isDragging && e.touches.length === 1) {
             const touch = e.touches[0];
-            const { vw, transformedW } = getImageRenderMetrics();
+            const { vw, vh, transformedW, transformedH } = getImageRenderMetrics();
             const maxX = Math.max(0, (transformedW - vw) / 2);
+            const maxY = Math.max(0, (transformedH - vh) / 2);
 
-            // Damping / Elasticity Logic
-            let moveBoost = imageScale > 1 ? Math.min(1 + (imageScale - 1) * 0.35, 2.1) : 1;
+            // 跟手系数：默认 1:1，越过边界时设为 0.3 阻尼
+            let resistX = 1;
+            let resistY = 1;
             
-            // If already out of bounds X, apply resistance
-            if (Math.abs(imageX) > maxX) {
-                moveBoost *= 0.3;
-            }
+            if (Math.abs(imageX) > maxX) resistX = 0.3;
+            if (Math.abs(imageY) > maxY) resistY = 0.3;
 
-            const deltaX = (touch.clientX - lastTouchX) * moveBoost;
-            const deltaY = touch.clientY - lastTouchY;
+            const deltaX = (touch.clientX - lastTouchX) * resistX;
+            const deltaY = (touch.clientY - lastTouchY) * resistY;
             
             imageX += deltaX;
             imageY += deltaY;
@@ -2439,8 +2448,6 @@ function initImageTouchHandlers() {
             lastTouchY = touch.clientY;
             
             updateImageTransform();
-            // Removed instant clamp to allow elasticity
-            // clampImagePosition(false); 
             e.preventDefault();
         }
     }, { passive: false });
@@ -2451,34 +2458,47 @@ function initImageTouchHandlers() {
 
         if (e.touches.length < 2) {
             if (isPinching) {
-                // 2. 当图片过小时，自动关闭图片
-                if (imageScale < 0.6) {
+                // 1. 当图片过小时（手动缩放极小），自动关闭图片
+                if (imageScale < 0.45) {
                     window.history.back();
                     isPinching = false;
                     return;
                 }
 
-                // 1. 增加图片矫正的灵敏度: 现在总是矫正到最近的 90 度
+                // 2. 弹性回正：如果图片小于原始 fit 尺寸（scale < 1），恢复到 1
+                let needElasticSnap = false;
+                if (imageScale < 1) {
+                    imageScale = 1;
+                    imageX = 0;
+                    imageY = 0;
+                    needElasticSnap = true;
+                }
+
+                // 3. 增加图片矫正的灵敏度: 现在总是矫正到最近的 90 度
                 const snappedRotation = Math.round(imageRotation / 90) * 90;
-                imageRotation = snappedRotation;
-                
-                modalImg.style.transition = 'transform 0.4s cubic-bezier(0.2, 0, 0.2, 1)';
-                updateImageTransform();
-                setTimeout(() => {
-                    modalImg.style.transition = 'transform 0.1s ease-out';
-                }, 400);
+                if (snappedRotation !== imageRotation || needElasticSnap) {
+                    imageRotation = snappedRotation;
+                    modalImg.style.transition = 'transform 0.4s cubic-bezier(0.2, 0, 0.2, 1)';
+                    updateImageTransform();
+                    setTimeout(() => {
+                        modalImg.style.transition = 'transform 0.1s ease-out';
+                    }, 400);
+                }
             }
             isPinching = false;
         }
 
         if (e.touches.length === 0) {
             if (isDragging) {
-                const { vw, vh, transformedH } = getImageRenderMetrics();
+                const { vw, vh, transformedH, transformedW } = getImageRenderMetrics();
                 const maxY = Math.max(0, (transformedH - vh) / 2);
-                const exceededYRange = Math.abs(imageY) > maxY;
+                const maxX = Math.max(0, (transformedW - vw) / 2);
+
                 const heavyMoveDown = imageY > winH * 0.18;
                 const heavyMoveOut = Math.abs(imageX) > winW * 0.4 || Math.abs(imageY) > winH * 0.4;
-                const needRecover = exceededYRange || heavyMoveOut;
+                
+                // 检查是否需要回弹
+                let needRecover = heavyMoveOut || Math.abs(imageY) > maxY || Math.abs(imageX) > maxX;
 
                 // 放大态仍执行 X 轴空隙自动回正
                 clampImagePosition(true);
@@ -2487,19 +2507,19 @@ function initImageTouchHandlers() {
                     // 下滑退出
                     window.history.back();
                 } else if (needRecover) {
-                    // 大范围移出时恢复位置（保持与缩放态兼容）
-                    if (maxY === 0) {
-                        imageY = 0;
-                    } else {
-                        imageY = Math.min(maxY, Math.max(-maxY, imageY));
-                    }
+                    // 恢复位置
+                    if (maxY === 0) imageY = 0;
+                    else imageY = Math.min(maxY, Math.max(-maxY, imageY));
+                    
+                    if (maxX === 0) imageX = 0;
+                    else imageX = Math.min(maxX, Math.max(-maxX, imageX));
+
                     modalImg.style.transition = 'transform 0.4s cubic-bezier(0.2, 0, 0.2, 1)';
                     updateImageTransform();
                     setTimeout(() => {
                         modalImg.style.transition = 'transform 0.1s ease-out';
                     }, 400);
                 }
-                // 小范围移动保持当前位置
             }
             isDragging = false;
         }

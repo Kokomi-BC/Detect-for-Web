@@ -260,6 +260,7 @@ body {
     flex-direction: column;
     transition: opacity 0.3s ease, transform 0.3s ease, background-color var(--transition-fast), color var(--transition-fast);
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 16px;
     padding-top: 68px; /* Support expanded header */
     box-sizing: border-box;
@@ -724,6 +725,11 @@ textarea.mobile-input {
 /* View 2: Result */
 #resultView {
     background: var(--bg-main);
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+#resultView::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
 }
 .result-container {
     padding-bottom: 40px;
