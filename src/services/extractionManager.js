@@ -22,6 +22,58 @@ class ExtractionManager {
     this.anomaliesDir = path.join(__dirname, '../../data/anomalies');
     this.anomaliesFile = path.join(__dirname, '../../data/anomalies.json');
     this.anomalies = this.loadAnomalies();
+
+    // Concurrency Control
+    this.maxGlobalConcurrency = 6;
+    this.maxUserConcurrency = 1;
+    this.activeGlobal = 0;
+    this.activeUserMap = new Map(); // userId -> count
+    this.pendingQueue = []; // Array of { userId, resolve, reject }
+  }
+
+  async _acquireSlot(userId) {
+    const userCount = this.activeUserMap.get(userId) || 0;
+
+    if (this.activeGlobal < this.maxGlobalConcurrency && userCount < this.maxUserConcurrency) {
+      this.activeGlobal++;
+      this.activeUserMap.set(userId, userCount + 1);
+      return true;
+    }
+
+    // Wait in queue
+    return new Promise((resolve, reject) => {
+      this.pendingQueue.push({ userId, resolve, reject });
+    });
+  }
+
+  _releaseSlot(userId) {
+    this.activeGlobal--;
+    if (this.activeGlobal < 0) this.activeGlobal = 0;
+
+    const userCount = this.activeUserMap.get(userId) || 0;
+    if (userCount > 0) {
+      this.activeUserMap.set(userId, userCount - 1);
+    }
+    
+    // Process queue only if we have global capacity
+    if (this.pendingQueue.length > 0 && this.activeGlobal < this.maxGlobalConcurrency) {
+      // Find first eligible task
+      const idx = this.pendingQueue.findIndex(task => {
+        // If the pending task is for the same user who just released, check if they are under limit
+        // (Wait, we just decremented their count, so they might be eligible again)
+        const uCount = this.activeUserMap.get(task.userId) || 0;
+        return uCount < this.maxUserConcurrency;
+      });
+
+      if (idx !== -1) {
+        const task = this.pendingQueue.splice(idx, 1)[0];
+        
+        // Activate task
+        this.activeGlobal++;
+        this.activeUserMap.set(task.userId, (this.activeUserMap.get(task.userId) || 0) + 1);
+        task.resolve(true); // Resolve with true
+      }
+    }
   }
 
   loadAnomalies() {
@@ -46,7 +98,25 @@ class ExtractionManager {
     }
   }
 
-  async extractContent(url, onStatusChange = null) {
+  async extractContent(url, userIdOrCallback = null, callback = null) {
+    let userId = 'unknown';
+    let onStatusChange = null;
+
+    if (typeof userIdOrCallback === 'function') {
+      onStatusChange = userIdOrCallback;
+    } else if (typeof userIdOrCallback === 'string' || typeof userIdOrCallback === 'number') {
+      userId = String(userIdOrCallback);
+      if (typeof callback === 'function') {
+        onStatusChange = callback;
+      }
+    }
+
+    try {
+      await this._acquireSlot(userId);
+    } catch (e) {
+      throw new Error('系统繁忙，请稍后重试');
+    }
+
     this.isExtractionCancelled = false;
     try {
       if (this.urlProcessor.isImageUrl(url)) {
@@ -96,7 +166,7 @@ class ExtractionManager {
                   ]
               }
           },
-          // 提升并发至 2 线程
+          // 提升并发至 3 线程
           maxConcurrency: 3,
           minConcurrency: 1,
           requestHandlerTimeoutSecs: 60,
@@ -331,6 +401,8 @@ class ExtractionManager {
     } catch (error) {
       console.error('内容提取具体错误:', error);
       throw error;
+    } finally {
+      this._releaseSlot(userId);
     }
   }
 

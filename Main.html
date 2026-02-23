@@ -709,7 +709,7 @@
                         </div>
 
                         <!-- 手机端风格结果卡片 -->
-                        <div class="result-card">
+                        <div class="result-card result-score">
                             <div class="summary-header">
                                 <div class="score-circle-container" id="scoreCircleContainer">
                                     <svg class="score-circle-svg" viewBox="0 0 100 100">
@@ -726,11 +726,10 @@
                                     <div class="summary-desc-text" id="scoreDescription">AI正在分析中...</div>
                                 </div>
                             </div>
-                            
-                            <div class="result-analysis" id="analysisContainer">
-                                <div class="analysis-title">详细分析</div>
-                                <!-- 动态注入分析点 -->
-                            </div>
+                        </div>
+                        <div class="result-card result-analysis" id="analysisContainer">
+                            <div class="analysis-title">详细分析</div>
+                            <!-- 动态注入分析点 -->
                         </div>
 
                         <!-- 解析内容 (原本就有的，现在加上手机端的 result-card 样式) -->
@@ -890,6 +889,7 @@
     <div class="toast" id="toast"></div>
 
     <!-- 自定义确认弹窗 -->
+    <div class="custom-modal" id="customModal">
         <div class="custom-modal-content">
             <div class="custom-modal-title">清空内容</div>
             <div class="custom-modal-message">确定要清空页面吗？</div>
@@ -3716,6 +3716,7 @@
             resultItem.classList.remove('active');
             resultItem.style.display = 'none'; // Ensure hidden during loading
             errorState.classList.remove('active');
+            loadingState.style.display = 'flex'; // Ensure visible overrides inline style
             loadingState.classList.add('active');
 
             // 显示取消按钮
@@ -4498,6 +4499,12 @@
             const parsedText = document.getElementById('parsedText');
             const parsedImages = document.getElementById('parsedImages');
 
+            // Ensure Score and Analysis are visible (in case they were hidden by preview)
+            const scoreSection = resultItem.querySelector('.result-score');
+            const analysisSection = resultItem.querySelector('.result-analysis');
+            if (scoreSection) scoreSection.style.display = 'flex';
+            if (analysisSection) analysisSection.style.display = 'block';
+
             // 获取输入内容
             const textContent = document.getElementById('textInput').innerText.trim();
 
@@ -4621,6 +4628,12 @@
             const parsedTitle = document.getElementById('parsedTitle');
             const parsedText = document.getElementById('parsedText');
             const parsedImages = document.getElementById('parsedImages');
+
+            // Ensure Score and Analysis are visible (in case they were hidden by preview)
+            const scoreSection = resultItem.querySelector('.result-score');
+            const analysisSection = resultItem.querySelector('.result-analysis');
+            if (scoreSection) scoreSection.style.display = 'flex';
+            if (analysisSection) analysisSection.style.display = 'block';
 
             loadingState.classList.remove('active');
 
@@ -4821,7 +4834,10 @@
             resultItem.classList.remove('active');
             resultItem.style.display = 'none'; // Ensure hidden during loading
             errorState.classList.remove('active');
-            loadingState.classList.add('active');
+            if (loadingState) {
+                loadingState.style.display = 'flex'; // Ensure visible overrides inline style
+                loadingState.classList.add('active');
+            }
             detectBtn.classList.add('loading');
             detectBtn.innerHTML = '分析中...';
 

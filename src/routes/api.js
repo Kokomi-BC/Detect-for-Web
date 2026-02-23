@@ -123,7 +123,7 @@ module.exports = function(services, state) {
                             client.write(`event: status-update\ndata: ${JSON.stringify({ status, data })}\n\n`);
                         }
                     };
-                    result = await extractionManager.extractContent(url, onStatusChange);
+                    result = await extractionManager.extractContent(url, req.userId, onStatusChange);
                     break;
                 }
                 case 'cancel-extraction': {
