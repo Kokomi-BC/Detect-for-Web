@@ -83,15 +83,16 @@ body {
     top: calc(8px + 8px * var(--p));
     width: 36px;
     height: 36px;
-    background: var(--bg-tertiary);
-    border: 1.5px solid var(--border-color);
+    background: var(--bg-menu);
+    border: none;
+    box-shadow: var(--shadow-sm);
     color: var(--text-primary);
     cursor: pointer;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s, transform 0.2s, top 250ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition: background 0.2s, transform 0.2s, top 250ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s;
     z-index: 10;
     padding: 0;
 }
@@ -124,7 +125,8 @@ body {
     color: var(--text-primary);
     background: var(--bg-tertiary);
     border-radius: 50%;
-    border: 1.5px solid var(--border-color);
+    border: none;
+    box-shadow: var(--shadow-sm);
     z-index: 30;
     transition: all var(--transition-fast);
     padding: 0;
@@ -144,8 +146,9 @@ body {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: var(--bg-tertiary);
-    border: 1.5px solid var(--border-color);
+    background: var(--bg-menu);
+    border: none;
+    box-shadow: var(--shadow-sm);
     align-items: center;
     justify-content: center;
     color: var(--text-primary);
@@ -169,7 +172,8 @@ body {
     height: 36px;
     border-radius: 50%;
     background: var(--bg-tertiary);
-    border: 1.5px solid var(--border-color);
+    border: none;
+    box-shadow: var(--shadow-sm);
     align-items: center;
     justify-content: center;
     color: var(--text-primary);
@@ -236,7 +240,8 @@ body {
 .large-detect-btn.is-stop {
     background-color: var(--bg-secondary);
     color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    border: none;
+    box-shadow: var(--shadow-sm);
 }
 .large-detect-btn.is-stop:active {
     background-color: var(--bg-tertiary);
@@ -312,7 +317,7 @@ body {
     top: 20px;
     left: 50%;
     transform: translateX(-50%) translateY(-150%);
-    z-index: 9999;
+    z-index: 1002;
     background: var(--bg-menu); /* Use theme variable for dark mode support */
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
@@ -371,6 +376,22 @@ body {
 
 @keyframes rotate { from {transform: rotate(0deg);} to {transform: rotate(360deg);} }
 
+/* Detection State Locks */
+body.is-detecting .mobile-input,
+body.is-detecting .remove-img-btn,
+body.is-detecting .remove-doc-btn,
+body.is-detecting .url-card-remove,
+body.is-detecting #plusBtn,
+body.is-detecting #clearBtn {
+    pointer-events: none !important;
+    opacity: 0.7;
+}
+
+body.is-detecting .input-area-wrapper {
+    background: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+}
+
 
 
 .input-card.fullscreen {
@@ -408,7 +429,7 @@ body {
     display: none !important;
 }
 
-/* Fix Exit Button to Viewport */
+
 .exit-edit-btn {
     position: fixed !important;
     top: 7px !important;
@@ -419,14 +440,14 @@ body {
     width: 36px; /* Consistency with other icons */
     height: 36px;
     color: var(--text-primary);
-    background: var(--bg-tertiary) !important;
+    background: var(--bg-menu) !important;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    border: 1.5px solid var(--border-color) !important;
+    border: none !important;
     border-radius: 50%; /* Circle for icon-only button */
     padding: 0;
     z-index: 2005; 
-    box-shadow: none;
+    box-shadow: var(--shadow-sm) !important;
     transition: all var(--transition-fast); 
     transform: translateZ(0); 
 }
@@ -540,10 +561,12 @@ textarea.mobile-input {
 /* Reusable Close Circle Button (Tooltip style) */
 .close-circle-btn {
     cursor: pointer;
-    color: var(--text-muted) !important; 
+    color: var(--text-primary) !important; 
     width: 20px;
     height: 20px;
-    background: var(--bg-glass) !important; 
+    background: var(--bg-menu) !important; 
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: none;
     border-radius: 50%;
     display: flex;
@@ -553,6 +576,7 @@ textarea.mobile-input {
     padding: 0;
     box-sizing: border-box;
     overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 .close-circle-btn:active {
     background: var(--border-color) !important;
@@ -594,7 +618,7 @@ textarea.mobile-input {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--glass-border);
+    border: none;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     pointer-events: auto;
     color: var(--text-primary);
@@ -967,7 +991,7 @@ textarea.mobile-input {
     transform: translateY(100%);
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
     margin: 0 !important;
-    box-shadow: 0 -12px 40px rgba(0,0,0,0.3) !important;
+    box-shadow: none !important;
     z-index: 9999 !important;
     padding-bottom: env(safe-area-inset-bottom, 30px) !important; 
     color: var(--text-primary) !important;
@@ -1002,7 +1026,7 @@ textarea.mobile-input {
     max-width: 300px;
     height: 100%;
     background: var(--bg-primary);
-    z-index: 1001; /* Above backdrop */
+    z-index: 1001; 
     transform: translateX(-100%);
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color var(--transition-fast);
     box-shadow: 4px 0 20px rgba(0,0,0,0.15);
@@ -1014,7 +1038,7 @@ textarea.mobile-input {
 }
 #actionSheet {
     z-index: 2001;
-    box-shadow: 0 -8px 24px rgba(0,0,0,0.25); /* Better shadow for bottom sheet */
+    box-shadow: none; /* Removed as requested */
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color var(--transition-fast);
 }
 
@@ -1180,6 +1204,9 @@ textarea.mobile-input {
     top: -8px;
     right: -8px;
     z-index: 10;
+    background: var(--bg-tertiary);
+    border-radius: 50%;
+    color: var(--text-primary);
 }
 
 /* Document Card in Preview Area - Yuanbao Style */
@@ -1283,4 +1310,7 @@ textarea.mobile-input {
     top: 4px;
     right: 4px;
     z-index: 10;
+    background: var(--bg-tertiary);
+    border-radius: 50%;
+    color: var(--text-primary);
 }

@@ -9,8 +9,6 @@
     <link rel="stylesheet" href="/client-src/css/common.css">
     <link rel="stylesheet" href="/client-src/css/mobile.css">
     <script>
-        // Use early script to fix landing on sub-paths (Vite + base: '/' is now used, but we still prefer clean URLs)
-        // 解决从历史记录或外部链接进入时带有路径后缀导致的资源加载(CSS)丢失及状态异常
         (function() {
             const path = window.location.pathname;
             // 只要不是标准的 /Mobile (忽略结尾斜杠)，则重定向回基点，保持状态一致
@@ -210,7 +208,7 @@
 
     <!-- Image Modal -->
     <div class="image-modal" id="imageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 10000; align-items: center; justify-content: center; flex-direction: column;" >
-        <span class="close-circle-btn" id="closeImageModalBtn" style="position: absolute; top: 20px; right: 20px; width: 36px; height: 36px; z-index: 10001; background: rgba(0,0,0,0.3) !important; color: white !important;"></span>
+        <span class="close-circle-btn" id="closeImageModalBtn" style="position: absolute; top: 20px; right: 20px; width: 36px; height: 36px; z-index: 10001;"></span>
         <img id="modalImage" style="max-width: 95%; max-height: 85%; object-fit: contain; transition: transform 0.3s ease-out;">
     </div>
 

@@ -3,11 +3,17 @@
 // --- API Mock ---
 window.api = {
     invoke: async (channel, ...args) => {
+        let signal = null;
+        if (args.length > 0 && args[args.length - 1] instanceof AbortSignal) {
+            signal = args.pop();
+        }
+
         try {
             const response = await fetch('/api/invoke', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ channel: channel, args })
+                body: JSON.stringify({ channel: channel, args }),
+                signal: signal
             });
             
             if (response.status === 401) {
@@ -30,6 +36,10 @@ window.api = {
             // Backend returns: { success: true, data: ... }
             return result.data;
         } catch (err) {
+            if (err.name === 'AbortError') {
+                console.log(`API Invoke Aborted (${channel})`);
+                throw new Error('Aborted');
+            }
             console.error(`API Invoke Error (${channel}):`, err);
             throw err;
         }
@@ -37,7 +47,7 @@ window.api = {
 };
 
 // --- Constants ---
-const UI_CLOSE_SVG = `<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="display: block;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>`;
+const UI_CLOSE_SVG = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
 
 // --- State ---
 let uploadedImages = [];
@@ -188,7 +198,11 @@ document.addEventListener('DOMContentLoaded', () => {
     bind('imageModal', (e) => {
         // 点击背景关闭图片预览
         if (e.target.id === 'imageModal') {
-            window.history.back();
+            // 防抖：如果模态框已经不是 active 状态，不再触发 back
+            const modal = document.getElementById('imageModal');
+            if (modal && modal.classList.contains('active')) {
+                window.history.back();
+            }
         }
     });
     bind('keepLinkBtn', () => resolveConflict('link'));
@@ -253,24 +267,30 @@ function setupNavigation() {
             imageModal.classList.remove('active');
             
             if (modalImg) {
-                // 确保动画过渡属性存在
-                modalImg.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease';
+                // Normalize rotation to prevent wild spinning back to 0
+                let currentRot = imageRotation;
+                let normalizedRot = currentRot % 360;
+                if (normalizedRot > 180) normalizedRot -= 360;
+                if (normalizedRot < -180) normalizedRot += 360;
                 
-                if (window._lastImageThumbEl && imageScale === 1 && imageRotation === 0) {
-                    const rect = window._lastImageThumbEl.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-                    const winW = window.innerWidth;
-                    const winH = window.innerHeight;
-                    const translateX = centerX - winW / 2;
-                    const translateY = centerY - winH / 2;
-                    const scale = rect.width / Math.min(winW, winH) * 0.8;
-                    modalImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-                } else {
-                    // If transformed, just fade out and scale down slightly
-                    modalImg.style.transform = `scale(${imageScale * 0.8}) rotate(${imageRotation}deg)`;
+                if (currentRot !== normalizedRot) {
+                    modalImg.style.transition = 'none';
+                    modalImg.style.transform = `translate(${imageX}px, ${imageY}px) scale(${imageScale}) rotate(${normalizedRot}deg)`;
+                    modalImg.offsetHeight; // force reflow
                 }
-                modalImg.style.opacity = '0';
+
+                if (window._lastImageThumbEl) {
+                    modalImg.style.transition = 'transform 0.35s cubic-bezier(0.3, 1, 0.4, 1), border-radius 0.3s ease';
+                    const t = getThumbnailTransform(window._lastImageThumbEl);
+                    modalImg.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.scale}) rotate(0deg)`;
+                    modalImg.style.borderRadius = '16px';
+                    modalImg.style.opacity = '1'; // Let the modal background fade it out
+                } else {
+                    modalImg.style.transition = 'transform 0.35s cubic-bezier(0.3, 1, 0.4, 1), opacity 0.3s ease, border-radius 0.3s ease';
+                    // If transformed, just fade out and scale down slightly
+                    modalImg.style.transform = `translate(${imageX}px, ${imageY}px) scale(${imageScale * 0.8}) rotate(${normalizedRot}deg)`;
+                    modalImg.style.opacity = '0';
+                }
             }
 
             // 如果路径包含子状态且不是 popstate 触发的，则后退
@@ -470,6 +490,12 @@ function initSSE() {
 }
 
 function updateStatusUI(status, data) {
+    // If local extraction is happening, ignore SSE status updates to prevent flickering
+    if (isExtracting) return;
+    
+    // Ignore late extraction/parsing updates if we already moved on to analysis phase
+    if ((status === 'extracting' || status === 'parsing') && currentAnalysisStatus !== 'initializing') return;
+
     const summaryDescText = document.getElementById('summaryDescText');
     
     if (!summaryDescText) return;
@@ -481,11 +507,17 @@ function updateStatusUI(status, data) {
     }
 
     const applyMessage = (msg) => {
-        setToastText(msg);
+        const toastMsgEl = document.getElementById('toastMessage');
+        // Check if message is actually different or toast is hidden
         if (summaryDescText && summaryDescText.textContent !== msg) {
             summaryDescText.textContent = msg;
         }
-        if (currentMode === 'input') {
+        
+        // Only show toast if in input mode (detection running) or if explicit request
+        if (currentMode === 'input' || detectBtn?.classList.contains('is-stop')) {
+            if (toastMsgEl && toastMsgEl.textContent === msg && document.getElementById('loadingToast')?.classList.contains('active')) {
+                return; // Skip repeated calls for same message
+            }
             showLoadingToast(msg);
         }
     };
@@ -537,40 +569,73 @@ function updateStatusUI(status, data) {
 // Global helper to update Toast with "Dynamic Island" transition
 let toastShowTime = 0;
 let toastHideTimeout = null;
+
+function setLoadingToastVisible(visible) {
+    const toast = document.getElementById('loadingToast');
+    if (!toast) return null;
+
+    if (visible) {
+        toast.style.visibility = 'visible';
+        toast.style.transform = '';
+        toast.style.opacity = '';
+        toast.classList.add('active');
+    } else {
+        // 保持可见直到位移动画结束，避免“瞬间消失”
+        toast.style.visibility = 'visible';
+        toast.style.transform = '';
+        toast.style.opacity = '';
+        toast.classList.remove('active');
+    }
+
+    return toast;
+}
+
 function showLoadingToast(message) {
     if (toastHideTimeout) {
         clearTimeout(toastHideTimeout);
         toastHideTimeout = null;
     }
 
-    const loadingToast = document.getElementById('loadingToast');
-    if (loadingToast) {
-        // Reset exit animation styles
-        loadingToast.style.transform = '';
-        loadingToast.style.opacity = '';
-    }
+    const toast = document.getElementById('loadingToast');
+    if (!toast) return;
 
-    setToastText(message);
-    if (loadingToast) {
-        if (!loadingToast.classList.contains('active')) {
-            loadingToast.classList.add('active');
-        }
-        toastShowTime = Date.now(); // Always refresh to ensure minimum display time for the current message
+    if (toast.classList.contains('active')) {
+        setToastText(message);
+    } else {
+        // 入场初始化
+        toast.style.transition = 'none'; 
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(-150%)';
+        toast.style.visibility = 'visible';
+        
+        setToastText(message);
+        
+        // 测量并锁定宽度以防入场时跳变
+        toast.style.width = 'auto';
+        const targetWidth = toast.offsetWidth;
+        toast.style.width = targetWidth + 'px';
+        
+        // 强制重绘
+        toast.offsetHeight;
+        
+        // 恢复过渡并激活
+        toast.style.transition = '';
+        setLoadingToastVisible(true);
+        
+        // 清除内联样式，让 CSS class 控制动画
+        toast.style.visibility = '';
     }
+    toastShowTime = Date.now();
 }
 
 function hideLoadingToast() {
     const loadingToast = document.getElementById('loadingToast');
-    
-    // Clear any lingering status update timeouts
     if (mobileStatusTimeout) {
         clearTimeout(mobileStatusTimeout);
         mobileStatusTimeout = null;
     }
-
     if (!loadingToast) return;
     
-    // Minimum display time of 0.5 seconds
     const minTime = 500;
     const elapsed = Date.now() - toastShowTime;
     const remaining = Math.max(0, minTime - elapsed);
@@ -578,20 +643,15 @@ function hideLoadingToast() {
     if (toastHideTimeout) clearTimeout(toastHideTimeout);
     
     toastHideTimeout = setTimeout(() => {
-        // Exit animation: Slide up out of screen, then fade out
-        loadingToast.style.transform = 'translateX(-50%) translateY(-150%)';
+        setLoadingToastVisible(false);
         
         setTimeout(() => {
-            loadingToast.style.opacity = '0';
-        }, 300);
-
-        setTimeout(() => {
-            loadingToast.classList.remove('active');
-            // Restore styles after it's hidden so it can show again normally
-            loadingToast.style.transform = '';
-            loadingToast.style.opacity = '';
-            toastHideTimeout = null;
-        }, 700);
+            if (!loadingToast.classList.contains('active')) {
+                loadingToast.style.width = 'auto';
+                loadingToast.style.visibility = '';
+                toastHideTimeout = null;
+            }
+        }, 600); // 对应 CSS 0.6s 动画
     }, remaining);
 }
 
@@ -599,23 +659,45 @@ function setToastText(message) {
     const toastMessage = document.getElementById('toastMessage');
     const loadingToast = document.getElementById('loadingToast');
     if (!toastMessage || !loadingToast) return;
-    if (toastMessage.textContent === message) return; // Ignore if identical
-
-    // Apply fade transition for text
-    toastMessage.style.opacity = '0';
-    toastMessage.style.transform = 'translateY(5px)';
     
-    setTimeout(() => {
+    // 如果正在转换中且目标内容一致，或者内容已一致且没有处于隐藏状态，则跳过
+    const isChanging = toastMessage.dataset.pendingMessage;
+    if (isChanging === message) return;
+    if (toastMessage.textContent === message && toastMessage.style.opacity !== '0') return;
+
+    if (!loadingToast.classList.contains('active')) {
         toastMessage.textContent = message;
+        toastMessage.dataset.pendingMessage = '';
+        loadingToast.style.width = 'auto';
+        return;
+    }
+
+    toastMessage.dataset.pendingMessage = message;
+    const oldWidth = loadingToast.offsetWidth;
+    toastMessage.style.opacity = '0';
+    toastMessage.style.transform = 'translateY(4px)';
+
+    setTimeout(() => {
+        // 再次检查此时的目标消息是否依然是自己设置的，防止竞争
+        if (toastMessage.dataset.pendingMessage !== message) return;
+
+        toastMessage.textContent = message;
+        toastMessage.dataset.pendingMessage = '';
+        
+        loadingToast.style.transition = 'none';
+        loadingToast.style.width = 'auto';
+        const newWidth = loadingToast.offsetWidth;
+
+        loadingToast.style.width = oldWidth + 'px';
+        loadingToast.offsetHeight;
+        loadingToast.style.transition = '';
+
+        requestAnimationFrame(() => {
+            loadingToast.style.width = `${newWidth}px`;
+        });
+
         toastMessage.style.opacity = '1';
         toastMessage.style.transform = 'translateY(0)';
-        
-        // Dynamic Island Width Transition Trick
-        // We measure the natural width of the content (now that width: 100% is removed from css)
-        const content = document.querySelector('.toast-content');
-        const contentWidth = content.offsetWidth || content.scrollWidth;
-        // Adding specific padding for the capsule look
-        loadingToast.style.width = (contentWidth + 60) + 'px'; 
     }, 150);
 }
 
@@ -1038,25 +1120,30 @@ function executeRemoveExtractedUrl() {
 }
 
 // Actually fetch content (called by runDetection)
-async function performRealExtraction(progressCallback) {
+async function performRealExtraction(progressCallback, startVal = 0) {
     if (!currentExtractedData || !currentExtractedData.pendingExtraction) return true;
     
+    // Check global lock
+    if (window._isExtractingNow) return true;
+    window._isExtractingNow = true;
+
     const url = currentExtractedData.url;
-    // We don't update toast here anymore, controlled by runDetection
+    let extInterval = null;
     
     try {
         // Start extraction progress simulation if callback provided
-        let extProgress = 0;
-        const extInterval = setInterval(() => {
+        let extProgress = startVal;
+        extInterval = setInterval(() => {
             if (extProgress < 40) {
                  extProgress += 1;
                  if (progressCallback) progressCallback(extProgress, '正在解析网页内容...');
             }
-        }, 200);
+        }, 150);
 
-        const result = await window.api.invoke('extract-content-sync', url);
+        const result = await window.api.invoke('extract-content-sync', url, _abortController?.signal);
         
-        clearInterval(extInterval);
+        if (extInterval) clearInterval(extInterval);
+        window._isExtractingNow = false;
 
         if (_abortController && _abortController.signal.aborted) {
             throw new Error('Aborted');
@@ -1081,6 +1168,8 @@ async function performRealExtraction(progressCallback) {
             return true;
         }
     } catch(e) {
+        if (extInterval) clearInterval(extInterval);
+        window._isExtractingNow = false;
         if (e.message === 'Aborted') throw e;
         console.warn('Real extraction failed', e);
         showToast('提取失败，将仅对当前文本进行检测', 'error');
@@ -1096,6 +1185,7 @@ async function runDetection() {
     if (detectBtn.classList.contains('is-stop')) {
         // Handle Cancel
         if (_abortController) {
+            setToastText('正在停止...');
             _abortController.abort();
         }
         return;
@@ -1114,6 +1204,8 @@ async function runDetection() {
     const originalText = '开始检测';
     detectBtn.classList.add('is-stop');
     detectBtn.innerHTML = '停止检测';
+    document.body.classList.add('is-detecting');
+    
     _abortController = new AbortController();
     currentAnalysisStatus = 'initializing';
     
@@ -1123,26 +1215,13 @@ async function runDetection() {
     showLoadingToast('正在初始化...');
     if (progressContainer) progressContainer.style.display = 'block';
     
-    // --- Progress Bar Logic (Ported from Main.html) ---
+    // --- Progress Bar Logic ---
     let progress = 0;
     progressBar.style.width = '0%';
     let statusTimer = 0;
-    let customText = ''; // To override default logic if extraction is happening
 
     const progressInterval = setInterval(() => {
-        // If we are in "extraction mode" (progress < 40 and pendingExtraction was true), 
-        // the performRealExtraction callback handles the *value* but we need to render it here?
-        // Actually, let's let one main loop handle the bar to avoid conflicts.
-        // But extraction is synchronous-ish (await). 
-        // We will pause this main interval's logic if customized, or mix them.
-        
-        // Let's implement the Main.html "Analysis" curve logic here primarily.
-        // If we are extracting, we might manually set progress.
-        
-        if (isExtracting) {
-            // Handled by extraction callback mostly, but we can ensure it doesn't stall
-            return; 
-        }
+        if (isExtracting) return; 
 
         // Analysis Phase Logic
         statusTimer += 80;
@@ -1159,97 +1238,92 @@ async function runDetection() {
         if (currentAnalysisStatus === 'searching') targetMax = 70;
         else if (currentAnalysisStatus === 'deep-analysis') targetMax = 91;
 
-            if (progress < targetMax) {
-                // Speed Control
-                let increment = (progress < 20) ? 0.6 : (progress < 40) ? 0.3 : (progress < 70) ? 0.2 : 0.1;
-                progress += increment;
-                if (progress > 91) progress = 91;
-
-                progressBar.style.width = Math.min(progress, 90) + '%';
-            }
-        }, 150); // Increased interval slightly to reduce calculation overhead
+        if (progress < targetMax) {
+            let increment = (progress < 20) ? 0.6 : (progress < 40) ? 0.3 : (progress < 70) ? 0.2 : 0.1;
+            progress += increment;
+            if (progress > 91) progress = 91;
+            progressBar.style.width = Math.min(progress, 91) + '%';
+        }
+    }, 150);
 
     try {
         // 1. Check if we need to extract content FIRST
         if (currentExtractedData && currentExtractedData.pendingExtraction) {
              isExtracting = true;
-             // Manually drive progress for extraction phase (0-40%)
+             // Manually drive progress for extraction phase (starting from current progress)
              await performRealExtraction((val, msg) => {
                  progress = val;
                  progressBar.style.width = progress + '%';
                  setToastText(msg);
-             });
+             }, progress);
              isExtracting = false;
-             // Extraction done. We are at ~40%.
-             // Reset status timer for analysis phase to start smoothly from here
-             statusTimer = 3000; // Skip to searching phase logic roughly
+             
+             statusTimer = 3000;
              currentAnalysisStatus = 'searching';
+             setToastText('正在分析中...');
         }
 
         if (_abortController.signal.aborted) throw new Error('Aborted');
 
         // 2. Run Analysis
         const analysisText = (currentExtractedData && currentExtractedData.content) ? currentExtractedData.content : text;
-        const analysisUrl = url;
         
-        // Include extracted images if available
-        let finalImages = [...images];
+        // 合并用户上传图片与网页提取图片
+        const finalImages = [...images];
         if (currentExtractedData && currentExtractedData.images) {
              currentExtractedData.images.forEach(img => {
-                 const url = typeof img === 'string' ? img : img.url;
-                 if (url && !finalImages.includes(url)) finalImages.push(url);
+                 const imgUrl = typeof img === 'string' ? img : img.url;
+                 if (imgUrl && !finalImages.includes(imgUrl)) finalImages.push(imgUrl);
              });
         }
 
         const data = await window.api.invoke('analyze-content', { 
             text: analysisText, 
             imageUrls: finalImages,
-            url: analysisUrl
-        });
+            url: url
+        }, _abortController?.signal);
 
         if (_abortController.signal.aborted) throw new Error('Aborted');
         
-        // Finish Progress
+        // Finish
         clearInterval(progressInterval);
         progressBar.style.width = '100%';
         setToastText('分析完成');
 
-        // Save to history
+        // Save history
         const historyItem = {
              id: Date.now().toString(),
              timestamp: new Date().toISOString(),
-             content: analysisText || (url ? currentExtractedData.title : (images.length > 0 ? '[图片分析]' : '未知内容')),
+             content: analysisText || (url ? currentExtractedData.title : (finalImages.length > 0 ? '[图片分析]' : '未知内容')),
              images: finalImages,
              result: data,
              url: url,
-             // Fix for Main.html compatibility: provide the original input (URL or Text) 
-             // so Main restores the link/input instead of the full extracted text.
              originalInput: url || text 
         };
         await window.api.invoke('save-history', historyItem);
         loadHistory();
         
-        // Pass original HTML if available for nice rendering
-        const displayContent = (currentExtractedData && currentExtractedData.htmlContent) ? currentExtractedData.htmlContent : ((currentExtractedData && currentExtractedData.content) ? currentExtractedData.content : text);
-        
-        showResult(data, displayContent, finalImages, url);
+        showResult(data, analysisText, finalImages, url);
         showResultView();
         
     } catch (e) {
         clearInterval(progressInterval);
         if (e.message === 'Aborted') {
-            showToast('提取已取消', 'info');
+            showToast('检测已停止', 'info');
         } else {
             console.error(e);
-            alert('检测失败: ' + e.message);
+            showToast('检测失败: ' + e.message, 'error');
         }
     } finally {
-        // Cleanup
         clearInterval(progressInterval);
         isExtracting = false;
-        detectBtn.classList.remove('is-stop'); // BUG FIX: Ensure is-stop is removed
+        window._isExtractingNow = false;
+        
+        detectBtn.classList.remove('is-stop');
         detectBtn.disabled = false;
         detectBtn.textContent = originalText;
+        document.body.classList.remove('is-detecting');
+        
         hideLoadingToast();
         if (progressContainer) {
             setTimeout(() => {
@@ -2356,18 +2430,31 @@ function initImageTouchHandlers() {
     };
 
     const clampImagePosition = (animate = false) => {
-        const { vw, transformedW } = getImageRenderMetrics();
+        const { vw, vh, transformedW, transformedH } = getImageRenderMetrics();
         const maxX = Math.max(0, (transformedW - vw) / 2);
+        const maxY = Math.max(0, (transformedH - vh) / 2);
 
         let changed = false;
+        
         const nextX = Math.min(maxX, Math.max(-maxX, imageX));
         if (nextX !== imageX) {
             imageX = nextX;
             changed = true;
         }
 
+        const nextY = Math.min(maxY, Math.max(-maxY, imageY));
+        if (nextY !== imageY) {
+            imageY = nextY;
+            changed = true;
+        }
+
         if (maxX === 0 && imageX !== 0) {
             imageX = 0;
+            changed = true;
+        }
+        
+        if (maxY === 0 && imageY !== 0) {
+            imageY = 0;
             changed = true;
         }
 
@@ -2383,13 +2470,14 @@ function initImageTouchHandlers() {
             }
         }
 
-        return { maxX };
+        return { maxX, maxY };
     };
 
     const getDist = (t1, t2) => Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
     const getAngle = (t1, t2) => Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180 / Math.PI;
 
     modal.addEventListener('touchstart', (e) => {
+        if (!modal.classList.contains('active')) return;
         if (e.touches.length === 2) {
             isPinching = true;
             isDragging = false; // Disable dragging when pinching
@@ -2407,6 +2495,7 @@ function initImageTouchHandlers() {
     }, { passive: false });
 
     modal.addEventListener('touchmove', (e) => {
+        if (!modal.classList.contains('active')) return;
         if (isPinching && e.touches.length === 2) {
             e.preventDefault();
             const dist = getDist(e.touches[0], e.touches[1]);
@@ -2443,6 +2532,15 @@ function initImageTouchHandlers() {
             
             imageX += deltaX;
             imageY += deltaY;
+
+            // 1. 向下滑动增加额外缩小逻辑 (保持跟手，用于关闭提示)
+            // 只有当图片高度方向没有超出屏幕（即 maxY=0）或者是已经拉到顶端还往下拉时触发
+            if (imageY > maxY && imageScale <= 1.2) {
+                const pullDistance = imageY - maxY;
+                // 增加缩小幅度：0.8 -> 1.2
+                const shrinkFactor = Math.max(0.6, 1 - (pullDistance / vh) * 1.2);
+                imageScale = 1 * shrinkFactor;
+            }
             
             lastTouchX = touch.clientX;
             lastTouchY = touch.clientY;
@@ -2453,75 +2551,57 @@ function initImageTouchHandlers() {
     }, { passive: false });
 
     modal.addEventListener('touchend', (e) => {
+        if (!modal.classList.contains('active')) return;
         const winH = window.innerHeight;
         const winW = window.innerWidth;
 
         if (e.touches.length < 2) {
             if (isPinching) {
-                // 1. 当图片过小时（手动缩放极小），自动关闭图片
-                if (imageScale < 0.45) {
-                    window.history.back();
-                    isPinching = false;
-                    return;
-                }
+                isPinching = false;
+                // 手动缩放极其小时直接关闭
+                if (imageScale < 0.45) return window.history.back();
 
-                // 2. 弹性回正：如果图片小于原始 fit 尺寸（scale < 1），恢复到 1
-                let needElasticSnap = false;
-                if (imageScale < 1) {
-                    imageScale = 1;
-                    imageX = 0;
-                    imageY = 0;
-                    needElasticSnap = true;
-                }
-
-                // 3. 增加图片矫正的灵敏度: 现在总是矫正到最近的 90 度
+                // 统一弹性回正逻辑
                 const snappedRotation = Math.round(imageRotation / 90) * 90;
-                if (snappedRotation !== imageRotation || needElasticSnap) {
+                if (imageScale < 1 || snappedRotation !== imageRotation) {
+                    imageScale = Math.max(1, imageScale);
                     imageRotation = snappedRotation;
                     modalImg.style.transition = 'transform 0.4s cubic-bezier(0.2, 0, 0.2, 1)';
                     updateImageTransform();
-                    setTimeout(() => {
-                        modalImg.style.transition = 'transform 0.1s ease-out';
-                    }, 400);
+                    setTimeout(() => { modalImg.style.transition = 'transform 0.1s ease-out'; }, 400);
                 }
             }
-            isPinching = false;
         }
 
         if (e.touches.length === 0) {
             if (isDragging) {
-                const { vw, vh, transformedH, transformedW } = getImageRenderMetrics();
+                isDragging = false;
+                const { vh, transformedH, transformedW, vw } = getImageRenderMetrics();
                 const maxY = Math.max(0, (transformedH - vh) / 2);
                 const maxX = Math.max(0, (transformedW - vw) / 2);
 
-                const heavyMoveDown = imageY > winH * 0.18;
+                const heavyMoveDown = imageY > winH * 0.12;
+                const outOfBounds = Math.abs(imageX) > maxX || Math.abs(imageY) > maxY || imageScale < 1;
                 const heavyMoveOut = Math.abs(imageX) > winW * 0.4 || Math.abs(imageY) > winH * 0.4;
-                
-                // 检查是否需要回弹
-                let needRecover = heavyMoveOut || Math.abs(imageY) > maxY || Math.abs(imageX) > maxX;
 
-                // 放大态仍执行 X 轴空隙自动回正
-                clampImagePosition(true);
+                // 下滑退出判定
+                if (heavyMoveDown && (imageScale <= 1.05 || (imageScale <= 2.2 && imageY > winH * 0.2))) {
+                    return window.history.back();
+                }
 
-                if (heavyMoveDown && imageScale <= 2.2) {
-                    // 下滑退出
-                    window.history.back();
-                } else if (needRecover) {
-                    // 恢复位置
-                    if (maxY === 0) imageY = 0;
-                    else imageY = Math.min(maxY, Math.max(-maxY, imageY));
-                    
-                    if (maxX === 0) imageX = 0;
-                    else imageX = Math.min(maxX, Math.max(-maxX, imageX));
+                // 强制回弹判定
+                if (heavyMoveOut || outOfBounds) {
+                    imageScale = Math.max(1, imageScale);
+                    imageY = maxY === 0 ? 0 : Math.min(maxY, Math.max(-maxY, imageY));
+                    imageX = maxX === 0 ? 0 : Math.min(maxX, Math.max(-maxX, imageX));
 
                     modalImg.style.transition = 'transform 0.4s cubic-bezier(0.2, 0, 0.2, 1)';
                     updateImageTransform();
-                    setTimeout(() => {
-                        modalImg.style.transition = 'transform 0.1s ease-out';
-                    }, 400);
+                    setTimeout(() => { modalImg.style.transition = 'transform 0.1s ease-out'; }, 400);
+                } else {
+                    clampImagePosition(true); // 仅微调 X 轴对齐
                 }
             }
-            isDragging = false;
         }
     });
 
@@ -2541,6 +2621,28 @@ function updateImageTransform() {
     const modalImg = document.getElementById('modalImage');
     if (!modalImg) return;
     modalImg.style.transform = `translate(${imageX}px, ${imageY}px) scale(${imageScale}) rotate(${imageRotation}deg)`;
+}
+
+function getThumbnailTransform(thumbEl) {
+    if (!thumbEl) return { x: 0, y: 0, scale: 0.3 };
+    const rect = thumbEl.getBoundingClientRect();
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+    
+    // 计算缩略图中心点相对于屏幕中心的偏移
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const translateX = centerX - winW / 2;
+    const translateY = centerY - winH / 2;
+    
+    // 尝试获取大图的实际渲染宽度，如果获取不到则使用屏幕宽度作为近似值
+    const modalImg = document.getElementById('modalImage');
+    const targetWidth = (modalImg && modalImg.offsetWidth > 0) ? modalImg.offsetWidth : winW;
+    
+    // 计算缩放比例：缩略图宽度 / 大图目标宽度
+    const scale = rect.width / targetWidth;
+    
+    return { x: translateX, y: translateY, scale };
 }
 
 function openImageModal(src, sourceEl) {
@@ -2567,30 +2669,33 @@ function openImageModal(src, sourceEl) {
     modal.style.display = 'flex';
     
     if (sourceEl) {
-        const rect = sourceEl.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const winW = window.innerWidth;
-        const winH = window.innerHeight;
-        
-        const translateX = centerX - winW / 2;
-        const translateY = centerY - winH / 2;
-        const scale = rect.width / Math.min(winW, winH) * 0.8;
+        const t = getThumbnailTransform(sourceEl);
 
+        modal.style.display = 'flex';
         modalImg.style.transition = 'none';
-        modalImg.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-        modalImg.style.opacity = '0';
+        modalImg.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.scale}) rotate(0deg)`;
+        modalImg.style.opacity = '1';
+        modalImg.style.borderRadius = '16px';
         
+        // 强制重绘
+        modalImg.offsetHeight;
+
         requestAnimationFrame(() => {
             modal.classList.add('active');
-            modalImg.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.35s ease';
-            modalImg.style.transform = 'translate(0, 0) scale(1)';
-            modalImg.style.opacity = '1';
+            modalImg.style.transition = 'transform 0.4s cubic-bezier(0.3, 1.05, 0.4, 1), border-radius 0.3s ease';
+            modalImg.style.transform = 'translate(0, 0) scale(1) rotate(0deg)';
+            modalImg.style.borderRadius = '0px';
         });
     } else {
-        modal.classList.add('active');
+        modal.style.display = 'flex';
+        modalImg.style.transition = 'none';
         modalImg.style.opacity = '1';
-        modalImg.style.transform = 'scale(1)';
+        modalImg.style.transform = 'scale(1) rotate(0deg)';
+        modalImg.style.borderRadius = '0px';
+        modalImg.offsetHeight;
+        requestAnimationFrame(() => {
+            modal.classList.add('active');
+        });
     }
 }
 

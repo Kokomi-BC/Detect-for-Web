@@ -48,9 +48,6 @@ class ExtractionManager {
 
   async extractContent(url, onStatusChange = null) {
     this.isExtractionCancelled = false;
-    if (typeof onStatusChange === 'function') {
-        onStatusChange('extracting', { url });
-    }
     try {
       if (this.urlProcessor.isImageUrl(url)) {
         return this.createImageResult(url);
@@ -100,7 +97,7 @@ class ExtractionManager {
               }
           },
           // 提升并发至 2 线程
-          maxConcurrency: 2,
+          maxConcurrency: 3,
           minConcurrency: 1,
           requestHandlerTimeoutSecs: 60,
           navigationTimeoutSecs: 45,
@@ -380,31 +377,32 @@ class ExtractionManager {
                         }
                         
                         // 提取高清图片
-                    const images = [];
-                    if (status.pics && Array.isArray(status.pics)) {
-                        status.pics.forEach(pic => {
-                            if (pic.large && pic.large.url) {
-                                images.push(pic.large.url);
-                            } else if (pic.url) {
-                                images.push(pic.url);
-                            }
-                        });
-                    }
+                        const images = [];
+                        if (status.pics && Array.isArray(status.pics)) {
+                            status.pics.forEach(pic => {
+                                let imgUrl = (pic.large && pic.large.url) ? pic.large.url : pic.url;
+                                if (imgUrl) {
+                                    // 处理协议相对路径
+                                    if (imgUrl.startsWith('//')) imgUrl = 'https:' + imgUrl;
+                                    images.push(imgUrl);
+                                }
+                            });
+                        }
 
-                    return {
-                        success: true,
-                        title: status.status_title || `微博正文-${status.id}`,
-                        content: content || '',
-                        textContent: textContent || '',
-                        images: images,
-                        url: url
-                    };
+                        return {
+                            success: true,
+                            title: status.status_title || `微博正文-${status.id}`,
+                            content: content || '',
+                            textContent: textContent || '',
+                            images: images,
+                            url: url
+                        };
+                    }
                 }
+            } catch (e) {
+                console.warn('[Processor] 微博专用提取失败，回退到通用模式:', e);
             }
-        } catch (e) {
-            console.warn('[Processor] 微博专用提取失败，回退到通用模式:', e);
         }
-    }
 
     // 预处理：移除所有 <style> 标签，防止 JSDOM 在解析某些复杂 CSS 时崩溃
     const safeHtml = htmlContent.replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, '');
