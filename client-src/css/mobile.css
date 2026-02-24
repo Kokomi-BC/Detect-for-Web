@@ -218,34 +218,63 @@ body {
 /* Progress Bar */
 .progress-container {
     width: 100%;
-    height: 6px;
-    background-color: var(--bg-tertiary);
-    border-radius: 0 0 24px 24px;
+    height: 100%;
+    /* Ensure it overlays the button area completely */
     position: absolute;
-    bottom: 0;
     left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
     overflow: hidden;
     display: none; /* Hidden by default */
-    z-index: 20;
+    z-index: 0; /* Behind text */
+    pointer-events: none;
+    border-radius: inherit; /* Follow button radius */
 }
 
+/* 进度条 */
 .progress-bar {
+    display: block;
     height: 100%;
     background-color: var(--primary-color);
     width: 0%;
-    transition: width 0.3s ease;
+    transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity: 0.32;
 }
 
 /* Stop Button Style (applies to detectBtn when active) */
 .large-detect-btn.is-stop {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    border: none;
-    box-shadow: var(--shadow-sm);
+    background-color: transparent; /* Makes it "hollow" 空心 */
+    color: var(--primary-color); /* 在空心胶囊中，文字为主题色 */
+    border: 2px solid var(--primary-color); /* The "ring" 外部空心胶囊颜色 */
+    box-shadow: none;
+    /* Ensure text is above progress bar */
 }
-.large-detect-btn.is-stop:active {
-    background-color: var(--bg-tertiary);
+
+.large-detect-btn.is-stop #detectBtnLabel {
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
 }
+
+#detectBtnLabel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    color: inherit;
+    font-weight: 700;
+    transition: color 0.3s;
+    white-space: nowrap;
+}
+
+[data-theme="dark"] .large-detect-btn:not(.is-stop) {
+    color: var(--text-main);
+}
+
 
 /* Container */
 .mobile-container {
@@ -678,10 +707,12 @@ textarea.mobile-input {
 }
 
 .large-detect-btn {
+    --detect-progress: 0%;
     width: 100%;
     height: 56px;
     background: var(--primary-color);
-    color: white;
+    /* 解决文本颜色问题：普通状态下使用浅色背景色作为文本颜色 */
+    color: var(--bg-secondary);
     border: none;
     border-radius: 28px;
     font-size: 18px;
@@ -692,6 +723,9 @@ textarea.mobile-input {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    overflow: hidden;
+    padding: 0 16px;
 }
 .large-detect-btn:disabled {
     background: var(--text-muted);
@@ -1171,8 +1205,8 @@ textarea.mobile-input {
 }
 
 .image-modal img {
-    max-width: 100%;
-    max-height: 100%;
+    max-width: 95vw;
+    max-height: 85vh;
     object-fit: contain;
     will-change: transform, opacity;
     /* transition is handled in JS for dynamic control */

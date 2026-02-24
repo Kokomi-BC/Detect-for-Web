@@ -63,9 +63,12 @@ let imageScale = 1;
 let imageRotation = 0;
 let imageX = 0;
 let imageY = 0;
+const ROTATION_INTENT_THRESHOLD = 18;
 
 let mobileStatusTimeout = null;
 let searchStartTime = 0;
+let analysisStageStartTime = 0;
+const STAGE_MIN_DISPLAY_MS = 2000;
 let _abortController = null;
 let currentAnalysisStatus = 'initializing';
 let isExtracting = false;
@@ -121,12 +124,13 @@ let searchTimeout = null;
 const historyLimit = 20;
 
 // --- Elements ---
-let textInput, detectBtn, plusBtn, fileInput, docInput, previewImages, historyBtn, userBtn, exitEditBtn, exitResultBtn, exportBtn, headerTitle, inputCard, extractedContentArea, startBranding, clearBtn;
+let textInput, detectBtn, detectBtnLabel, plusBtn, fileInput, docInput, previewImages, historyBtn, userBtn, exitEditBtn, exitResultBtn, exportBtn, headerTitle, inputCard, extractedContentArea, startBranding, clearBtn;
 let actionSheet, actionSheetBackdrop, exportActionSheet, exportActionSheetBackdrop;
 
 function initElements() {
     textInput = document.getElementById('textInput');
     detectBtn = document.getElementById('detectBtn');
+    detectBtnLabel = document.getElementById('detectBtnLabel');
     plusBtn = document.getElementById('plusBtn');
     fileInput = document.getElementById('fileInput');
     docInput = document.getElementById('docInput');
@@ -280,13 +284,28 @@ function setupNavigation() {
                 }
 
                 if (window._lastImageThumbEl) {
-                    modalImg.style.transition = 'transform 0.35s cubic-bezier(0.3, 1, 0.4, 1), border-radius 0.3s ease';
+                    // 两阶段关闭动画：先移动到缩略图位置，再执行自动裁剪与淡出
+                    const moveDuration = 320;
+                    const cropDuration = 140;
                     const t = getThumbnailTransform(window._lastImageThumbEl);
+
+                    // Phase 1: 仅位移/缩放到目标位置（不裁剪）
+                    modalImg.style.transition = `transform ${moveDuration}ms cubic-bezier(0.32, 0.72, 0, 1)`;
                     modalImg.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.scale}) rotate(0deg)`;
-                    modalImg.style.borderRadius = '16px';
-                    modalImg.style.opacity = '1'; // Let the modal background fade it out
+                    modalImg.style.clipPath = 'inset(0% 0% 0% 0% round 0px)';
+                    modalImg.style.webkitClipPath = 'inset(0% 0% 0% 0% round 0px)';
+                    modalImg.style.opacity = '1';
+
+                    // Phase 2: 到位后再裁剪并淡出
+                    setTimeout(() => {
+                        if (imageModal.classList.contains('active')) return;
+                        modalImg.style.transition = `clip-path ${cropDuration}ms cubic-bezier(0.32, 0.72, 0, 1), -webkit-clip-path ${cropDuration}ms cubic-bezier(0.32, 0.72, 0, 1), opacity ${cropDuration}ms ease-in`;
+                        modalImg.style.clipPath = t.clip;
+                        modalImg.style.webkitClipPath = t.clip;
+                        modalImg.style.opacity = '0';
+                    }, moveDuration);
                 } else {
-                    modalImg.style.transition = 'transform 0.35s cubic-bezier(0.3, 1, 0.4, 1), opacity 0.3s ease, border-radius 0.3s ease';
+                    modalImg.style.transition = 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease-out';
                     // If transformed, just fade out and scale down slightly
                     modalImg.style.transform = `translate(${imageX}px, ${imageY}px) scale(${imageScale * 0.8}) rotate(${normalizedRot}deg)`;
                     modalImg.style.opacity = '0';
@@ -308,9 +327,17 @@ function setupNavigation() {
                     if (modalImg) {
                         modalImg.style.transform = '';
                         modalImg.style.transition = '';
+                        modalImg.style.clipPath = '';
+                        modalImg.style.webkitClipPath = '';
+                        modalImg.style.opacity = '1';
+                        // 重置尺寸锁定，为下一次进入做准备
+                        modalImg.style.width = '';
+                        modalImg.style.height = '';
+                        modalImg.style.maxWidth = '';
+                        modalImg.style.maxHeight = '';
                     }
                 }
-            }, 400);
+            }, 520);
         }
 
         // 2. 关闭 Tooltip
@@ -490,22 +517,53 @@ function initSSE() {
 }
 
 function updateStatusUI(status, data) {
+    // 基础防御：如果没有在检测中，不响应任何状态更新 (防止延迟的 SSE 或 Timer 导致 Toast 无法关闭)
+    if (!document.body.classList.contains('is-detecting')) return;
+
     // If local extraction is happening, ignore SSE status updates to prevent flickering
     if (isExtracting) return;
+
+    const elapsedInitMs = Date.now() - (analysisStageStartTime || 0);
+    const shouldDelayInitTransition =
+        analysisStageStartTime &&
+        elapsedInitMs < STAGE_MIN_DISPLAY_MS &&
+        (status === 'analyzing' || status === 'searching' || status === 'deep-analysis' || status === 'search-failed');
+
+    if (shouldDelayInitTransition) {
+        if (mobileStatusTimeout) {
+            clearTimeout(mobileStatusTimeout);
+        }
+        const delay = STAGE_MIN_DISPLAY_MS - elapsedInitMs;
+        mobileStatusTimeout = setTimeout(() => {
+            mobileStatusTimeout = null;
+            if (!document.body.classList.contains('is-detecting')) return;
+            updateStatusUI(status, data);
+        }, delay);
+
+        const summaryDescText = document.getElementById('summaryDescText');
+        if (summaryDescText && summaryDescText.textContent !== '正在初始化分析') {
+            summaryDescText.textContent = '正在初始化分析';
+        }
+        showLoadingToast('正在初始化分析');
+        return;
+    }
+    
+    // Update global status to sync with backend
+    if (status === 'extracting' || status === 'parsing') {
+        currentAnalysisStatus = 'extracting';
+    } else if (status === 'analyzing') {
+        currentAnalysisStatus = 'analyzing';
+    } else if (status === 'searching') {
+        currentAnalysisStatus = 'searching';
+    } else if (status === 'deep-analysis') {
+        currentAnalysisStatus = 'deep-analysis';
+    }
     
     // Ignore late extraction/parsing updates if we already moved on to analysis phase
-    if ((status === 'extracting' || status === 'parsing') && currentAnalysisStatus !== 'initializing') return;
+    if ((status === 'extracting' || status === 'parsing') && currentAnalysisStatus !== 'initializing' && currentAnalysisStatus !== 'extracting') return;
 
     const summaryDescText = document.getElementById('summaryDescText');
     
-    if (!summaryDescText) return;
-
-    // Clear any existing search timer
-    if (mobileStatusTimeout) {
-        clearTimeout(mobileStatusTimeout);
-        mobileStatusTimeout = null;
-    }
-
     const applyMessage = (msg) => {
         const toastMsgEl = document.getElementById('toastMessage');
         // Check if message is actually different or toast is hidden
@@ -526,42 +584,66 @@ function updateStatusUI(status, data) {
     switch(status) {
         case 'extracting':
         case 'parsing':
-            message = '正在解析网页...';
+            message = '正在解析网页';
             applyMessage(message);
             break;
         case 'analyzing':
-            message = '进行初步分析中...';
+            message = (analysisStageStartTime && (Date.now() - analysisStageStartTime) < STAGE_MIN_DISPLAY_MS)
+                ? '正在初始化分析'
+                : '进行初步分析中';
             applyMessage(message);
             break;
         case 'searching':
+            if (mobileStatusTimeout) {
+                clearTimeout(mobileStatusTimeout);
+                mobileStatusTimeout = null;
+            }
             searchStartTime = Date.now();
-            message = `联网搜索: ${data?.query || ''}`;
+            let searchQuery = '';
+            // Try effectively to find the search query in various possible locations
+            if (data) {
+                if (typeof data === 'string') {
+                    searchQuery = data;
+                } else {
+                    searchQuery = String(
+                        data.query ||
+                        data.keyword ||
+                        data.searchQuery ||
+                        data.searchTerm ||
+                        data.search_query ||  // Explicitly check snake_case which backend sends
+                        (Array.isArray(data.keywords) ? data.keywords.join('、') : '') ||
+                        ''
+                    );
+                }
+            }
+            searchQuery = searchQuery.trim();
+            
+            message = (searchQuery && searchQuery !== '...' && searchQuery !== 'undefined') ? `联网搜索：${searchQuery}` : '联网搜索中';
             applyMessage(message);
-            // Limit search word display to max 5 seconds
-            mobileStatusTimeout = setTimeout(() => {
-                updateStatusUI('deep-analysis', null);
-            }, 5000);
             break;
         case 'search-failed':
-            message = '联网搜索失败，进行离线分析...';
+            message = '联网搜索失败，进行离线分析';
             applyMessage(message);
             break;
         case 'deep-analysis':
-            const elapsed = Date.now() - (searchStartTime || 0);
-            const minDisplay = 4000;
-            message = '深度分析中...';
-
-            if (elapsed < minDisplay && searchStartTime) {
-                // Keep the search keyword visible for at least 4 seconds
+            message = '深度分析中';
+            const elapsedSearchMs = Date.now() - (searchStartTime || 0);
+            if (searchStartTime && elapsedSearchMs < STAGE_MIN_DISPLAY_MS) {
+                if (mobileStatusTimeout) {
+                    clearTimeout(mobileStatusTimeout);
+                }
+                const delay = STAGE_MIN_DISPLAY_MS - elapsedSearchMs;
                 mobileStatusTimeout = setTimeout(() => {
+                    mobileStatusTimeout = null;
+                    if (!document.body.classList.contains('is-detecting')) return;
                     applyMessage(message);
-                }, minDisplay - elapsed);
+                }, delay);
             } else {
                 applyMessage(message);
             }
             break;
         default:
-            message = '正在分析中...';
+            message = '正在分析中';
             applyMessage(message);
     }
 }
@@ -569,6 +651,69 @@ function updateStatusUI(status, data) {
 // Global helper to update Toast with "Dynamic Island" transition
 let toastShowTime = 0;
 let toastHideTimeout = null;
+let toastMeasureEl = null;
+
+function getToastMeasureElement() {
+    if (toastMeasureEl && document.body.contains(toastMeasureEl)) return toastMeasureEl;
+    const el = document.createElement('span');
+    el.style.position = 'fixed';
+    el.style.left = '-99999px';
+    el.style.top = '-99999px';
+    el.style.visibility = 'hidden';
+    el.style.whiteSpace = 'nowrap';
+    el.style.pointerEvents = 'none';
+    document.body.appendChild(el);
+    toastMeasureEl = el;
+    return el;
+}
+
+function applyMeasureFont(measureEl, referenceEl) {
+    const fallback = window.getComputedStyle(document.body);
+    const refStyle = referenceEl ? window.getComputedStyle(referenceEl) : fallback;
+    measureEl.style.fontSize = refStyle.fontSize || fallback.fontSize;
+    measureEl.style.fontWeight = refStyle.fontWeight || fallback.fontWeight;
+    measureEl.style.fontFamily = refStyle.fontFamily || fallback.fontFamily;
+    measureEl.style.letterSpacing = refStyle.letterSpacing || 'normal';
+}
+
+function measureTextWidth(text, referenceEl) {
+    const measureEl = getToastMeasureElement();
+    applyMeasureFont(measureEl, referenceEl);
+    measureEl.textContent = text;
+    return measureEl.getBoundingClientRect().width;
+}
+
+function truncateToastMessage(message, referenceEl = null, chineseChars = 25) {
+    const text = String(message || '');
+    if (!text) return '';
+
+    const visualLimit = measureTextWidth('测'.repeat(chineseChars), referenceEl);
+    if (measureTextWidth(text, referenceEl) <= visualLimit) return text;
+
+    const ellipsis = '...';
+    const ellipsisWidth = measureTextWidth(ellipsis, referenceEl);
+    if (ellipsisWidth >= visualLimit) return ellipsis;
+
+    const chars = Array.from(text);
+    let low = 0;
+    let high = chars.length;
+    let best = 0;
+
+    while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        const candidate = chars.slice(0, mid).join('');
+        const candidateWidth = measureTextWidth(candidate, referenceEl) + ellipsisWidth;
+
+        if (candidateWidth <= visualLimit) {
+            best = mid;
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+
+    return chars.slice(0, best).join('') + ellipsis;
+}
 
 function setLoadingToastVisible(visible) {
     const toast = document.getElementById('loadingToast');
@@ -661,27 +806,28 @@ function setToastText(message) {
     if (!toastMessage || !loadingToast) return;
     
     // 如果正在转换中且目标内容一致，或者内容已一致且没有处于隐藏状态，则跳过
+    const normalizedMessage = truncateToastMessage(message, toastMessage, 25);
     const isChanging = toastMessage.dataset.pendingMessage;
-    if (isChanging === message) return;
-    if (toastMessage.textContent === message && toastMessage.style.opacity !== '0') return;
+    if (isChanging === normalizedMessage) return;
+    if (toastMessage.textContent === normalizedMessage && toastMessage.style.opacity !== '0') return;
 
     if (!loadingToast.classList.contains('active')) {
-        toastMessage.textContent = message;
+        toastMessage.textContent = normalizedMessage;
         toastMessage.dataset.pendingMessage = '';
         loadingToast.style.width = 'auto';
         return;
     }
 
-    toastMessage.dataset.pendingMessage = message;
+    toastMessage.dataset.pendingMessage = normalizedMessage;
     const oldWidth = loadingToast.offsetWidth;
     toastMessage.style.opacity = '0';
     toastMessage.style.transform = 'translateY(4px)';
 
     setTimeout(() => {
         // 再次检查此时的目标消息是否依然是自己设置的，防止竞争
-        if (toastMessage.dataset.pendingMessage !== message) return;
+        if (toastMessage.dataset.pendingMessage !== normalizedMessage) return;
 
-        toastMessage.textContent = message;
+        toastMessage.textContent = normalizedMessage;
         toastMessage.dataset.pendingMessage = '';
         
         loadingToast.style.transition = 'none';
@@ -1135,8 +1281,8 @@ async function performRealExtraction(progressCallback, startVal = 0) {
         let extProgress = startVal;
         extInterval = setInterval(() => {
             if (extProgress < 40) {
-                 extProgress += 1;
-                 if (progressCallback) progressCallback(extProgress, '正在解析网页内容...');
+                 extProgress += 0.5; // Slower extraction progress simulation
+                 if (progressCallback) progressCallback(extProgress, '正在解析网页内容');
             }
         }, 150);
 
@@ -1185,7 +1331,7 @@ async function runDetection() {
     if (detectBtn.classList.contains('is-stop')) {
         // Handle Cancel
         if (_abortController) {
-            setToastText('正在停止...');
+            setToastText('正在停止');
             _abortController.abort();
         }
         return;
@@ -1203,48 +1349,104 @@ async function runDetection() {
     // Init Loading State
     const originalText = '开始检测';
     detectBtn.classList.add('is-stop');
-    detectBtn.innerHTML = '停止检测';
+    if (detectBtnLabel) {
+        detectBtnLabel.textContent = '停止检测';
+    } else {
+        detectBtn.textContent = '停止检测';
+    }
     document.body.classList.add('is-detecting');
     
     _abortController = new AbortController();
     currentAnalysisStatus = 'initializing';
+    analysisStageStartTime = Date.now();
+    searchStartTime = 0;
     
     const progressBar = document.getElementById('progressBar');
     const progressContainer = document.getElementById('progressBarContainer');
+    const setDetectProgress = (value) => {
+        const safeVal = Math.max(0, Math.min(100, Number(value) || 0));
+        if (progressBar) progressBar.style.width = safeVal + '%';
+        if (detectBtn) detectBtn.style.setProperty('--detect-progress', safeVal + '%');
+    };
+    const animateProgressTo = (target, durationMs = 1000) => new Promise((resolve) => {
+        const start = performance.now();
+        const from = Math.max(0, Math.min(100, progress));
+        const to = Math.max(from, Math.min(100, target));
 
-    showLoadingToast('正在初始化...');
+        const step = (now) => {
+            const t = Math.min(1, (now - start) / durationMs);
+            const eased = 1 - Math.pow(1 - t, 2);
+            progress = from + (to - from) * eased;
+            setDetectProgress(progress);
+            if (t < 1) {
+                requestAnimationFrame(step);
+            } else {
+                progress = to;
+                setDetectProgress(progress);
+                resolve();
+            }
+        };
+
+        requestAnimationFrame(step);
+    });
+
+    showLoadingToast('正在初始化分析');
     if (progressContainer) progressContainer.style.display = 'block';
     
     // --- Progress Bar Logic ---
     let progress = 0;
-    progressBar.style.width = '0%';
-    let statusTimer = 0;
+    setDetectProgress(0);
+    const stageTargets = {
+        initializing: 50,
+        analyzing: 50,
+        searching: 92,
+        'deep-analysis': 92
+    };
+    const stageSpeedPerSecond = {
+        initializing: 1.2,
+        analyzing: 1.2,
+        searching: 0.72,
+        'deep-analysis': 0.72
+    };
+    const fallbackTimeline = {
+        toAnalyzing: STAGE_MIN_DISPLAY_MS
+    };
+    const detectionStartAt = Date.now();
+    let lastTickAt = Date.now();
 
     const progressInterval = setInterval(() => {
-        if (isExtracting) return; 
-
-        // Analysis Phase Logic
-        statusTimer += 80;
-        
-        // Simulating status changes
-        if (statusTimer > 3000 && currentAnalysisStatus === 'initializing') {
-            currentAnalysisStatus = 'searching';
-        }
-        if (statusTimer > 8000 && currentAnalysisStatus === 'searching') {
-            currentAnalysisStatus = 'deep-analysis';
+        if (isExtracting) {
+            lastTickAt = Date.now();
+            return;
         }
 
-        let targetMax = 40; 
-        if (currentAnalysisStatus === 'searching') targetMax = 70;
-        else if (currentAnalysisStatus === 'deep-analysis') targetMax = 91;
+        const now = Date.now();
+        const elapsedMs = now - detectionStartAt;
+        const deltaSeconds = Math.max(0, (now - lastTickAt) / 1000);
+        lastTickAt = now;
+
+        // Fallback only when backend status hasn't advanced yet
+        if (currentAnalysisStatus === 'initializing' && elapsedMs >= fallbackTimeline.toAnalyzing) {
+            updateStatusUI('analyzing');
+        }
+
+        const targetMax = stageTargets[currentAnalysisStatus] || stageTargets.initializing;
+        const speed = stageSpeedPerSecond[currentAnalysisStatus] || stageSpeedPerSecond.initializing;
 
         if (progress < targetMax) {
-            let increment = (progress < 20) ? 0.6 : (progress < 40) ? 0.3 : (progress < 70) ? 0.2 : 0.1;
-            progress += increment;
-            if (progress > 91) progress = 91;
-            progressBar.style.width = Math.min(progress, 91) + '%';
+            const remaining = targetMax - progress;
+            const step = Math.min(remaining, speed * deltaSeconds);
+            progress += step;
+            setDetectProgress(Math.min(progress, 91));
+        } else if (currentAnalysisStatus === 'analyzing' && progress >= stageTargets.analyzing) {
+            const lowSpeedCap = 56;
+            if (progress < lowSpeedCap) {
+                const lowSpeedStep = Math.min(lowSpeedCap - progress, 0.08 * deltaSeconds);
+                progress += lowSpeedStep;
+                setDetectProgress(Math.min(progress, 91));
+            }
         }
-    }, 150);
+    }, 120);
 
     try {
         // 1. Check if we need to extract content FIRST
@@ -1253,14 +1455,13 @@ async function runDetection() {
              // Manually drive progress for extraction phase (starting from current progress)
              await performRealExtraction((val, msg) => {
                  progress = val;
-                 progressBar.style.width = progress + '%';
+                 setDetectProgress(progress);
                  setToastText(msg);
              }, progress);
              isExtracting = false;
              
-             statusTimer = 3000;
-             currentAnalysisStatus = 'searching';
-             setToastText('正在分析中...');
+             currentAnalysisStatus = 'analyzing';
+             setToastText('正在分析中');
         }
 
         if (_abortController.signal.aborted) throw new Error('Aborted');
@@ -1287,8 +1488,8 @@ async function runDetection() {
         
         // Finish
         clearInterval(progressInterval);
-        progressBar.style.width = '100%';
         setToastText('分析完成');
+        await animateProgressTo(100, 1000);
 
         // Save history
         const historyItem = {
@@ -1316,19 +1517,27 @@ async function runDetection() {
         }
     } finally {
         clearInterval(progressInterval);
+        if (mobileStatusTimeout) {
+            clearTimeout(mobileStatusTimeout);
+            mobileStatusTimeout = null;
+        }
         isExtracting = false;
         window._isExtractingNow = false;
         
         detectBtn.classList.remove('is-stop');
         detectBtn.disabled = false;
-        detectBtn.textContent = originalText;
+        if (detectBtnLabel) {
+            detectBtnLabel.textContent = originalText;
+        } else {
+            detectBtn.textContent = originalText;
+        }
         document.body.classList.remove('is-detecting');
         
         hideLoadingToast();
         if (progressContainer) {
             setTimeout(() => {
                 progressContainer.style.display = 'none';
-                progressBar.style.width = '0%';
+                setDetectProgress(0);
             }, 300);
         }
         updateButtonState();
@@ -1353,7 +1562,6 @@ function showToast(message, type = 'info') {
 
     const toast = document.createElement('div');
     toast.className = 'custom-toast';
-    toast.textContent = message;
     toast.style.position = 'fixed';
     toast.style.bottom = '120px'; /* Raised slightly to avoid conflict with buttons */
     toast.style.left = '50%';
@@ -1369,6 +1577,7 @@ function showToast(message, type = 'info') {
     toast.style.pointerEvents = 'none';
     
     document.body.appendChild(toast);
+    toast.textContent = truncateToastMessage(message, toast, 25);
     
     // Simple fade in/out
     toast.style.opacity = '0';
@@ -2404,29 +2613,47 @@ function initImageTouchHandlers() {
     let baseRotation = 0;
     let lastTouchX = 0;
     let lastTouchY = 0;
+    let initialMidX = 0;
+    let initialMidY = 0;
+    let baseImageX = 0;
+    let baseImageY = 0;
+    let lastPinchAngle = 0;
+    let accumulatedAngleDiff = 0;
+
+    const normalizeAngleDelta = (delta) => {
+        let next = delta;
+        while (next > 180) next -= 360;
+        while (next < -180) next += 360;
+        return next;
+    };
+
+    const normalizeAbsoluteAngle = (angle) => {
+        let next = angle;
+        while (next > 180) next -= 360;
+        while (next < -180) next += 360;
+        return next;
+    };
 
     const getImageRenderMetrics = () => {
         const vw = window.innerWidth;
         const vh = window.innerHeight;
-        const naturalW = modalImg.naturalWidth || vw;
-        const naturalH = modalImg.naturalHeight || vh;
-
-        const fitScale = Math.min(1, (vw * 0.95) / naturalW, (vh * 0.85) / naturalH);
-        const baseW = naturalW * fitScale;
-        const baseH = naturalH * fitScale;
+        
+        // 核心改进：直接使用当前锁定的基础像素尺寸，不再内部重复计算 fitScale
+        const baseW = modalImg.offsetWidth || vw;
+        const baseH = modalImg.offsetHeight || vh;
         
         let transformedW = baseW * imageScale;
         let transformedH = baseH * imageScale;
 
-        // 核心修复：如果旋转了 90 或 270 度，交换宽高供边界计算使用
-        const isRotated = Math.abs(Math.round(imageRotation / 90) % 2) === 1;
-        if (isRotated) {
-            const temp = transformedW;
-            transformedW = transformedH;
-            transformedH = temp;
-        }
+        // 核心修复：平滑边界计算 (基于旋转包围盒)
+        const rad = Math.abs(imageRotation) * Math.PI / 180;
+        const cos = Math.abs(Math.cos(rad));
+        const sin = Math.abs(Math.sin(rad));
+        
+        const boundingW = transformedW * cos + transformedH * sin;
+        const boundingH = transformedW * sin + transformedH * cos;
 
-        return { vw, vh, transformedW, transformedH };
+        return { vw, vh, transformedW: boundingW, transformedH: boundingH };
     };
 
     const clampImagePosition = (animate = false) => {
@@ -2483,8 +2710,20 @@ function initImageTouchHandlers() {
             isDragging = false; // Disable dragging when pinching
             initialDist = getDist(e.touches[0], e.touches[1]);
             initialAngle = getAngle(e.touches[0], e.touches[1]);
+            lastPinchAngle = initialAngle;
+            accumulatedAngleDiff = 0;
             baseScale = imageScale;
             baseRotation = imageRotation;
+            modalImg.style.transition = 'none';
+            
+            // 记录捏合中心点相对于屏幕中心的初始坐标
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            initialMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - vw / 2;
+            initialMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - vh / 2;
+            baseImageX = imageX;
+            baseImageY = imageY;
+            
             e.preventDefault();
         } else if (e.touches.length === 1) {
             isDragging = true;
@@ -2501,19 +2740,48 @@ function initImageTouchHandlers() {
             const dist = getDist(e.touches[0], e.touches[1]);
             const angle = getAngle(e.touches[0], e.touches[1]);
             
-            // Increased sensitivity: use power function for scale and multiplier for rotation
+            // 灵敏度设置
             const sensitivity = 1.25;
-            const distRatio = dist / initialDist;
-            imageScale = baseScale * Math.pow(distRatio, sensitivity);
+            const distRatio = initialDist > 0 ? (dist / initialDist) : 1;
+            const newScale = Math.min(Math.max(0.2, baseScale * Math.pow(distRatio, sensitivity)), 12);
             
-            const angleDiff = angle - initialAngle;
-            imageRotation = baseRotation + (angleDiff * sensitivity);
+            // 旋转增量解包：跨越 ±180° 时避免出现大幅突跳导致的多次旋转
+            const stepAngleDiff = normalizeAngleDelta(angle - lastPinchAngle);
+            accumulatedAngleDiff += stepAngleDiff;
+            lastPinchAngle = angle;
+
+            let newRotation = baseRotation + (accumulatedAngleDiff * sensitivity);
+            // 保持角度在稳定区间，避免长时间旋转后数值过大造成精度抖动
+            newRotation = normalizeAbsoluteAngle(newRotation);
             
-            // Limit scale
-            imageScale = Math.min(Math.max(0.2, imageScale), 12);
+            // 计算当前捏合中心点
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const currentMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - vw / 2;
+            const currentMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - vh / 2;
+
+            // 以手指为中心点进行缩放与旋转的位移补偿
+            // 1. 计算初始中心点相对于图片偏移的向量
+            const dx = initialMidX - baseImageX;
+            const dy = initialMidY - baseImageY;
+            
+            // 2. 根据缩放比例和角度变化量旋转该向量
+            const scaleRatio = newScale / baseScale;
+            const deltaRotRad = (newRotation - baseRotation) * Math.PI / 180;
+            const cos = Math.cos(deltaRotRad);
+            const sin = Math.sin(deltaRotRad);
+            
+            const shiftedDx = (dx * cos - dy * sin) * scaleRatio;
+            const shiftedDy = (dx * sin + dy * cos) * scaleRatio;
+            
+            // 3. 更新图片位置，使得图片上的同一点依然在当前捏合中心下方
+            imageX = currentMidX - shiftedDx;
+            imageY = currentMidY - shiftedDy;
+            imageScale = newScale;
+            imageRotation = newRotation;
             
             updateImageTransform();
-            clampImagePosition(false);
+            // 旋转/缩放过程中不做硬性边界夹取，避免高频重排导致卡顿与“卡住”
         } else if (isDragging && e.touches.length === 1) {
             const touch = e.touches[0];
             const { vw, vh, transformedW, transformedH } = getImageRenderMetrics();
@@ -2563,12 +2831,17 @@ function initImageTouchHandlers() {
 
                 // 统一弹性回正逻辑
                 const snappedRotation = Math.round(imageRotation / 90) * 90;
-                if (imageScale < 1 || snappedRotation !== imageRotation) {
-                    imageScale = Math.max(1, imageScale);
+                const rotationDelta = Math.abs(snappedRotation - imageRotation);
+                const shouldSnapRotation = rotationDelta >= ROTATION_INTENT_THRESHOLD;
+
+                if (imageScale < 1) {
+                    settleImageToNaturalSize(snappedRotation, 420);
+                } else if (shouldSnapRotation) {
+                    settleImageToNaturalSize(snappedRotation, 420);
+                } else {
+                    // 未发生有效旋转时，保持当前缩放级别，避免放大后松手被自动缩小
                     imageRotation = snappedRotation;
-                    modalImg.style.transition = 'transform 0.4s cubic-bezier(0.2, 0, 0.2, 1)';
-                    updateImageTransform();
-                    setTimeout(() => { modalImg.style.transition = 'transform 0.1s ease-out'; }, 400);
+                    clampImagePosition(true);
                 }
             }
         }
@@ -2595,15 +2868,35 @@ function initImageTouchHandlers() {
                     imageY = maxY === 0 ? 0 : Math.min(maxY, Math.max(-maxY, imageY));
                     imageX = maxX === 0 ? 0 : Math.min(maxX, Math.max(-maxX, imageX));
 
-                    modalImg.style.transition = 'transform 0.4s cubic-bezier(0.2, 0, 0.2, 1)';
-                    updateImageTransform();
-                    setTimeout(() => { modalImg.style.transition = 'transform 0.1s ease-out'; }, 400);
+                    const currentSnapped = Math.round(imageRotation / 90) * 90;
+                    const dragRotationDelta = Math.abs(currentSnapped - imageRotation);
+                    const dragShouldSnapRotation = dragRotationDelta >= ROTATION_INTENT_THRESHOLD;
+
+                    if (dragShouldSnapRotation) {
+                        settleImageToNaturalSize(currentSnapped, 420);
+                    } else {
+                        imageRotation = currentSnapped;
+                        modalImg.style.transition = 'transform 0.4s cubic-bezier(0.2, 0, 0.2, 1)';
+                        updateImageTransform();
+                        setTimeout(() => {
+                            if (!modal.classList.contains('active')) return;
+                            modalImg.style.transition = 'transform 0.1s ease-out';
+                        }, 400);
+                    }
                 } else {
                     clampImagePosition(true); // 仅微调 X 轴对齐
                 }
             }
         }
     });
+
+    modal.addEventListener('touchcancel', () => {
+        if (!modal.classList.contains('active')) return;
+        isPinching = false;
+        isDragging = false;
+        imageRotation = normalizeAbsoluteAngle(imageRotation);
+        clampImagePosition(true);
+    }, { passive: true });
 
     // Handle mouse wheel for desktop preview testing if needed
     modal.addEventListener('wheel', (e) => {
@@ -2620,29 +2913,101 @@ function initImageTouchHandlers() {
 function updateImageTransform() {
     const modalImg = document.getElementById('modalImage');
     if (!modalImg) return;
+    // 基础 transform 更新。不再在此处动态更改 maxWidth/maxHeight 以避免旋转时的布局跳动。
+    // 布局尺寸已在 openImageModal 中锁定。
     modalImg.style.transform = `translate(${imageX}px, ${imageY}px) scale(${imageScale}) rotate(${imageRotation}deg)`;
 }
 
 function getThumbnailTransform(thumbEl) {
-    if (!thumbEl) return { x: 0, y: 0, scale: 0.3 };
+    if (!thumbEl) return { x: 0, y: 0, scale: 0.3, clip: 'inset(0%)' };
     const rect = thumbEl.getBoundingClientRect();
     const winW = window.innerWidth;
     const winH = window.innerHeight;
     
+    // 计算缩放比例：尝试获取大图的实际渲染尺寸
+    const modalImg = document.getElementById('modalImage');
+    const imgW = (modalImg && modalImg.naturalWidth > 0) ? modalImg.naturalWidth : (modalImg ? modalImg.offsetWidth : winW);
+    const imgH = (modalImg && modalImg.naturalHeight > 0) ? modalImg.naturalHeight : (modalImg ? modalImg.offsetHeight : winH);
+    
+    // 我们希望大图缩放到能恰好“覆盖”缩略图的尺寸（类似 object-fit: cover）
+    const scaleX = rect.width / imgW;
+    const scaleY = rect.height / imgH;
+    const scale = Math.max(scaleX, scaleY);
+    
+    // 计算裁剪区域，使大图展示的比例与缩略图一致
+    const actualW = imgW * scale;
+    const actualH = imgH * scale;
+    const clipW = (actualW - rect.width) / 2 / actualW * 100;
+    const clipH = (actualH - rect.height) / 2 / actualH * 100;
+
     // 计算缩略图中心点相对于屏幕中心的偏移
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
     const translateX = centerX - winW / 2;
     const translateY = centerY - winH / 2;
     
-    // 尝试获取大图的实际渲染宽度，如果获取不到则使用屏幕宽度作为近似值
+    // 获取缩略图的圆角设置，尝试从自身或子元素获取
+    let radius = parseFloat(window.getComputedStyle(thumbEl).borderRadius);
+    if (!radius) {
+        const childImg = thumbEl.querySelector('img');
+        if (childImg) radius = parseFloat(window.getComputedStyle(childImg).borderRadius);
+    }
+    radius = radius || 12;
+    
+    return { 
+        x: translateX, 
+        y: translateY, 
+        scale: scale, 
+        clip: `inset(${clipH.toFixed(2)}% ${clipW.toFixed(2)}% ${clipH.toFixed(2)}% ${clipW.toFixed(2)}% round ${radius / scale}px)`
+    };
+}
+
+function lockImageDimension(rotation = 0) {
     const modalImg = document.getElementById('modalImage');
-    const targetWidth = (modalImg && modalImg.offsetWidth > 0) ? modalImg.offsetWidth : winW;
+    if (!modalImg) return;
     
-    // 计算缩放比例：缩略图宽度 / 大图目标宽度
-    const scale = rect.width / targetWidth;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const nw = modalImg.naturalWidth || vw;
+    const nh = modalImg.naturalHeight || vh;
     
-    return { x: translateX, y: translateY, scale };
+    // 计算当前旋转角度下的“有效”宽高 (90/270度时交换)
+    const isRotated = Math.abs(Math.round(rotation / 90) % 2) === 1;
+    const testW = isRotated ? nh : nw;
+    const testH = isRotated ? nw : nh;
+    
+    // 计算在当前视口下能容纳该方向图片的缩放比例
+    const fitScale = Math.min(1, (vw * 0.95) / testW, (vh * 0.85) / testH);
+    
+    // 锁定物理尺寸（注意：width/height 始终对应 0度时的方向）
+    modalImg.style.width = (nw * fitScale) + 'px';
+    modalImg.style.height = (nh * fitScale) + 'px';
+    modalImg.style.maxWidth = 'none';
+    modalImg.style.maxHeight = 'none';
+}
+
+function settleImageToNaturalSize(targetRotation = 0, duration = 420) {
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImage');
+    if (!modal || !modalImg || !modal.classList.contains('active')) return;
+
+    imageRotation = targetRotation;
+    imageScale = 1;
+
+    modalImg.style.transition = `transform ${duration}ms cubic-bezier(0.22, 0.61, 0.36, 1), width ${duration}ms cubic-bezier(0.22, 0.61, 0.36, 1), height ${duration}ms cubic-bezier(0.22, 0.61, 0.36, 1)`;
+
+    lockImageDimension(targetRotation);
+
+    // 关键修复：旋转完成后自动恢复必须回到屏幕中心，避免沿用放大拖拽时的历史偏移
+    imageX = 0;
+    imageY = 0;
+
+    updateImageTransform();
+
+    setTimeout(() => {
+        if (!modal.classList.contains('active')) return;
+        modalImg.style.transition = 'transform 0.1s ease-out';
+    }, duration + 20);
 }
 
 function openImageModal(src, sourceEl) {
@@ -2651,7 +3016,6 @@ function openImageModal(src, sourceEl) {
     if (!modal || !modalImg) return;
 
     window._lastImageThumbEl = sourceEl;
-
     window._pushHybridHash(window.currentMode, 'image');
 
     // Reset interaction state
@@ -2659,6 +3023,12 @@ function openImageModal(src, sourceEl) {
     imageRotation = 0;
     imageX = 0;
     imageY = 0;
+    
+    // 重置尺寸防止残留
+    modalImg.style.width = '';
+    modalImg.style.height = '';
+    modalImg.style.maxWidth = '';
+    modalImg.style.maxHeight = '';
 
     let displayUrl = src;
     if (displayUrl && !displayUrl.startsWith('data:') && !displayUrl.startsWith('blob:') && displayUrl.startsWith('http')) {
@@ -2666,32 +3036,42 @@ function openImageModal(src, sourceEl) {
     }
 
     modalImg.src = displayUrl;
+    
+    // 尽早锁定 0 度时的比例
+    if (modalImg.complete) lockImageDimension(0);
+    else modalImg.onload = () => lockImageDimension(0);
+
     modal.style.display = 'flex';
     
     if (sourceEl) {
-        const t = getThumbnailTransform(sourceEl);
-
         modal.style.display = 'flex';
         modalImg.style.transition = 'none';
-        modalImg.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.scale}) rotate(0deg)`;
         modalImg.style.opacity = '1';
-        modalImg.style.borderRadius = '16px';
+
+        // 设置到缩略图状态（裁剪并位移）
+        const t = getThumbnailTransform(sourceEl);
+        modalImg.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.scale}) rotate(0deg)`;
+        modalImg.style.clipPath = t.clip;
+        modalImg.style.webkitClipPath = t.clip;
         
         // 强制重绘
         modalImg.offsetHeight;
 
         requestAnimationFrame(() => {
             modal.classList.add('active');
-            modalImg.style.transition = 'transform 0.4s cubic-bezier(0.3, 1.05, 0.4, 1), border-radius 0.3s ease';
+            // 使用流畅的贝赛尔曲线过渡到全屏
+            modalImg.style.transition = 'transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), clip-path 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), -webkit-clip-path 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)';
             modalImg.style.transform = 'translate(0, 0) scale(1) rotate(0deg)';
-            modalImg.style.borderRadius = '0px';
+            modalImg.style.clipPath = 'inset(0% 0% 0% 0% round 0px)';
+            modalImg.style.webkitClipPath = 'inset(0% 0% 0% 0% round 0px)';
         });
     } else {
         modal.style.display = 'flex';
         modalImg.style.transition = 'none';
         modalImg.style.opacity = '1';
         modalImg.style.transform = 'scale(1) rotate(0deg)';
-        modalImg.style.borderRadius = '0px';
+        modalImg.style.clipPath = 'none';
+        modalImg.style.webkitClipPath = 'none';
         modalImg.offsetHeight;
         requestAnimationFrame(() => {
             modal.classList.add('active');
