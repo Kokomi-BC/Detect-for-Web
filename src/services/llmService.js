@@ -84,8 +84,11 @@ class LLMService {
    * @param {string} query 搜索关键词
    * @returns {Promise<string>} 搜索结果摘要
    */
-  async performWebSearch(query) {
+  async performWebSearch(query, abortSignal = null) {
     try {
+      if (abortSignal && abortSignal.aborted) {
+        throw new Error('Aborted');
+      }
       if (!this.bochaApiKey) {
         throw new Error('搜索接口未配置 (Search API Key is missing)');
       }
@@ -104,6 +107,7 @@ class LLMService {
           'Authorization': `Bearer ${this.bochaApiKey}`,
           'Content-Type': 'application/json'
         },
+        signal: abortSignal || undefined,
         body: JSON.stringify({
           query: query,
           summary: true,
@@ -142,6 +146,9 @@ class LLMService {
       
       return { success: true, formattedString: "未搜索到相关结果。", rawResults: [] };
     } catch (error) {
+      if (error && (error.name === 'AbortError' || error.message === 'Aborted')) {
+        throw new Error('Aborted');
+      }
       console.error('联网搜索失败:', error);
       // Return error structure that matches the expected object format
       return { 
@@ -158,9 +165,10 @@ class LLMService {
    * @param {string[]} imageUrls 图片URL数组
    * @param {string} sourceUrl 来源URL（可选）
    * @param {Function} onStatusChange 状态变化回调函数（可选）
+  * @param {AbortSignal|null} abortSignal 取消信号（可选）
    * @returns {Promise<Object>} 分析结果
    */
-  async analyzeContent(text, imageUrls = [], sourceUrl = '', onStatusChange = null) {
+  async analyzeContent(text, imageUrls = [], sourceUrl = '', onStatusChange = null, abortSignal = null) {
     const currentDate = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
     const systemPrompt = `You are a professional fake news detection assistant. Current date: ${currentDate}.
   Analyze the provided content and determine its authenticity. You can request a web search for verification. If images are provided, you MUST also check text-image consistency (图文一致性): extract visible text from images (OCR mentally), identify key entities/objects/scenes/time/watermarks, and compare with the written claims and captions. Flag mismatches explicitly.
@@ -191,16 +199,19 @@ class LLMService {
 }
 
 ### Core Rules:
-1. **Search Priority**: If facts are unclear or time-sensitive, set "needs_search": true with concise Chinese keywords.
-2. **Finality**: If search results are provided, "needs_search" MUST be false. Prioritize search evidence.
-3. **Image Analysis**: 
+1. **Search & Investigation**: 
+   - If facts are unclear, contradictory, or time-sensitive, set "needs_search": true with concise Chinese keywords.
+   - You can perform MULTIPLE rounds of search to drill down into details (e.g., search for an event, then search for specific evidence found in the first results).
+   - Once enough information is gathered or no further clarity can be reached via search, set "needs_search" to false and provide the final evaluation.
+   - Prioritize evidence from search results over your internal knowledge for recent events.
+2. **Image Analysis**: 
    - **Image-Text Consistency**: When images exist, assess whether images support, contradict, or are unrelated to textual claims. 
    - **Specific Image Evaluation**: Evaluate each image provided. If an image is AI-generated (AIGC), photoshopped, from a different event (out-of-context), or otherwise deceptive, list it in "fake_images" with the ORIGINAL URL provided in the prompt.
    - **Reporting**: Explicitly include a "图文一致性分析" point in "analysis_points". If mismatches are found, put the specific claim into "fake_parts" and the image into "fake_images".
-4. **Language**: All descriptive fields MUST be in Simplified Chinese.
-5. **Format**: Return ONLY raw JSON. No markdown blocks.
+3. **Language**: All descriptive fields MUST be in Simplified Chinese.
+4. **Format**: Return ONLY raw JSON. No markdown blocks.
 
-Summary: Use concise Chinese keywords for search; output strictly valid JSON; all analysis text must be in Simplified Chinese; explicitly check and report image-text consistency when images are provided.`;
+Summary: Efficiently use multi-round search for deep investigation; output strictly valid JSON; all analysis text must be in Simplified Chinese; explicitly check and report image-text consistency when images are provided.`;
 
     const userContent = [];
     
@@ -259,102 +270,39 @@ Summary: Use concise Chinese keywords for search; output strictly valid JSON; al
       throw new Error('模型服务未配置 (LLM API is not configured)');
     }
 
-    // Step 1: Notify start of preliminary analysis
-    if (typeof onStatusChange === 'function') {
-      onStatusChange('analyzing', { step: 'preliminary' });
-    }
-
     const messages = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userContent }
     ];
 
+    let result = null;
+    let iteration = 0;
+    const MAX_ITERATIONS = 4; // 最多允许3轮搜索 + 最终分析
+    let accumulatedSearchResults = [];
+
     try {
-      const callArgs = {
-        model: this.model,
-        messages: messages,
-        temperature: 0.1
-      };
-      if (this.isThinking) callArgs.thinking = { type: 'enabled' };
-
-      // 第一次调用
-      console.log('第一次调用...');
-      let response;
-      if (this.method === 'curl') {
-        let fullUrl = (this.config.llm.baseURL || '').replace(/\/$/, '');
-        if (!fullUrl.endsWith('/chat/completions')) {
-          fullUrl += '/chat/completions';
+      while (iteration < MAX_ITERATIONS) {
+        if (abortSignal && abortSignal.aborted) {
+          throw new Error('Aborted');
         }
-        const res = await fetch(fullUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${this.config.llm.apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(callArgs)
-        });
-        if (!res.ok) {
-          const err = await res.text();
-          throw new Error(`LLM API Error (cURL): ${res.status} - ${err}`);
-        }
-        response = await res.json();
-      } else {
-        response = await this.client.chat.completions.create(callArgs);
-      }
+        iteration++;
+        console.log(`[LLM Service] 第 ${iteration} 轮尝试...`);
 
-      let content = response.choices[0].message.content;
-      let result = this.parseResponse(content);
-
-      // 检查是否需要搜索
-      if (result.needs_search && result.search_query) {
-        console.log(`Model requests search: ${result.search_query}`);
-        
-        // 执行回调通知前端：开始搜索
-        if (typeof onStatusChange === 'function') {
-          onStatusChange('searching', { query: result.search_query });
+        // 状态回调
+        if (iteration === 1) {
+          if (typeof onStatusChange === 'function') {
+            onStatusChange('analyzing', { step: 'preliminary' });
+          }
         }
 
-        // 执行搜索
-        // 修改：现在 performWebSearch 返回 { formattedString, rawResults } 用于前端展示
-        const searchData = await this.performWebSearch(result.search_query);
-        
-        if (!searchData.success) {
-            console.warn(`联网搜索遇到问题: ${searchData.formattedString}`);
-            if (typeof onStatusChange === 'function') {
-                onStatusChange('search-failed', { 
-                    query: result.search_query, 
-                    error: searchData.formattedString 
-                });
-            }
-        }
-
-        const searchSummary = typeof searchData === 'object' ? searchData.formattedString : searchData;
-        
-        // 保存原始搜索结果以便合并到最终输出
-        if (typeof searchData === 'object' && searchData.rawResults) {
-          result.search_results = searchData.rawResults;
-        }
-
-        // 通知：搜索完成，开始深度分析
-        if (typeof onStatusChange === 'function') {
-          onStatusChange('deep-analysis', { query: result.search_query });
-        }
-
-        // 构造第二轮对话
-        messages.push({ role: 'assistant', content: content }); // 保留模型的第一轮回复
-        messages.push({ 
-          role: 'user', 
-          content: `[联网搜索结果(类json格式)]:\n${searchSummary}\n\n请根据以上搜索结果和原始信息，进行最终的真伪判断。请确保 needs_search 为 false，并填写完整的分析字段。搜索结果具有较高的可信度，请优先参考。` 
-        });
-
-        console.log('第二次调用...');
-        const secondCallArgs = {
+        const callArgs = {
           model: this.model,
           messages: messages,
           temperature: 0.1
         };
-        if (this.isThinking) secondCallArgs.thinking = { type: 'enabled' };
+        if (this.isThinking) callArgs.thinking = { type: 'enabled' };
 
+        let response;
         if (this.method === 'curl') {
           let fullUrl = (this.config.llm.baseURL || '').replace(/\/$/, '');
           if (!fullUrl.endsWith('/chat/completions')) {
@@ -366,7 +314,8 @@ Summary: Use concise Chinese keywords for search; output strictly valid JSON; al
               'Authorization': `Bearer ${this.config.llm.apiKey}`,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify(secondCallArgs)
+            signal: abortSignal || undefined,
+            body: JSON.stringify(callArgs)
           });
           if (!res.ok) {
             const err = await res.text();
@@ -374,26 +323,67 @@ Summary: Use concise Chinese keywords for search; output strictly valid JSON; al
           }
           response = await res.json();
         } else {
-          response = await this.client.chat.completions.create(secondCallArgs);
+          response = await this.client.chat.completions.create(callArgs, { signal: abortSignal || undefined });
         }
 
-        content = response.choices[0].message.content;
-        const secondResult = this.parseResponse(content);
-        
-        // 合并第一轮的搜索结果到最终结果
-        if (result.search_results) {
-          secondResult.search_results = result.search_results;
-        }
-        result = secondResult;
-      } else {
-        // 不需要搜索，直接进入深度分析阶段
-        if (typeof onStatusChange === 'function') {
-          onStatusChange('deep-analysis');
+        const content = response.choices[0].message.content;
+        result = this.parseResponse(content);
+
+        // 检查是否需要搜索且未达到次数上限
+        if (result.needs_search && result.search_query && iteration < MAX_ITERATIONS) {
+          console.log(`[LLM Service] 模型请求第 ${iteration} 轮搜索: ${result.search_query}`);
+          
+          if (typeof onStatusChange === 'function') {
+            onStatusChange('searching', { query: result.search_query, round: iteration });
+          }
+
+          const searchData = await this.performWebSearch(result.search_query, abortSignal);
+          
+          if (!searchData.success) {
+            console.warn(`[LLM Service] 联网搜索遇到问题: ${searchData.formattedString}`);
+            if (typeof onStatusChange === 'function') {
+              onStatusChange('search-failed', { 
+                query: result.search_query, 
+                error: searchData.formattedString 
+              });
+            }
+          }
+
+          if (searchData.rawResults) {
+            accumulatedSearchResults.push(...searchData.rawResults);
+          }
+
+          // 将当前回复和搜索结果加入对话，进行下一轮
+          messages.push({ role: 'assistant', content: content });
+          messages.push({ 
+            role: 'user', 
+            content: `[联网搜索结果(${iteration})]:\n${searchData.formattedString}\n\n请分析以上结果。如有必要弄清更多细节，可继续设置 needs_search: true 并在 search_query 中提供新的搜索词；若信息已足够判定，请给出最终 JSON 结论并将 needs_search 设为 false。` 
+          });
+
+          // 如果搜索后进入下一轮，通常是在准备深度分析或进一步挖掘
+          if (typeof onStatusChange === 'function') {
+            onStatusChange('deep-analysis', { query: result.search_query, round: iteration });
+          }
+          continue;
+        } else {
+          // 不需要进一步搜索，或者已达上限，结束循环
+          if (iteration === 1) {
+            if (typeof onStatusChange === 'function') onStatusChange('deep-analysis');
+          }
+          break;
         }
       }
 
+      // 如果有累积的搜网结果，合入最终结果供前端展示
+      if (accumulatedSearchResults.length > 0) {
+        result.search_results = accumulatedSearchResults;
+      }
+      
       return { success: true, ...result };
     } catch (error) {
+      if (error && (error.name === 'AbortError' || error.message === 'Aborted')) {
+        throw new Error('Aborted');
+      }
       console.error('LLM API调用失败:', error);
       throw error;
     }

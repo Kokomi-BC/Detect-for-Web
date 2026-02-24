@@ -119,6 +119,12 @@ class ExtractionManager {
 
     this.isExtractionCancelled = false;
     try {
+      const ensureNotCancelled = () => {
+        if (this.isExtractionCancelled) {
+          throw new Error('Extraction cancelled');
+        }
+      };
+
       if (this.urlProcessor.isImageUrl(url)) {
         return this.createImageResult(url);
       }
@@ -146,6 +152,7 @@ class ExtractionManager {
       if (typeof onStatusChange === 'function') {
         onStatusChange('extracting', { url, step: 'browser-start' });
       }
+      ensureNotCancelled();
 
       // 使用 Crawlee 的 PlaywrightCrawler
       const crawler = new PlaywrightCrawler({
@@ -175,7 +182,7 @@ class ExtractionManager {
           requestHandler: async ({ page, request }) => {
               if (this.isExtractionCancelled) {
                   console.log(`[Crawler] Extraction cancelled before processing: ${request.url}`);
-                  return;
+                throw new Error('Extraction cancelled');
               }
               console.log(`[Crawler] Processing: ${request.url}`);
               
@@ -188,6 +195,9 @@ class ExtractionManager {
 
               // 拦截无关资源以节省内存
               await page.route('**/*', (route) => {
+                  if (this.isExtractionCancelled) {
+                    return route.abort('aborted');
+                  }
                   const url = route.request().url().toLowerCase();
                   const resourceType = route.request().resourceType();
                   
@@ -227,6 +237,7 @@ class ExtractionManager {
               });
               
               try {
+                  ensureNotCancelled();
                   if (typeof onStatusChange === 'function') {
                     onStatusChange('extracting', { url, step: 'loading' });
                   }
@@ -235,6 +246,7 @@ class ExtractionManager {
                       page.waitForLoadState('domcontentloaded', { timeout: 10000 }),
                       new Promise(resolve => setTimeout(resolve, 15000))
                   ]).catch(() => {});
+                    ensureNotCancelled();
 
                   // 处理非 HTML 内容
                   if (request.userData.isNonHtml) {
@@ -243,10 +255,12 @@ class ExtractionManager {
 
                   // 处理新浪访客系统（微博跳转）
                   const title = await page.title();
+                  ensureNotCancelled();
                   if (title.includes('Sina Visitor System') || title.includes('新浪访客系统')) {
                     console.log('[Crawler] 检测到新浪访客系统，等待跳转...');
                     let retries = 0;
                     while (retries < 15) {
+                      ensureNotCancelled();
                         await new Promise(r => setTimeout(r, 1000));
                         const newTitle = await page.title();
                         if (!newTitle.includes('Sina Visitor System') && !newTitle.includes('新浪访客系统')) {
@@ -262,13 +276,16 @@ class ExtractionManager {
                   const waitTime = isSlowSite ? 4000 : 2000;
                   console.log(`[Crawler] 等待页面动态渲染 (${waitTime}ms)...`);
                   await new Promise(resolve => setTimeout(resolve, waitTime));
+                  ensureNotCancelled();
 
                   // 尝试轻微滚动以触发布局动态加载
                   await page.evaluate(() => window.scrollBy(0, 300)).catch(() => {});
+                  ensureNotCancelled();
 
                   // 如果是微信文章，执行特定的渲染等待
                   if (isWechatArticle) {
                       await this.imageExtractor.waitForWechatContent(page);
+                      ensureNotCancelled();
                   }
                   
                   if (typeof onStatusChange === 'function') {
@@ -276,6 +293,7 @@ class ExtractionManager {
                   }
                   // 等待所有正文图片加载以获取真实尺寸
                   await this.imageExtractor.waitForImagesLoad(page);
+                  ensureNotCancelled();
 
               } catch (e) {
                   console.warn(`[Crawler] 加载过程阶段性超时/错误 (非致命): ${e.message}`);
@@ -386,6 +404,7 @@ class ExtractionManager {
           url: url, 
           uniqueKey: `${url}-${Date.now()}` 
       }]);
+        ensureNotCancelled();
       
       // 强制触发一次垃圾回收（如果 Node.js 启动时带有 --expose-gc 标志）
       if (global.gc) {

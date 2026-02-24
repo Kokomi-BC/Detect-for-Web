@@ -65,6 +65,7 @@ const uploadAvatar = multer({
 module.exports = function(services, state) {
     const { extractionManager, fileParser, llmService, pdfService } = services;
     const { sseClients } = state;
+    const analysisAbortControllers = new Map();
 
     // SSE for Real-time Updates
     router.get('/events', authenticate, (req, res) => {
@@ -106,13 +107,21 @@ module.exports = function(services, state) {
                 }
                 case 'analyze-content': {
                     const { text, imageUrls, url } = args[0];
+                    const abortController = new AbortController();
+                    analysisAbortControllers.set(req.userId, abortController);
                     const onStatusChange = (status, data) => {
                         const client = sseClients.get(req.userId);
                         if (client) {
                             client.write(`event: status-update\ndata: ${JSON.stringify({ status, data })}\n\n`);
                         }
                     };
-                    result = await llmService.analyzeContent(text, imageUrls, url, onStatusChange);
+                    try {
+                        result = await llmService.analyzeContent(text, imageUrls, url, onStatusChange, abortController.signal);
+                    } finally {
+                        if (analysisAbortControllers.get(req.userId) === abortController) {
+                            analysisAbortControllers.delete(req.userId);
+                        }
+                    }
                     break;
                 }
                 case 'extract-content-sync': {
@@ -128,6 +137,11 @@ module.exports = function(services, state) {
                 }
                 case 'cancel-extraction': {
                     extractionManager.cancelExtraction();
+                    const llmAbortController = analysisAbortControllers.get(req.userId);
+                    if (llmAbortController) {
+                        llmAbortController.abort('user-cancelled');
+                        analysisAbortControllers.delete(req.userId);
+                    }
                     result = { success: true };
                     break;
                 }

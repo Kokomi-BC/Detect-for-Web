@@ -652,6 +652,7 @@ function updateStatusUI(status, data) {
 let toastShowTime = 0;
 let toastHideTimeout = null;
 let toastMeasureEl = null;
+const TOAST_CHINESE_CHAR_LIMIT = 17;
 
 function getToastMeasureElement() {
     if (toastMeasureEl && document.body.contains(toastMeasureEl)) return toastMeasureEl;
@@ -683,7 +684,7 @@ function measureTextWidth(text, referenceEl) {
     return measureEl.getBoundingClientRect().width;
 }
 
-function truncateToastMessage(message, referenceEl = null, chineseChars = 25) {
+function truncateToastMessage(message, referenceEl = null, chineseChars = TOAST_CHINESE_CHAR_LIMIT) {
     const text = String(message || '');
     if (!text) return '';
 
@@ -806,7 +807,7 @@ function setToastText(message) {
     if (!toastMessage || !loadingToast) return;
     
     // 如果正在转换中且目标内容一致，或者内容已一致且没有处于隐藏状态，则跳过
-    const normalizedMessage = truncateToastMessage(message, toastMessage, 25);
+    const normalizedMessage = truncateToastMessage(message, toastMessage, TOAST_CHINESE_CHAR_LIMIT);
     const isChanging = toastMessage.dataset.pendingMessage;
     if (isChanging === normalizedMessage) return;
     if (toastMessage.textContent === normalizedMessage && toastMessage.style.opacity !== '0') return;
@@ -1334,6 +1335,9 @@ async function runDetection() {
             setToastText('正在停止');
             _abortController.abort();
         }
+        window.api.invoke('cancel-extraction').catch((err) => {
+            console.warn('Cancel extraction request failed:', err);
+        });
         return;
     }
 
@@ -1577,7 +1581,7 @@ function showToast(message, type = 'info') {
     toast.style.pointerEvents = 'none';
     
     document.body.appendChild(toast);
-    toast.textContent = truncateToastMessage(message, toast, 25);
+    toast.textContent = truncateToastMessage(message, toast, TOAST_CHINESE_CHAR_LIMIT);
     
     // Simple fade in/out
     toast.style.opacity = '0';

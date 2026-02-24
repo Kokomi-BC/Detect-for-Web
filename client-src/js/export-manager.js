@@ -37,9 +37,10 @@ class ExportManager {
         try {
             // Extract Data First
             const data = this.extractExportData(resultItem);
+            const exportData = await this.resolveExportAssets(data);
             
             if (format === 'html') {
-                const html = this.generateStaticHtml(data, theme);
+                const html = this.generateStaticHtml(exportData, theme);
                 this.downloadFile(html);
                 if (isMobile && window.hideLoadingToast) window.hideLoadingToast();
                 if (window.showToast) window.showToast('HTML 下载成功', 'success');
@@ -59,7 +60,7 @@ class ExportManager {
             
             container.style.width = exportWidth + 'px';
             container.style.zIndex = '-1';
-            container.innerHTML = this.generateStaticHtml(data, theme, true); // true = raw body content only
+            container.innerHTML = this.generateStaticHtml(exportData, theme, true); // true = raw body content only
             document.body.appendChild(container);
 
             // Wait for images to load if they were passed as data URIs or need fetching
@@ -97,7 +98,7 @@ class ExportManager {
             } else if (format === 'pdf') {
                 // PDF Logic (simplified: send image to backend or simple print)
                 if (isMobile) {
-                    const fullHtml = this.generateStaticHtml(data, theme);
+                    const fullHtml = this.generateStaticHtml(exportData, theme);
                     const invoker = window.api;
                     const response = await invoker.invoke('export-pdf', { html: fullHtml });
                      if (response && response.pdfBase64) {
@@ -113,7 +114,7 @@ class ExportManager {
                     }
                 } else {
                      const printWindow = window.open('', '_blank');
-                     printWindow.document.write(this.generateStaticHtml(data, theme));
+                     printWindow.document.write(this.generateStaticHtml(exportData, theme));
                      printWindow.document.close();
                      printWindow.onload = () => { setTimeout(() => { printWindow.print(); }, 500); };
                 }
@@ -618,6 +619,47 @@ class ExportManager {
             console.warn('Fetch image failed for url:', url, e);
             return null;
         }
+    }
+
+    toAbsoluteUrl(url) {
+        if (!url) return '';
+        if (/^data:|^blob:|^https?:/i.test(url)) return url;
+        if (url.startsWith('//')) return `${window.location.protocol}${url}`;
+        if (url.startsWith('/')) return `${window.location.origin}${url}`;
+        return new URL(url, window.location.origin + '/').href;
+    }
+
+    async resolveAssetUrl(src) {
+        if (!src) return '';
+        if (src.startsWith('data:')) return src;
+        if (src.startsWith('blob:')) {
+            const b64 = await this.blobUrlToBase64(src);
+            return b64 || src;
+        }
+
+        const absolute = this.toAbsoluteUrl(src);
+        const b64 = await this.fetchImageAsBase64(absolute);
+        return b64 || absolute;
+    }
+
+    async resolveExportAssets(data) {
+        const resolved = { ...data };
+
+        if (Array.isArray(data.images) && data.images.length > 0) {
+            resolved.images = await Promise.all(data.images.map(src => this.resolveAssetUrl(src)));
+        } else {
+            resolved.images = [];
+        }
+
+        if (data.sourceIconHtml && data.sourceIconHtml.includes('<img')) {
+            const match = data.sourceIconHtml.match(/src=["']([^"']+)["']/i);
+            if (match && match[1]) {
+                const iconSrc = await this.resolveAssetUrl(match[1]);
+                resolved.sourceIconHtml = data.sourceIconHtml.replace(match[1], iconSrc);
+            }
+        }
+
+        return resolved;
     }
 
     async getAllCssContent() {

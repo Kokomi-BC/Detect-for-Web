@@ -904,11 +904,16 @@
         // API Bridge for Web compatibility (Migration)
         window.api = {
             invoke: async (channel, ...args) => {
+                let signal = null;
+                if (args.length > 0 && args[args.length - 1] instanceof AbortSignal) {
+                    signal = args.pop();
+                }
                 try {
                     const response = await fetch('/api/invoke', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ channel: channel, args })
+                        body: JSON.stringify({ channel: channel, args }),
+                        signal
                     });
 
                     if (response.status === 401) {
@@ -926,6 +931,9 @@
                     if (result.status !== 'fail') return result.data;
                     throw new Error(result.message || result.error || 'Server Error');
                 } catch (error) {
+                    if (error.name === 'AbortError') {
+                        throw new Error('Aborted');
+                    }
                     console.error(`API Invoke Error (${channel}):`, error);
                     throw error;
                 }
@@ -4816,6 +4824,9 @@
             const errorState = document.getElementById('errorState');
             const progressBar = document.getElementById('progressBar');
             const loadingText = document.getElementById('loadingText');
+            const cancelBtn = document.getElementById('cancelExtractBtn');
+            const abortController = new AbortController();
+            let isCanceledByUser = false;
 
             // 禁用按钮防止重复点击
             if (detectBtn) {
@@ -4837,6 +4848,14 @@
             if (loadingState) {
                 loadingState.style.display = 'flex'; // Ensure visible overrides inline style
                 loadingState.classList.add('active');
+            }
+            if (cancelBtn) {
+                cancelBtn.style.display = 'block';
+                cancelBtn.onclick = function () {
+                    isCanceledByUser = true;
+                    try { abortController.abort(); } catch (_) {}
+                    api.send('cancel-extraction');
+                };
             }
             detectBtn.classList.add('loading');
             detectBtn.innerHTML = '分析中...';
@@ -4901,7 +4920,7 @@
                 }
 
                 // Call unified API bridge
-                const response = await api.invoke('analyze-content', { text, imageUrls, url: sourceUrl });
+                const response = await api.invoke('analyze-content', { text, imageUrls, url: sourceUrl }, abortController.signal);
                 if (response) {
                     // Backend might return {success, data} or raw object
                     result = response.data || response;
@@ -4923,6 +4942,10 @@
                     } finally {
                         loadingState.classList.remove('active');
                         loadingState.style.display = 'none'; // 强制隐藏
+                        if (cancelBtn) {
+                            cancelBtn.style.display = 'none';
+                            cancelBtn.onclick = null;
+                        }
                         detectBtn.classList.remove('loading');
                         detectBtn.innerHTML = '开始检测';
 
@@ -4952,10 +4975,21 @@
             } catch (error) {
                 clearInterval(progressInterval);
                 console.error(error);
-                showError('AI分析失败: ' + error.message);
-                showToast('分析失败', 'error');
+                if (isCanceledByUser || error.message === 'Aborted') {
+                    showToast('检测已停止', 'info');
+                    if (initialState) initialState.style.display = 'flex';
+                    if (resultItem) resultItem.style.display = 'none';
+                    if (errorState) errorState.classList.remove('active');
+                } else {
+                    showError('AI分析失败: ' + error.message);
+                    showToast('分析失败', 'error');
+                }
                 loadingState.classList.remove('active');
                 loadingState.style.display = 'none'; // 强制隐藏
+                if (cancelBtn) {
+                    cancelBtn.style.display = 'none';
+                    cancelBtn.onclick = null;
+                }
                 detectBtn.classList.remove('loading');
                 detectBtn.innerHTML = '开始检测';
 

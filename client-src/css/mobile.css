@@ -301,6 +301,20 @@ body {
     opacity: 0;
     pointer-events: none;
     transform: scale(0.98);
+    /* 弹性滚动及触感优化 */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+}
+
+/* 强制各页面内容始终具备弹性回弹触感 (即使内容较短) */
+.view-section::after,
+#historyList::after {
+    content: "";
+    display: block;
+    height: 1px;
+    margin-top: 1px;
+    flex-shrink: 0;
+    pointer-events: none;
 }
 
 .view-section.active {
@@ -659,6 +673,31 @@ textarea.mobile-input {
 .circle-btn-flat:active {
     transform: scale(0.9);
     opacity: 0.7;
+}
+
+/* Unified button material (based on .circle-btn-flat) */
+#historyBtn,
+#exitResultBtn,
+#exitEditBtnInside,
+#closeImageModalBtn,
+#exportBtn {
+    background: var(--bg-glass) !important;
+    color: var(--text-primary) !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+}
+
+#historyBtn:active,
+#exitResultBtn:active,
+#exitEditBtnInside:active,
+#closeImageModalBtn:active,
+#exportBtn:active {
+    transform: scale(0.9);
+    opacity: 0.7;
+    background: var(--bg-glass) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
 }
 
 .toolbar-divider {
@@ -1139,6 +1178,9 @@ textarea.mobile-input {
     padding: 10px;
     overflow-y: auto;
     height: calc(100% - 110px); /* Adjusted for more compact header + search */
+    /* 弹性滚动及触感优化 */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
 }
 .history-item {
     padding: 12px;
