@@ -303,11 +303,16 @@ body {
     transform: scale(0.98);
     /* 弹性滚动及触感优化 */
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: auto;
 }
 
-/* 强制各页面内容始终具备弹性回弹触感 (即使内容较短) */
-.view-section::after,
+/* 仅结果页与历史页启用原生弹性回弹 */
+#resultView,
+#historyList {
+    overscroll-behavior-y: auto;
+}
+
+#resultView::after,
 #historyList::after {
     content: "";
     display: block;
@@ -315,6 +320,10 @@ body {
     margin-top: 1px;
     flex-shrink: 0;
     pointer-events: none;
+}
+
+#resultItem {
+    min-height: calc(100% + 1px);
 }
 
 .view-section.active {
@@ -1180,7 +1189,7 @@ textarea.mobile-input {
     height: calc(100% - 110px); /* Adjusted for more compact header + search */
     /* 弹性滚动及触感优化 */
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: auto;
 }
 .history-item {
     padding: 12px;

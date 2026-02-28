@@ -47,18 +47,27 @@ export default defineConfig({
       options: {
         compact: true,
         controlFlowFlattening: true, 
-        controlFlowFlatteningThreshold: 0.25, // 降低阈值以提升速度
-        deadCodeInjection: false, // 禁用注入死代码，这非常耗时
+        controlFlowFlatteningThreshold: 0.75, 
+        deadCodeInjection: false, 
+        debugProtection: false, 
+        debugProtectionInterval: 4000, 
+        disableConsoleOutput: false,
         identifierNamesGenerator: 'hexadecimal', 
+        log: false, 
+        numbersToExpressions: true,
         renameGlobals: true, 
         reservedNames: [
           'userEditor', 'api'
         ],
         selfDefending: true, 
+        simplify: true, 
+        splitStrings: true,
+        splitStringsChunkLength: 5,
         stringArray: true, 
-        stringArrayEncoding: ['rc4'],
-        stringArrayThreshold: 0.5, // 降低字符串数组比例
-        unicodeEscapeSequence: false, 
+        stringArrayEncoding: ['base64'], 
+        stringArrayThreshold: 0.75, 
+        transformObjectKeys: true, 
+        unicodeEscapeSequence: true, 
       }
     }),
   ],

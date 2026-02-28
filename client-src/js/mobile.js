@@ -1560,14 +1560,16 @@ function updateButtonState() {
 }
 
 function showToast(message, type = 'info') {
-    // Remove any existing non-loading toasts to prevent overlapping
+    if (type === 'error' || type === 'fail' || type === 'success') {
+        hideLoadingToast();
+    }
     const existing = document.querySelectorAll('.custom-toast:not(.is-loading)');
     existing.forEach(t => t.remove());
 
     const toast = document.createElement('div');
     toast.className = 'custom-toast';
     toast.style.position = 'fixed';
-    toast.style.bottom = '120px'; /* Raised slightly to avoid conflict with buttons */
+    toast.style.bottom = '120px';
     toast.style.left = '50%';
     toast.style.transform = 'translateX(-50%)';
     toast.style.background = 'rgba(0,0,0,0.85)';

@@ -5593,11 +5593,6 @@
             const historyList = document.getElementById('historyList');
 
             if (!historyList) return;
-
-            // Note: If we are appending, we might not want to clear innerHTML.
-            // But since our renderHistory clears it, it's safer for now or we update it to append.
-            // Given vanilla JS, redraw is easier to maintain but slower. 
-            // However, with metadata-only items, 100 items redraw is very fast.
             historyList.innerHTML = '';
 
             if (allHistory.length === 0) {
